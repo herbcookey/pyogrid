@@ -134,7 +134,7 @@ const DEFAULTS = {
   height: null,
 };
 
-/** 스크롤바 너비 (CSS ::-webkit-scrollbar와 맞춘다) */
+/** 스크롤바 너비를 잴 수 없을 때(화면에 붙지 않음, jsdom) 쓰는 값. CSS ::-webkit-scrollbar 너비와 같다 */
 const SCROLLBAR = 15;
 
 let uid = 0;
@@ -1601,6 +1601,21 @@ export class PyoGrid {
     this._afterColumnsChanged(false);
   }
 
+  /**
+   * 이 브라우저의 세로 스크롤바 너비. ::-webkit-scrollbar를 쓰는 Chrome·Edge·Safari는 15,
+   * Firefox는 운영체제 기본(Windows 17, 겹쳐 그리는 스크롤바면 0).
+   * 스크롤 영역과 같은 class의 숨은 상자를 overflow:scroll로 만들어 잰다. 잴 수 없으면 SCROLLBAR.
+   * @returns {number}
+   */
+  _scrollbarWidth() {
+    const probe = h("div", "pyo-scroll");
+    probe.style.cssText = "position:absolute;visibility:hidden;overflow:scroll;width:100px;height:100px;top:0;left:0";
+    this.el.root.append(probe);
+    const w = probe.offsetWidth ? probe.offsetWidth - probe.clientWidth : SCROLLBAR;
+    probe.remove();
+    return w >= 0 && w < 100 ? w : SCROLLBAR;
+  }
+
   _computeLayout() {
     const o = this.options;
     const aside = [];
@@ -1610,7 +1625,7 @@ export class PyoGrid {
     const asideW = aside.reduce((s, a) => s + a.width, 0);
 
     // 스크롤바 너비를 항상 빼고 계산해서, 행 수에 따라 "*" 너비가 바뀌지 않게 한다
-    const available = this.el.root.clientWidth - asideW - SCROLLBAR;
+    const available = this.el.root.clientWidth - asideW - this._scrollbarWidth();
     this.widths = computeWidths(this.leaves, available, { defaultWidth: o.defaultColumnWidth, override: this._userWidths });
 
     const frozen = clamp(o.frozenColumns | 0, 0, this.leaves.length);

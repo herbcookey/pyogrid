@@ -7,9 +7,10 @@
 | 항목 | 결정 |
 |---|---|
 | 의존성 | 없음. xlsx 내보내기만 SheetJS가 있을 때 쓴다 |
-| 브라우저 | Chrome·Edge 최신 (sticky, ResizeObserver, `::-webkit-scrollbar`) |
+| 브라우저 | Chrome·Edge·Firefox·Safari 최신 (sticky, ResizeObserver). 자동 테스트는 Chrome·Firefox·WebKit |
 | 언어 | 순수 JS(ES2020 모듈) + JSDoc + `// @ts-check`, `.d.ts` 생성 |
 | 이름 | 전역 `PyoGrid`, CSS 접두사 `pyo-` |
+| 화면 문구 | `core/locales.js`의 언어별 문구. 기본 영어, 한국어 내장. `locale`로 고르고 `messages`로 일부를 덮는다 |
 | date 편집기 | `yyyy-MM-dd` 입력 정리 + 자체 달력 팝업 (브라우저 `input type=date`는 칸 단위 입력이라 바로 입력·붙여넣기와 맞지 않음) |
 
 ## 구조
@@ -23,6 +24,7 @@ src/
   core/sort.js              정렬 (smart / plain / 함수)
   core/range.js             셀 범위
   core/formatters.js        money
+  core/locales.js           화면 문구 (en, ko), locale + messages 합치기
   editors/types.js          편집기 종류 (입력 정리·값 해석)
   editors/popups.js         달력·선택 목록 팝업
   features/editing.js       셀 편집·키보드·한글 입력
@@ -62,8 +64,8 @@ div.pyo                         (테두리, position:relative)
 - 브라우저 스크롤 하나에 `position: sticky`를 써서 헤더·고정 컬럼·합계 행이 같은 프레임에 움직인다. 패널 여러 개의 위치를 스크롤마다 스크립트로 맞추지 않으므로 동기화 지연이 없다.
 - 세로: 행 높이가 고정이므로 `scrollTop / 행 높이`로 범위를 구하고 위아래 6행을 더 그린다. 범위를 벗어난 행만 지우고 새 행만 만든다.
 - 가로: 고정 컬럼은 항상, 스크롤 컬럼은 보이는 범위 ±2열만 그린다. 범위가 바뀌면 보이는 행을 다시 만든다.
-- 스크롤바: `::-webkit-scrollbar`로 15px. 세로 막대는 헤더 아래부터.
-- 너비: 그리드 너비에서 보조 컬럼과 스크롤바 15px를 빼고 `"*"`·`%`를 계산한다 (행 수에 따라 너비가 바뀌지 않게). 컨테이너 크기가 바뀌면 ResizeObserver로 다시 계산하고, 사용자가 조절한 너비는 유지한다.
+- 스크롤바: Chrome·Edge·Safari는 `::-webkit-scrollbar`로 15px. Firefox는 이 선택자가 없어서 브라우저 기본 너비(Windows 17px, 겹쳐 그리는 스크롤바면 0)에 색만 `scrollbar-color`로 맞춘다. Chrome 121+는 `scrollbar-color`가 있으면 `::-webkit-scrollbar`를 무시하므로 `@supports not selector(::-webkit-scrollbar)` 안에만 둔다. 세로 막대는 헤더 아래부터(`::-webkit-scrollbar` 브라우저만).
+- 너비: 그리드 너비에서 보조 컬럼과 스크롤바 너비를 빼고 `"*"`·`%`를 계산한다 (행 수에 따라 너비가 바뀌지 않게). 스크롤바 너비는 상수가 아니라, 스크롤 영역과 같은 class의 숨은 상자를 `overflow:scroll`로 만들어 잰다. 잴 수 없으면(화면에 없음, jsdom) 15px. 컨테이너 크기가 바뀌면 ResizeObserver로 다시 계산하고, 사용자가 조절한 너비는 유지한다.
 - 행 객체는 복사하지 않는다 (화면 코드가 행을 직접 고치고 다시 그리게 하는 방식에 맞춤).
 - formatter 결과와 헤더 label은 HTML로 넣는다. formatter가 없는 값은 이스케이프한다.
 - **성능:** 스크롤 중에는 스크롤 영역 크기(clientWidth/Height)를 다시 읽지 않는다. 행을 DOM에 넣은 직후 크기를 읽으면 브라우저가 레이아웃을 강제로 계산해서, 화면 밖 행으로 스크롤할 때 15초가 걸린 일이 있었다 (`refresh`에서만 읽도록 고침). 50,000행 × 30열에서 생성+setData 20~50ms, 화면 DOM은 행 26개·셀 약 470개.

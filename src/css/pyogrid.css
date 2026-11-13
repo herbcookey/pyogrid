@@ -64,6 +64,11 @@
 }
 .pyo-scroll::-webkit-scrollbar-thumb:hover { background: var(--pyo-scroll-thumb-hover); }
 .pyo-scroll::-webkit-scrollbar-corner { background: var(--pyo-scroll-track); }
+/* ::-webkit-scrollbar가 없는 브라우저(Firefox): 색만 맞춘다. 너비는 브라우저 기본이고 그리드가 재서 쓴다.
+   Chrome 121+는 scrollbar-color가 있으면 ::-webkit-scrollbar를 무시하므로 @supports로 나눈다. */
+@supports not selector(::-webkit-scrollbar) {
+  .pyo-scroll { scrollbar-color: var(--pyo-scroll-thumb) var(--pyo-scroll-track); }
+}
 
 /* ---------- 헤더 ---------- */
 .pyo-head {

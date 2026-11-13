@@ -8,7 +8,7 @@ A fast, dependency-free data grid in plain JavaScript. It renders tens of thousa
 - Use it from a single `<script>` tag (global `PyoGrid`) or as an ES module.
 - Works with any framework, or none.
 
-> Version 0.7.2 · Chrome and Edge (latest). See [Browser support](#browser-support).
+> Version 0.8.0 · Chrome, Edge, Firefox, and Safari. See [Browser support](#browser-support).
 
 ![Weekly orders demo: multi-level headers, frozen columns, row selection, footer totals](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/weekly.png)
 
@@ -41,6 +41,7 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - [Collecting changes for saving](#collecting-changes-for-saving)
 - [Global extensions](#global-extensions)
 - [Theming](#theming)
+- [Localization](#localization)
 - [Demos](#demos)
 - [Browser support](#browser-support)
 - [Development](#development)
@@ -64,6 +65,7 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - **xlsx export** of what is on screen, with merged headers and real number cells.
 - **Remembers column widths and sort** per page in `localStorage`.
 - **Themeable** with CSS custom properties. TypeScript declarations included.
+- **Localizable.** English by default, Korean built in, and every built-in string can be replaced.
 
 ## Installation
 
@@ -79,11 +81,11 @@ import "pyogrid/css"; // with a bundler such as Vite or webpack
 Or load it from a CDN without a build step:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.8/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.8/dist/pyogrid.min.js"></script>
 ```
 
-The same files are on unpkg (`https://unpkg.com/pyogrid@0.7/dist/...`). Keep the version in the URL (`@0.7`, or an exact one like `@0.7.2`) on production pages: without it you get whatever the latest release is, including breaking changes.
+The same files are on unpkg (`https://unpkg.com/pyogrid@0.8/dist/...`). Keep the version in the URL (`@0.8`, or an exact one like `@0.8.0`) on production pages: without it you get whatever the latest release is, including breaking changes.
 
 | File | Use |
 |---|---|
@@ -103,8 +105,8 @@ To build from source, see [Development](#development).
 ## Quick start
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.8/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.8/dist/pyogrid.min.js"></script>
 
 <div id="grid" style="height: 400px"></div>
 
@@ -302,7 +304,9 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 | `defaultColumnWidth` | `100` | Width of columns without `width` |
 | `minColumnWidth` | `10` | Minimum width when resizing |
 | `resizable` | `true` | Drag header edges to resize columns |
-| `emptyText` | `"조회된 데이터가 없습니다."` | Message when there are no rows ("No data found."); `null` shows nothing |
+| `emptyText` | `undefined` | Message when there are no rows. Leave it out to use the locale's message, or pass `null` to show nothing |
+| `locale` | `"en"` | Language of built-in text: `"en"`, `"ko"`, or a name registered on `PyoGrid.locales`. See [Localization](#localization) |
+| `messages` | `null` | Replace individual built-in strings. See [Localization](#localization) |
 | `overscanRows` / `overscanColumns` | `6` / `2` | Extra rows and columns rendered outside the visible area |
 
 ### Selection and sorting
@@ -725,8 +729,8 @@ With `filter: true`, each header gets a ▾ button that opens a value list, like
 ![Header filter popup with search, select all, and a value list](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/filter.png)
 
 - The list shows only values from rows that pass the other columns' filters. With many values only the first 2,000 are drawn, but search, select all, and OK apply to every value (pressing OK without changes adds no condition).
-- Select-editor columns list option names, and money columns list formatted numbers. Empty values appear as "(빈 값)" ("(empty)").
-- Filters survive `setData`. When no rows match, the grid shows "필터 조건에 맞는 데이터가 없습니다." ("No rows match the filter.")
+- Select-editor columns list option names, and money columns list formatted numbers. Empty values appear as "(Blank)".
+- Filters survive `setData`. When no rows match, the grid shows "No rows match the filter". Both texts can be changed; see [Localization](#localization).
 - Not available in tree mode or with server paging (`setData(rows, page)`).
 - From code: `grid.setFilter("MANAGER", ["Alice", "Bob"])`, `grid.clearFilters()`
 
@@ -858,13 +862,14 @@ PyoGrid.editors.upper = {
 | Name | Description |
 |---|---|
 | `PyoGrid.version` | |
+| `PyoGrid.locales` | Built-in text per language. Add a language here; see [Localization](#localization) |
 | `PyoGrid.escapeHtml(v)` | Escape HTML |
 | `PyoGrid.formatNumber(n)` | Thousands separators, up to two decimal places |
 | `PyoGrid.sortRows(rows, sort, compare?)` | Sort an array with the grid's rules (returns a new array) |
 | `PyoGrid.util.getValue(row, key)` / `setValue(row, key, v)` | Read and write path keys |
 | `PyoGrid.util.toNumber(v)` | "1,200" → 1200; null if not a number |
 
-The ES module exports the same things by name: `formatters`, `editorTypes`, `userCollectors`, `escapeHtml`, `sortRows`, `parseTSV`, `buildTSV`, and more (see `src/index.js`).
+The ES module exports the same things by name: `formatters`, `editorTypes`, `userCollectors`, `escapeHtml`, `sortRows`, `parseTSV`, `buildTSV`, `locales`, and more (see `src/index.js`).
 
 ## Theming
 
@@ -895,6 +900,69 @@ The default theme has a light gray header and a blue accent. Override the CSS cu
 
 Main classes: `.pyo-row` (`.pyo-selected`, `.pyo-group-row`), `.pyo-cell` (`.pyo-in-range`, `.pyo-active`, `.pyo-merged`), `.pyo-hcell`, `.pyo-foot`, `.pyo-page`, `.pyo-popup` (editor and filter popups).
 
+## Localization
+
+Built-in text (the empty message, header filter popup, calendar, and bottom-bar messages) is English by default. Korean is built in:
+
+```js
+new PyoGrid("#grid", { locale: "ko", columns: [...] });
+```
+
+Change individual strings with `messages`. Anything you leave out comes from the locale:
+
+```js
+new PyoGrid("#grid", {
+  messages: {
+    empty: "Nothing to show",
+    ok: "Apply",
+    copied: (count) => count + " copied",
+  },
+  columns: [...]
+});
+```
+
+To add a language, register it on `PyoGrid.locales` (or the `locales` export) and use its name. Missing strings fall back to English, and a region tag like `"ko-KR"` finds `"ko"`.
+
+```js
+PyoGrid.locales.ja = {
+  empty: "データがありません",
+  weekdays: ["日", "月", "火", "水", "木", "金", "土"],
+  calendarTitle: (year, month) => year + "年" + month + "月",
+  ok: "OK",
+  cancel: "キャンセル"
+};
+new PyoGrid("#grid", { locale: "ja", columns: [...] });
+```
+
+Numbers passed to message functions are already formatted with thousands separators (strings such as `"1,234"`). Messages are inserted as text, never as HTML.
+
+| Key | English default | Used for |
+|---|---|---|
+| `empty` | `"No data"` | No rows (the `emptyText` option wins if set) |
+| `noFilterMatch` | `"No rows match the filter"` | Filters leave no rows |
+| `filter` | `"Filter"` | Header filter button label |
+| `filterDialog(column)` | `"Filter " + column` | Filter popup label for screen readers |
+| `filterSearch` | `"Search"` | Filter search box |
+| `selectAll` | `"(Select all)"` | Filter popup |
+| `blank` | `"(Blank)"` | Empty values in the filter list |
+| `clear` / `ok` / `cancel` | `"Clear"` / `"OK"` / `"Cancel"` | Filter popup buttons |
+| `filterTruncated(shown, total)` | `"Showing the first 2,000 of 50,000. Search to narrow the list."` | Filter list with too many values |
+| `noOptions` | `"No options"` | Select editor with no options |
+| `cellInput` | `"Cell input"` | Cell input label for screen readers |
+| `weekdays` | `["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]` | Calendar, starting on Sunday |
+| `calendarTitle(year, month)` | `"November 2026"` | Calendar header (`month` is 1–12) |
+| `prevMonth` / `nextMonth` / `today` | `"Previous month"` / `"Next month"` / `"Today"` | Calendar buttons |
+| `selected(count)` | `"6 cells selected"` | Selection summary |
+| `selectedNumbers(numCount, sum, avg)` | `"Numbers 3 · Sum 2,502.5 · Average 834.17"` | Selection summary, numeric part |
+| `summarySeparator` | `" · "` | Between the two summary parts |
+| `actions` | `{edit: "edit", clear: "clear", paste: "paste", cut: "cut"}` | Action names in undo and redo messages |
+| `nothingToUndo` / `nothingToRedo` | `"Nothing to undo"` / `"Nothing to redo"` | Bottom bar |
+| `undone(action, count)` / `redone(action, count)` | `"Undo paste: 4 cells"` | Bottom bar |
+| `copied(count)` | `"Copied 6 cells"` | Bottom bar |
+| `pasted(count, skipped)` | `"Pasted 5 cells (1 skipped)"` | Bottom bar (`skipped` is `"0"` when nothing was skipped) |
+
+The status text on the right (`"1 - 15 of 300"`) is replaced with the `statusFormat` option.
+
 ## Demos
 
 Try them online at **[herbcookey.github.io/pyogrid/demo/](https://herbcookey.github.io/pyogrid/demo/)**, or run them locally:
@@ -919,9 +987,10 @@ All demo data is made up.
 
 ## Browser support
 
-- Latest Chrome and Edge. Tests run only in these two browsers.
-- The grid relies on `position: sticky`, `ResizeObserver`, and `::-webkit-scrollbar`.
-- Built-in UI text is in Korean: the empty message, filter popup, calendar, and bottom-bar messages. Only the empty message can be changed (`emptyText`); `statusFormat` replaces the status text on the right.
+- Latest Chrome, Edge, Firefox, and Safari.
+- The end-to-end tests run in Chrome, Firefox, and WebKit (Playwright's build of Safari's engine) on Windows. Real Safari on macOS and iOS is not tested yet.
+- The grid relies on `position: sticky` and `ResizeObserver`. Scrollbars are styled with `::-webkit-scrollbar` in Chrome, Edge, and Safari; Firefox keeps its own scrollbar width (the grid measures it) and only takes the colors.
+- Typing during IME composition (Korean and similar) is tested automatically only in Chrome, because only Chromium can simulate IME input. In Firefox and Safari, try it by hand with a real IME.
 
 ## Development
 
@@ -932,10 +1001,12 @@ npm install
 npm run build        # dist/ (js, min.js, esm.js, css, min.css, types)
 npm run typecheck    # type-check the JSDoc types (// @ts-check)
 npm test             # unit tests (vitest + jsdom)
-npm run test:e2e     # build, then run headless Chrome tests (Playwright with the installed Chrome)
+npm run test:e2e     # build, then run headless browser tests in Chrome, Firefox, and WebKit (Playwright)
 npm run test:all     # typecheck, unit, and e2e
 npm run demo         # demo server at http://127.0.0.1:5179/demo/
 ```
+
+The e2e tests use your installed Chrome. Download Firefox and WebKit for Playwright once with `npx playwright install firefox webkit`. To run one browser: `npx playwright test --project=firefox` (`chrome`, `firefox`, or `webkit`).
 
 Source layout:
 
@@ -943,11 +1014,11 @@ Source layout:
 src/
   index.js / global.js      ES module / <script> entry points
   grid.js                   PyoGrid class (DOM, layout, virtual scrolling, public API)
-  core/                     column model and widths, sorting, cell range, formatters
+  core/                     column model and widths, sorting, cell range, formatters, built-in text (locales)
   editors/                  editor types, calendar and select popups
   features/                 editing and keyboard, clipboard, undo, filters, totals, view rows, Excel, saved state, bottom bar
   css/pyogrid.css
-test/unit, test/e2e         unit / Chrome tests
+test/unit, test/e2e         unit / browser tests
 docs/                       design notes (Korean)
 tools/                      build, test runner, demo server, performance probes, screenshots
 ```

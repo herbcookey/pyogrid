@@ -1,13 +1,21 @@
 {
   "name": "pyogrid",
-  "version": "0.7.2",
-  "description": "외부 의존성 없는 순수 JavaScript 데이터 그리드 (가상 스크롤, 셀 편집, Excel 붙여넣기, 필터, 합계, 트리, xlsx 내보내기)",
+  "version": "0.8.0",
+  "description": "Fast, dependency-free JavaScript data grid with virtual scrolling, Excel-style editing and paste, IME-friendly input, filters, totals, tree grid, and xlsx export.",
   "keywords": [
     "grid",
     "datagrid",
+    "data-grid",
     "table",
-    "virtual-scroll",
+    "editable",
     "spreadsheet",
+    "excel",
+    "virtual-scroll",
+    "tree-grid",
+    "react",
+    "vue",
+    "angular",
+    "ime",
     "vanilla-js"
   ],
   "author": "Donghyeon Shin",
@@ -16,7 +24,7 @@
     "type": "git",
     "url": "git+https://github.com/herbcookey/pyogrid.git"
   },
-  "homepage": "https://github.com/herbcookey/pyogrid#readme",
+  "homepage": "https://herbcookey.github.io/pyogrid/",
   "bugs": {
     "url": "https://github.com/herbcookey/pyogrid/issues"
   },

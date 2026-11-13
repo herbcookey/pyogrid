@@ -161,7 +161,7 @@ test.describe("대량 데이터 (50,000행 × 30열)", () => {
     expect(errors).toEqual([]);
   });
 
-  test("연속 스크롤 프레임 시간", async ({ page }) => {
+  test("연속 스크롤 프레임 시간", async ({ page, browserName }) => {
     await page.goto("/demo/big.html");
     const result = await page.evaluate(async () => {
       const s = document.querySelector(".pyo-scroll");
@@ -181,7 +181,8 @@ test.describe("대량 데이터 (50,000행 × 30열)", () => {
     console.log(`  프레임 간격 중간값 ${result.median.toFixed(1)}ms, 95% ${result.p95.toFixed(1)}ms, 최대 ${result.max.toFixed(1)}ms`);
     // 프레임 간격은 PC 부하에 따라 크게 흔들린다 (같은 PC에서 95%가 20~250ms).
     // 중간값으로 평소 속도를, 95% 100ms로 큰 회귀만 잡는다. 정밀 비교는 tools/probe-frames.mjs로 A/B 측정.
-    expect(result.median).toBeLessThan(25);
+    // Windows의 Playwright WebKit·Firefox는 빈 화면에서도 프레임 간격이 Chrome보다 들쭉날쭉해서 중간값 기준을 넓힌다.
+    expect(result.median).toBeLessThan(browserName === "chromium" ? 25 : 40);
     expect(result.p95).toBeLessThan(100);
   });
 });
@@ -195,9 +196,22 @@ test.describe("크기 변화", () => {
       <script>window.grid = new PyoGrid(document.getElementById("g"), { columns: [{ key: "a", width: 100 }, { key: "b", width: "*" }] });
       grid.setData([{ a: 1, b: 2 }]);</script></body></html>`);
     await page.waitForFunction(() => window.grid);
+    // 이 브라우저의 스크롤바 너비 (Chrome·WebKit은 ::-webkit-scrollbar 15px, Firefox는 기본값, headless는 0일 수 있다)
+    const sb = await page.evaluate(() => {
+      const p = document.createElement("div");
+      p.className = "pyo-scroll";
+      p.style.cssText = "position:absolute;overflow:scroll;width:100px;height:100px";
+      document.querySelector(".pyo").append(p);
+      const w = p.offsetWidth - p.clientWidth;
+      p.remove();
+      return w;
+    });
     const w0 = await page.evaluate(() => window.grid.getColumnWidths()[1]);
-    expect(w0).toBe(600 - 2 - 15 - 100); // 테두리 2px, 스크롤바 15px
+    expect(w0).toBe(600 - 2 - sb - 100); // 테두리 2px, 스크롤바
     await page.evaluate(() => (document.getElementById("g").style.width = "800px"));
-    await page.waitForFunction(() => window.grid.getColumnWidths()[1] === 800 - 2 - 15 - 100);
+    await page.waitForFunction((s) => window.grid.getColumnWidths()[1] === 800 - 2 - s - 100, sb);
+    // 스크롤바가 있는 화면에서 행이 많아져도 가로로 넘치지 않는다
+    await page.evaluate(() => window.grid.setData(Array.from({ length: 300 }, (_, i) => ({ a: i, b: i }))));
+    expect(await page.evaluate(() => { const s = document.querySelector(".pyo-scroll"); return s.scrollWidth - s.clientWidth; })).toBe(0);
   });
 });

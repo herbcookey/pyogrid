@@ -32,7 +32,8 @@ test("셀을 누르고 바로 치면 첫 글자부터 들어가고 Enter로 저�
   expect(await active(page)).toEqual({ r: 2, c: 1 });
 });
 
-test("한글 조합 입력 (CDP IME) → 셀에 그대로 들어간다", async ({ page }) => {
+test("한글 조합 입력 (CDP IME) → 셀에 그대로 들어간다", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "IME 조합 흉내(CDP Input.imeSetComposition)는 Chromium에서만 된다");
   await cell(page, 0, 1).click();
   const cdp = await page.context().newCDPSession(page);
   for (const t of ["ㅎ", "하", "한"]) await cdp.send("Input.imeSetComposition", { text: t, selectionStart: 1, selectionEnd: 1 });
@@ -102,7 +103,7 @@ test("일자: 숫자만 쳐도 하이픈, 잘못된 날짜는 저장 안 됨, �
   await expect(cal).toHaveCount(0);
 });
 
-test("구분: Enter로 목록, 방향키·Enter 저장, 한글로 찾기, 클릭", async ({ page }) => {
+test("구분: Enter로 목록, 방향키·Enter 저장, 한글로 찾기, 클릭", async ({ page, browserName }) => {
   await cell(page, 0, 5).click();
   await expect(cell(page, 0, 5)).toHaveText("가공");
   await page.keyboard.press("Enter");
@@ -115,11 +116,15 @@ test("구분: Enter로 목록, 방향키·Enter 저장, 한글로 찾기, 클릭
   expect((await row(page, 0)).cd).toBe("C");
   await expect(cell(page, 0, 5)).toHaveText("조립");
 
-  // 한글로 찾기: 조합 입력
+  // 한글로 찾기: 조합 입력 (CDP는 Chromium에서만. 다른 브라우저는 조합 없이 글자로 찾는다)
   await cell(page, 1, 5).click();
-  const cdp = await page.context().newCDPSession(page);
-  for (const t of ["ㄷ", "도"]) await cdp.send("Input.imeSetComposition", { text: t, selectionStart: 1, selectionEnd: 1 });
-  await cdp.send("Input.insertText", { text: "도" });
+  if (browserName === "chromium") {
+    const cdp = await page.context().newCDPSession(page);
+    for (const t of ["ㄷ", "도"]) await cdp.send("Input.imeSetComposition", { text: t, selectionStart: 1, selectionEnd: 1 });
+    await cdp.send("Input.insertText", { text: "도" });
+  } else {
+    await page.keyboard.insertText("도");
+  }
   await expect(dd.locator(".pyo-option-active")).toHaveText("도장");
   await dd.locator(".pyo-option", { hasText: "검사" }).click();
   expect((await row(page, 1)).cd).toBe("E");
