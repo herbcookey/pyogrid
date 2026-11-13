@@ -6,11 +6,11 @@
 - 의존성 없음. xlsx 내보내기만 [SheetJS](https://sheetjs.com/)가 있을 때 씁니다.
 - `<script>` 태그 하나(전역 `PyoGrid`)로 쓰거나 ES 모듈로 가져옵니다.
 
-> 버전 0.7.0 · 지원 브라우저: Chrome, Edge 최신 (테스트는 이 두 브라우저에서만 합니다)
+> 버전 0.7.1 · 지원 브라우저: Chrome, Edge 최신 (테스트는 이 두 브라우저에서만 합니다)
 
-![주간 주문·출고 현황 데모: 다단 헤더, 틀 고정, 행 선택, 합계 행](docs/images/weekly.png)
+![주간 주문·출고 현황 데모: 다단 헤더, 틀 고정, 행 선택, 합계 행](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/weekly.png)
 
-![50,000행 × 30열을 가운데까지 스크롤한 화면. 왼쪽 두 열은 고정](docs/images/big.png)
+![50,000행 × 30열을 가운데까지 스크롤한 화면. 왼쪽 두 열은 고정](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/big.png)
 
 위: 다단 헤더·틀 고정·행 선택·합계 행·선택 합계. 아래: 50,000행 × 30열을 25,001행까지 스크롤한 화면 (가상 스크롤).
 
@@ -401,7 +401,7 @@ formatter가 돌려준 글자는 **HTML로** 셀에 들어갑니다. formatter�
 
 컬럼에 `editor`를 주면 편집할 수 있습니다.
 
-![날짜 칸에 숫자를 치는 중에 달력이 열린 모습](docs/images/editors.png)
+![날짜 칸에 숫자를 치는 중에 달력이 열린 모습](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/editors.png)
 
 ```js
 editor: {
@@ -629,7 +629,7 @@ grid.on("batchchange", function () { grid.refresh(); });
 
 **합계 행 (`footSum`)**은 본문 아래에 붙어 있고, 가로로는 컬럼과 같이 스크롤됩니다. 배열 하나가 한 줄입니다.
 
-![그룹 합계·합계 행, 트리, 셀 병합 데모](docs/images/summary.png)
+![그룹 합계·합계 행, 트리, 셀 병합 데모](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/summary.png)
 
 위에서부터 그룹 합계와 합계 행, [트리](#트리), [셀 병합](#셀-병합)입니다.
 
@@ -703,7 +703,7 @@ grid.setData([
 
 `filter: true`면 헤더마다 ▾ 단추가 생기고, Excel 자동 필터처럼 값 목록에서 고릅니다 (검색, 전체 선택, 초기화·확인·취소, Enter·Esc).
 
-![헤더 값 필터 팝업: 검색, 전체 선택, 값 목록](docs/images/filter.png)
+![헤더 값 필터 팝업: 검색, 전체 선택, 값 목록](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/filter.png)
 
 - 목록에는 다른 컬럼 조건에 걸린 행의 값만 나옵니다. 값이 많으면 앞의 2,000개만 그리지만, 검색·전체 선택·확인은 모든 값을 대상으로 합니다 (그대로 확인하면 조건이 생기지 않습니다).
 - select 편집기 컬럼은 항목 이름, money 컬럼은 쉼표 넣은 숫자로 보입니다. 빈 값은 "(빈 값)".
