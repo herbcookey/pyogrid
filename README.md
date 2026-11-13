@@ -79,9 +79,11 @@ import "pyogrid/css"; // with a bundler such as Vite or webpack
 Or load it from a CDN without a build step:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.js"></script>
 ```
+
+The same files are on unpkg (`https://unpkg.com/pyogrid@0.7/dist/...`). Keep the version in the URL (`@0.7`, or an exact one like `@0.7.2`) on production pages: without it you get whatever the latest release is, including breaking changes.
 
 | File | Use |
 |---|---|
@@ -101,8 +103,8 @@ To build from source, see [Development](#development).
 ## Quick start
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.js"></script>
 
 <div id="grid" style="height: 400px"></div>
 

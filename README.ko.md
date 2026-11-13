@@ -51,12 +51,14 @@ import { PyoGrid } from "pyogrid";
 import "pyogrid/css"; // 번들러(Vite, webpack 등)에서 CSS 불러오기
 ```
 
-빌드 도구 없이 CDN으로 쓸 수도 있습니다.
+빌드 도구 없이 CDN으로 쓸 수도 있습니다. JSP·PHP처럼 번들러가 없는 화면에서는 이 두 줄이면 됩니다.
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.js"></script>
 ```
+
+unpkg에도 같은 파일이 있습니다 (`https://unpkg.com/pyogrid@0.7/dist/...`). 운영 화면에서는 주소에 버전(`@0.7` 또는 `@0.7.2`처럼 정확한 버전)을 꼭 넣으세요. 버전을 빼면 항상 최신 버전을 받으므로, 사용법이 바뀌는 새 버전이 나오면 화면이 깨질 수 있습니다.
 
 엑셀 내보내기를 쓰려면 SheetJS를 그리드보다 먼저 불러옵니다.
 
@@ -69,8 +71,8 @@ import "pyogrid/css"; // 번들러(Vite, webpack 등)에서 CSS 불러오기
 ## 빠른 시작
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.7/dist/pyogrid.min.js"></script>
 
 <div id="grid" style="height: 400px"></div>
 
