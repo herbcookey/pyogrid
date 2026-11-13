@@ -1,6 +1,6 @@
 # pyogrid
 
-[한국어](https://github.com/herbcookey/pyogrid/blob/main/README.ko.md)
+**[Website](https://herbcookey.github.io/pyogrid/)** · **[Live demos](https://herbcookey.github.io/pyogrid/demo/)** · [npm](https://www.npmjs.com/package/pyogrid) · [한국어](https://github.com/herbcookey/pyogrid/blob/main/README.ko.md)
 
 A fast, dependency-free data grid in plain JavaScript. It renders tens of thousands of rows with virtual scrolling and handles spreadsheet-style editing: type straight into a cell (IME input such as Korean included), paste from Excel, undo, filter by header values, show footer totals, group subtotals, trees, and export to xlsx.
 

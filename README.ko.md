@@ -1,6 +1,6 @@
 # pyogrid
 
-[English](README.md)
+**[웹사이트](https://herbcookey.github.io/pyogrid/README.ko.html)** · **[데모](https://herbcookey.github.io/pyogrid/demo/)** · [npm](https://www.npmjs.com/package/pyogrid) · [English](README.md)
 
 외부 라이브러리 없이 동작하는 순수 JavaScript 데이터 그리드입니다. 수만 행을 가상 스크롤로 보여 주고, 엑셀처럼 셀을 고르고 바로 입력하는 편집을 지원합니다. 셀을 고르고 그냥 치면 한글도 첫 글자부터 들어가고, 조합 중에 누른 Enter 한 번으로 저장됩니다.
 
