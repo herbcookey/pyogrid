@@ -1,0 +1,431 @@
+/* pyogrid 기본 테마
+ * 접두사 pyo-. 화면별 스타일은 #id .class 형태로 덮어쓴다. */
+
+.pyo-host { position: relative; }
+
+.pyo {
+  --pyo-row-h: 26px;
+  --pyo-head-row-h: 26px;
+  --pyo-head-h: 26px;
+  --pyo-border: #cfd6de;
+  --pyo-text: #1f2937;
+  --pyo-head-bg: #f4f6f9;
+  --pyo-head-text: #344054;
+  --pyo-head-line: #dde2e8;
+  --pyo-head-bottom: #c9d1da;
+  --pyo-head-hover: #e9eef5;
+  --pyo-cell-line: #e6e9ee;
+  --pyo-row-even: #fff;
+  --pyo-row-odd: #f8fafc;
+  --pyo-row-hover: #eef4fd;
+  --pyo-row-selected: #e3edfc;
+  --pyo-range-bg: #cfe0fa;
+  --pyo-active-bg: #eaf2fe;
+  --pyo-aside-bg: #f8fafc;
+  --pyo-aside-text: #667085;
+  --pyo-frozen-line: #b9c3cf;
+  --pyo-accent: #2f6fd6;
+  --pyo-scroll-track: #f8fafc;
+  --pyo-scroll-thumb: #c5cdd8;
+  --pyo-scroll-thumb-hover: #98a2b3;
+
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--pyo-border);
+  border-radius: 4px;
+  color: var(--pyo-text);
+  font-size: 12px;
+  line-height: normal;
+}
+.pyo *, .pyo *::before, .pyo *::after { box-sizing: border-box; }
+
+.pyo-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.pyo-canvas { position: relative; min-width: 100%; min-height: 100%; display: flex; flex-direction: column; }
+.pyo-head, .pyo-body, .pyo-foot { flex: 0 0 auto; }
+
+/* 스크롤바: 15px. 세로 막대는 헤더 아래부터 */
+.pyo-scroll::-webkit-scrollbar { width: 15px; height: 15px; }
+.pyo-scroll::-webkit-scrollbar-track { background: var(--pyo-scroll-track); }
+.pyo-scroll::-webkit-scrollbar-track:vertical { margin-top: var(--pyo-head-h); border-left: 1px solid var(--pyo-cell-line); }
+.pyo-scroll::-webkit-scrollbar-track:horizontal { border-top: 1px solid var(--pyo-cell-line); }
+.pyo-scroll::-webkit-scrollbar-thumb {
+  background: var(--pyo-scroll-thumb);
+  border: 3px solid var(--pyo-scroll-track);
+  border-radius: 8px;
+  min-height: 15px;
+}
+.pyo-scroll::-webkit-scrollbar-thumb:hover { background: var(--pyo-scroll-thumb-hover); }
+.pyo-scroll::-webkit-scrollbar-corner { background: var(--pyo-scroll-track); }
+
+/* ---------- 헤더 ---------- */
+.pyo-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  background: var(--pyo-head-bg);
+  border-bottom: 1px solid var(--pyo-head-bottom);
+  color: var(--pyo-head-text);
+  user-select: none;
+}
+.pyo-head-fz, .pyo-head-sc { position: relative; flex: 0 0 auto; height: 100%; }
+.pyo-head-fz { position: sticky; left: 0; z-index: 2; background: var(--pyo-head-bg); }
+.pyo-hcell {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
+  overflow: hidden;
+  border-right: 1px solid var(--pyo-head-line);
+  border-bottom: 1px solid var(--pyo-head-line);
+  background: var(--pyo-head-bg);
+  font-weight: 600;
+  cursor: default;
+}
+.pyo-hcell:hover { background: var(--pyo-head-hover); }
+.pyo-hlabel { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pyo-hcell.pyo-al-center .pyo-hlabel { text-align: center; }
+.pyo-hcell.pyo-al-right .pyo-hlabel { text-align: right; }
+.pyo-head-fz:not(:empty) { box-shadow: 1px 0 0 var(--pyo-head-bottom); }
+
+.pyo-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+.pyo-resizer:hover { background: var(--pyo-accent); opacity: .5; }
+.pyo-resize-guide {
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  z-index: 10;
+  background: var(--pyo-accent);
+  opacity: .6;
+  pointer-events: none;
+}
+.pyo.pyo-resizing, .pyo.pyo-resizing * { cursor: col-resize !important; user-select: none; }
+
+/* ---------- 본문 ---------- */
+.pyo-body { position: relative; }
+.pyo-row {
+  position: absolute;
+  left: 0;
+  display: flex;
+  background: var(--pyo-row-even);
+}
+.pyo-row.pyo-odd { background: var(--pyo-row-odd); }
+.pyo-row:hover { background: var(--pyo-row-hover); }
+.pyo-fz {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  background: inherit;
+}
+.pyo-has-frozen .pyo-fz { box-shadow: 1px 0 0 var(--pyo-frozen-line); }
+.pyo-sc { display: flex; flex: 0 0 auto; }
+
+.pyo-cell {
+  flex: 0 0 auto;
+  height: var(--pyo-row-h);
+  padding: 0 7px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: calc(var(--pyo-row-h) - 1px);
+  border-right: 1px solid var(--pyo-cell-line);
+  border-bottom: 1px solid var(--pyo-cell-line);
+  font-variant-numeric: tabular-nums;
+}
+.pyo-cell.pyo-multiline { white-space: normal; line-height: 1.25; padding-top: 2px; padding-bottom: 2px; }
+.pyo-al-left { text-align: left; }
+.pyo-al-center { text-align: center; }
+.pyo-al-right { text-align: right; }
+.pyo-hcell.pyo-al-center { justify-content: center; }
+.pyo-hcell.pyo-al-right { justify-content: flex-end; }
+
+.pyo-cell.pyo-aside { padding: 0; color: var(--pyo-aside-text); background: var(--pyo-aside-bg); }
+.pyo-hcell.pyo-aside { padding: 0; }
+
+/* 행 선택 체크박스 */
+.pyo-check {
+  display: inline-block;
+  position: relative;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  border: 1px solid #a9b4c2;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+}
+.pyo-check:hover { border-color: var(--pyo-accent); }
+.pyo-cell .pyo-check { margin-top: -2px; }
+.pyo-check::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 8px;
+  height: 4px;
+  border: 2px solid #fff;
+  border-top: 0;
+  border-right: 0;
+  transform: rotate(-45deg);
+  opacity: 0;
+}
+.pyo-row.pyo-selected .pyo-check, .pyo-check.pyo-checked { background: var(--pyo-accent); border-color: var(--pyo-accent); }
+.pyo-row.pyo-selected .pyo-check::after, .pyo-check.pyo-checked::after { opacity: 1; }
+.pyo-row.pyo-unselectable .pyo-check { background: #eceff3; border-color: #d0d6de; cursor: not-allowed; }
+
+/* 선택된 행 */
+.pyo-row.pyo-selected { background: var(--pyo-row-selected); }
+
+/* 셀 범위 선택 */
+.pyo-cell-select .pyo-body { user-select: none; }
+.pyo-cell.pyo-in-range { background: var(--pyo-range-bg); color: #111827; }
+.pyo-cell.pyo-active { box-shadow: inset 0 0 0 2px var(--pyo-accent); background: var(--pyo-active-bg); color: #111827; }
+.pyo:focus { outline: none; }
+
+/* 정렬 표시: 위·아래 삼각형, 켜진 방향만 파란색 */
+.pyo-hcell.pyo-sortable { cursor: pointer; padding-right: 14px; }
+.pyo-sort-mark { position: absolute; right: 5px; top: 50%; width: 7px; height: 11px; margin-top: -6px; }
+.pyo-sort-mark::before, .pyo-sort-mark::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  opacity: .3;
+}
+.pyo-sort-mark::before { top: 0; border-bottom: 4px solid #344054; }
+.pyo-sort-mark::after { bottom: 0; border-top: 4px solid #344054; }
+.pyo-hcell[data-sort="asc"] .pyo-sort-mark::before { border-bottom-color: var(--pyo-accent); opacity: 1; }
+.pyo-hcell[data-sort="desc"] .pyo-sort-mark::after { border-top-color: var(--pyo-accent); opacity: 1; }
+
+/* ---------- 페이지 바 ---------- */
+.pyo-page {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 5px;
+  background: var(--pyo-scroll-track);
+  border-top: 1px solid var(--pyo-head-line);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.pyo-page[hidden] { display: none; }
+.pyo-page-summary { color: #344054; font-weight: 600; padding-left: 3px; }
+.pyo-page-summary[data-flash="true"] { color: #15803d; }
+.pyo-page-summary:empty { display: none; }
+.pyo-page-nav { display: flex; align-items: center; }
+.pyo-page-nums { padding: 0 5px; }
+.pyo-page-btn {
+  min-width: 20px;
+  padding: 1px 3px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 11px;
+  color: #222;
+  cursor: pointer;
+}
+.pyo-page-btn:hover { text-decoration: underline; }
+.pyo-page-btn[data-selected="true"], .pyo-page-btn:active { background: #888; color: #fff; }
+.pyo-page-status { margin-left: auto; color: #667085; }
+
+/* ---------- 셀 입력칸 (그리드에 하나) ----------
+ * 편집하지 않을 때도 활성 셀 위에서 포커스를 받고 있다 (보이지 않음). 글자를 치면 pyo-input-on이 붙어 보인다. */
+.pyo-input {
+  position: absolute;
+  z-index: 5;
+  margin: 0;
+  padding: 0 7px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+  font: inherit;
+  font-size: 12px;
+  line-height: calc(var(--pyo-row-h) - 1px);
+  color: transparent;
+  caret-color: transparent;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+.pyo-input.pyo-input-on {
+  opacity: 1;
+  color: #111827;
+  caret-color: auto;
+  background: #fff;
+  box-shadow: inset 0 0 0 2px var(--pyo-accent);
+  pointer-events: auto;
+}
+.pyo-input[data-align="right"] { text-align: right; }
+.pyo-input[data-align="center"] { text-align: center; }
+.pyo-input.pyo-invalid { box-shadow: inset 0 0 0 2px #d92d20; background: #fef3f2; }
+.pyo-input::selection { background: #b3d1fb; }
+
+/* 체크박스 편집기 */
+.pyo-cell .pyo-cb { margin-top: -2px; }
+.pyo-check.pyo-cb.pyo-checked { background: var(--pyo-accent); border-color: var(--pyo-accent); }
+.pyo-check.pyo-cb.pyo-checked::after { opacity: 1; }
+.pyo-row.pyo-selected .pyo-check.pyo-cb:not(.pyo-checked) { background: #fff; border-color: #a9b4c2; }
+.pyo-row.pyo-selected .pyo-check.pyo-cb:not(.pyo-checked)::after { opacity: 0; }
+
+/* ---------- 편집기 팝업 (document.body에 붙음) ---------- */
+.pyo-popup {
+  position: fixed;
+  z-index: 10050;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #d0d6de;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .16);
+  font-size: 12px;
+  color: #1f2937;
+  user-select: none;
+}
+.pyo-dropdown { max-height: 240px; overflow-y: auto; padding: 4px 0; }
+.pyo-option { padding: 4px 10px; white-space: nowrap; cursor: pointer; }
+.pyo-option:hover { background: #eef4fd; }
+.pyo-option.pyo-option-active { background: #2f6fd6; color: #fff; }
+.pyo-option-empty { padding: 4px 10px; color: #98a2b3; }
+
+.pyo-calendar { width: 232px; padding: 8px; }
+.pyo-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.pyo-cal-title { font-weight: 700; font-size: 13px; }
+.pyo-cal-nav { width: 26px; height: 24px; border: 0; border-radius: 4px; background: transparent; font-size: 16px; cursor: pointer; }
+.pyo-cal-nav:hover { background: #f4f6f9; }
+.pyo-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.pyo-cal-week { text-align: center; color: #667085; padding: 2px 0; }
+.pyo-cal-day { height: 26px; border: 0; border-radius: 4px; background: transparent; font-size: 12px; cursor: pointer; color: #1f2937; }
+.pyo-cal-day:hover { background: #eef4fd; }
+.pyo-cal-day.pyo-other { color: #c0c6cf; }
+.pyo-sun { color: #d92d20; }
+.pyo-sat { color: #2f6fd6; }
+.pyo-cal-day.pyo-today { box-shadow: inset 0 0 0 1px #2f6fd6; }
+.pyo-cal-day.pyo-picked { background: #2f6fd6; color: #fff; }
+.pyo-cal-foot { margin-top: 6px; text-align: right; }
+.pyo-cal-today { padding: 3px 12px; border: 1px solid #d0d6de; border-radius: 4px; background: #fff; font-size: 12px; cursor: pointer; }
+.pyo-cal-today:hover { background: #f4f6f9; }
+
+/* ---------- 데이터 없음 ---------- */
+.pyo-empty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #98a2b3;
+  pointer-events: none;
+}
+.pyo-empty[hidden] { display: none; }
+
+/* ---------- 합계 행 (footSum): 본문 아래에 붙어 가로로는 같이 스크롤 ---------- */
+.pyo-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin-top: auto;
+  background: #eef2f7;
+  border-top: 1px solid var(--pyo-frozen-line);
+}
+.pyo-foot[hidden] { display: none; }
+.pyo-foot .pyo-row { position: relative; background: #eef2f7; font-weight: 700; color: #1f2937; }
+.pyo-foot .pyo-row:hover { background: #eef2f7; }
+.pyo-foot .pyo-fz { background: #eef2f7; }
+.pyo-sum-cell { font-variant-numeric: tabular-nums; }
+
+/* 그룹 합계 행 */
+.pyo-row.pyo-group-row, .pyo-row.pyo-group-row:hover { background: #fffaeb; font-weight: 600; }
+.pyo-row.pyo-group-depth-0, .pyo-row.pyo-group-depth-0:hover { background: #fff3d1; }
+
+/* 셀 병합: 안쪽 가로선 없음, 흰 바탕 (선택 범위·포커스 셀이면 그 색이 이긴다) */
+.pyo-cell.pyo-merged { background: #fff; }
+.pyo-cell.pyo-merged.pyo-in-range { background: var(--pyo-range-bg); }
+.pyo-cell.pyo-merged.pyo-active { background: var(--pyo-active-bg); }
+.pyo-cell.pyo-merge-cont { border-bottom-color: transparent; }
+/* 글자는 덩어리마다 한 행에만 보인다. visibility라 cellClass의 색 지정과 관계없이 숨는다 */
+.pyo-cell.pyo-merge-hide > .pyo-merge-text { visibility: hidden; }
+
+/* 트리 */
+.pyo-cell.pyo-tree-cell { display: flex; align-items: center; }
+.pyo-tree-indent, .pyo-tree-arrow, .pyo-tree-icon { flex: 0 0 auto; display: inline-block; text-align: center; }
+.pyo-tree-arrow[data-tree-toggle] { cursor: pointer; color: #475467; }
+.pyo-tree-arrow[data-tree-toggle]:hover { color: var(--pyo-accent); }
+.pyo-tree-icon { color: #98a2b3; }
+.pyo-tree-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* 헤더 값 필터 단추: 오른쪽 너비 조절 영역(5px)과 겹치지 않게.
+ * 필터 단추가 있는 컬럼은 좁은 헤더 글자가 잘리지 않도록 정렬 표시를 정렬했을 때만 보인다. */
+.pyo-hcell.pyo-filterable { padding-right: 22px; }
+.pyo-hcell.pyo-filterable.pyo-sortable { padding-right: 22px; }
+.pyo-hcell.pyo-filterable .pyo-sort-mark { display: none; }
+.pyo-hcell.pyo-filterable[data-sort] { padding-right: 32px; }
+.pyo-hcell.pyo-filterable[data-sort] .pyo-sort-mark { display: block; right: 22px; }
+.pyo-filter-btn {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin-top: -6px;
+  border-radius: 3px;
+  opacity: .45;
+  cursor: pointer;
+}
+.pyo-filter-btn::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 4px;
+  border-left: 4.5px solid transparent;
+  border-right: 4.5px solid transparent;
+  border-top: 5px solid #344054;
+}
+.pyo-filter-btn:hover { opacity: 1; background: rgba(0, 0, 0, .08); }
+.pyo-filter-btn.pyo-filter-on { opacity: 1; background: var(--pyo-accent); }
+.pyo-filter-btn.pyo-filter-on::before { border-top-color: #fff; }
+
+.pyo-filter { width: 220px; padding: 8px; user-select: auto; }
+.pyo-f-title { font-weight: 700; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pyo-f-search { width: 100%; height: 28px; padding: 2px 8px; margin-bottom: 6px; border: 1px solid #d0d6de; border-radius: 4px; box-sizing: border-box; outline: 0; font-size: 12px; }
+.pyo-f-search:focus { border-color: #2f6fd6; box-shadow: 0 0 0 2px rgba(47, 111, 214, .15); }
+.pyo-filter label { display: block; margin: 0; padding: 2px; border-radius: 3px; font-weight: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.pyo-filter label:hover { background: #eef4fd; }
+.pyo-filter label input { margin: 0 4px 0 0; vertical-align: middle; }
+.pyo-f-all { border-bottom: 1px solid #eee; margin-bottom: 2px !important; }
+.pyo-f-list { max-height: 220px; overflow-y: auto; }
+.pyo-filter .pyo-f-hide { display: none; }
+.pyo-f-note { color: #8a6d3b; margin-top: 4px; }
+.pyo-f-btns { margin-top: 8px; text-align: right; }
+.pyo-f-btns button { margin-left: 4px; padding: 3px 12px; border: 1px solid #d0d6de; border-radius: 4px; background: #fff; color: #344054; font-size: 12px; cursor: pointer; }
+.pyo-f-btns button:hover { background: #f4f6f9; }
+.pyo-f-btns .pyo-f-ok, .pyo-f-btns .pyo-f-ok:hover { background: #2f6fd6; border-color: #2f6fd6; color: #fff; }

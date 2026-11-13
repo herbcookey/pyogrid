@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>주간 주문·출고 현황 (PyoGrid 데모)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../dist/pyogrid.css">
+  <style>
+    body { background: #fff; }
+    .wk-wrap { padding: 0 2px; }
+    .wk-search label { font-weight: normal; margin-right: 10px; }
+    .wk-search select, .wk-search input[type=date] { height: 28px; padding: 2px 6px; }
+    .wk-week-nav { display: inline-flex; align-items: center; gap: 4px; }
+    .wk-week-range { margin-left: 6px; color: #555; font-size: 12px; }
+    .wk-week-range strong { color: #222; }
+    .wk-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .wk-card { min-width: 130px; padding: 6px 12px; border: 1px solid #ddd; border-radius: 3px; background: #fafafa; }
+    .wk-card .wk-label { font-size: 11px; color: #777; }
+    .wk-card .wk-value { font-size: 18px; font-weight: 700; color: #222; }
+    .wk-card.wk-accent { border-color: #f0ad4e; background: #fff8ec; }
+    .wk-card.wk-accent .wk-value { color: #c77700; }
+    .wk-note { margin-left: 10px; font-size: 11px; color: #667085; }
+
+    #gridWrap .wk-backlog-cell { color: #c9302c !important; font-weight: 700; }
+    #gridWrap .wk-carry-cell { background: #fff6d9 !important; font-weight: 700; }
+    #gridWrap .wk-total-cell { background: #eaf4ff !important; font-weight: 700; }
+    #gridWrap .wk-over-cell { color: #c9302c !important; }
+  </style>
+</head>
+<body>
+<div class="container-fluid wk-wrap">
+  <div class="wk-search">
+    <label>
+      기준 주차
+      <span class="wk-week-nav">
+        <button type="button" id="btnPrevWeek" class="btn btn-default btn-xs" title="이전 주">&#9664;</button>
+        <input type="date" id="baseDate">
+        <button type="button" id="btnNextWeek" class="btn btn-default btn-xs" title="다음 주">&#9654;</button>
+      </span>
+      <span class="wk-week-range">이번 주 <strong id="curWeekLabel"></strong> &rarr; 다음 주 <strong id="nextWeekLabel"></strong></span>
+    </label>
+    <label>
+      매장
+      <select id="storeFilter" style="width:120px;">
+        <option value="">전체</option>
+        <option value="SEOUL">서울점</option>
+        <option value="BUSAN">부산점</option>
+      </select>
+    </label>
+    <label>분류 <select id="categoryFilter" style="width:110px;"><option value="">전체</option></select></label>
+    <label>분류 그룹 <select id="groupFilter" style="width:110px;"><option value="">전체</option></select></label>
+    <label>담당자 <select id="ownerFilter" style="width:110px;"><option value="">전체</option></select></label>
+    <label><input type="checkbox" id="chkBacklogOnly"> 미출고만</label>
+    <label>행 수
+      <select id="rowCount">
+        <option value="6">6</option>
+        <option value="300" selected>300</option>
+        <option value="50000">50,000</option>
+      </select>
+    </label>
+    <button id="btnSearch" class="btn btn-info btn-sm">조회</button>
+    <button id="btnExcelDownload" class="btn btn-success btn-sm" style="margin-left:6px;">엑셀 다운</button>
+    <button id="btnResetState" class="btn btn-default btn-sm" style="margin-left:6px;" title="기억한 컬럼 너비·정렬 지우기">화면 설정 초기화</button>
+    <span class="wk-note">가상 데이터 · 헤더 ▾ 필터, 이월 수량 편집·붙여넣기·Ctrl+Z, 합계 행, 엑셀, 너비·정렬 기억</span>
+  </div>
+
+  <div class="wk-summary">
+    <div class="wk-card"><div class="wk-label">상품 수</div><div class="wk-value" id="sumItemCount">0</div></div>
+    <div class="wk-card"><div class="wk-label">이번 주 주문</div><div class="wk-value" id="sumOrder">0</div></div>
+    <div class="wk-card"><div class="wk-label">이번 주 출고</div><div class="wk-value" id="sumShip">0</div></div>
+    <div class="wk-card"><div class="wk-label">출고율</div><div class="wk-value" id="sumShipRate">-</div></div>
+    <div class="wk-card wk-accent"><div class="wk-label">이월 수량 (선택 기준)</div><div class="wk-value" id="sumCarry">0</div></div>
+  </div>
+
+  <div id="gridWrap" style="height:400px;"></div>
+</div>
+
+<script src="shared/weekly-data.js"></script>
+<!-- 엑셀 내보내기용 SheetJS (npm install로 받은 사본. CDN을 써도 된다) -->
+<script src="../node_modules/xlsx/dist/xlsx.full.min.js"></script>
+<script src="../dist/pyogrid.js"></script>
+<script>
+  var D = window.WeeklyData;
+  var $ = function (id) { return document.getElementById(id); };
+  var allRows = [];
+  var nf = new Intl.NumberFormat("ko-KR");
+
+  function buildColumns(info) {
+    var num = { align: "right", formatter: "money", width: 80 };
+    var ext = function (a, b, c) { return Object.assign({}, a, b, c || {}); };
+    return [
+      { key: "OWNER", label: "담당자", width: 70, align: "center" },
+      { key: "SKU", label: "상품 코드", width: 120, align: "center" },
+      { key: "BARCODE", label: "바코드", width: 110, align: "center" },
+      { key: "VENDOR_CODE", label: "공급처 코드", width: 110, align: "center" },
+      { key: "CHANNEL", label: "판매처", width: 80, align: "center" },
+      { key: "REGION", label: "지역", width: 70, align: "center" },
+      { key: "CATEGORY", label: "분류", width: 70, align: "center" },
+      { key: "CATEGORY_GROUP", label: "분류 그룹", width: 90, align: "center" },
+      { label: "이번 주 " + info.curWeekNo, columns: [
+        ext({ key: "ORDER_QTY", label: "주문" }, num),
+        ext({ key: "SHIP_QTY", label: "출고" }, num),
+        ext({ key: "BACKLOG_QTY", label: "미출고", cellClass: function (c) { return c.row.BACKLOG_QTY > 0 ? "wk-backlog-cell" : ""; } }, num)
+      ] },
+      ext({ key: "CARRY_QTY", label: "이월 수량", editor: { type: "number" }, cellClass: function (c) {
+        return "wk-carry-cell" + (c.row.CARRY_QTY > c.row.BACKLOG_QTY ? " wk-over-cell" : "");
+      } }, num, { width: 90 }),
+      { label: "다음 주 " + info.nextWeekNo, columns: [
+        ext({ key: "NEXT_ORDER", label: "예정 주문" }, num),
+        ext({ key: "NEXT_TOTAL", label: "조정 후", cellClass: "wk-total-cell" }, num)
+      ] },
+      { key: "STATUS", label: "상태", width: 80, align: "center" }
+    ];
+  }
+
+  var grid = new PyoGrid($("gridWrap"), {
+    rowSelector: true,
+    multipleSelect: true,
+    frozenColumns: 3,
+    sortable: true,
+    filter: true,
+    stateKey: "weekly-grid",
+    sheetName: "주간 출고",
+    headerAlign: "center",
+    footSum: [[
+      { label: "합계", colspan: 8, align: "center" },
+      { key: "ORDER_QTY", collector: "sum", formatter: "money", align: "right" },
+      { key: "SHIP_QTY", collector: "sum", formatter: "money", align: "right" },
+      { key: "BACKLOG_QTY", collector: "sum", formatter: "money", align: "right" },
+      { key: "CARRY_QTY", collector: "sum", formatter: "money", align: "right" },
+      { key: "NEXT_ORDER", collector: "sum", formatter: "money", align: "right" },
+      { key: "NEXT_TOTAL", collector: "sum", formatter: "money", align: "right" },
+      { label: "" }
+    ]],
+    columns: []
+  });
+  window.grid = grid; // 테스트·콘솔 확인용
+  grid.on("filterchange", refreshSummary);
+  // 행 선택이 바뀌면 이월 합계(선택 기준)를 다시 계산
+  grid.on("selectionchange", refreshSummary);
+  // 이월 수량 편집: 0 이상 정수로 정리하고 다음 주 조정 수량을 다시 계산
+  grid.on("change", function (e) {
+    if (e.key !== "CARRY_QTY") return;
+    applyCarryQty(e.row);
+    if (e.batch) return; // Delete 같은 일괄 변경은 batchchange에서 한 번에 다시 그린다
+    grid.refreshRow(e.rowIndex);
+    refreshSummary();
+  });
+  grid.on("batchchange", function () { grid.refresh(); refreshSummary(); });
+
+  function applyCarryQty(item) {
+    var qty = Math.max(0, Math.floor(Number(item.CARRY_QTY) || 0));
+    item.CARRY_QTY = qty;
+    item.NEXT_TOTAL = (Number(item.NEXT_ORDER) || 0) + qty;
+  }
+
+  function refreshWeekLabels() {
+    var info = D.getWeekInfo($("baseDate").value);
+    $("curWeekLabel").textContent = info.curLabel;
+    $("nextWeekLabel").textContent = info.nextLabel;
+    return info;
+  }
+
+  function load() {
+    var info = refreshWeekLabels();
+    grid.setColumns(buildColumns(info)); // 주차가 헤더에 들어가므로 조회마다 컬럼을 새로 만든다
+    allRows = D.buildSampleRows(Number($("rowCount").value)).map(D.normalizeRow);
+    fillFilterOptions(allRows);
+    applyClientFilter();
+  }
+
+  function applyClientFilter() {
+    var backlogOnly = $("chkBacklogOnly").checked, store = $("storeFilter").value, category = $("categoryFilter").value,
+      group = $("groupFilter").value, owner = $("ownerFilter").value;
+    var rows = allRows.filter(function (r) {
+      if (backlogOnly && !(r.BACKLOG_QTY > 0)) return false;
+      if (store && r.STORE !== store) return false;
+      if (category && r.CATEGORY !== category) return false;
+      if (group && r.CATEGORY_GROUP !== group) return false;
+      if (owner && r.OWNER !== owner) return false;
+      return true;
+    });
+    grid.setData(rows);
+    refreshSummary();
+    resizeGrid();
+  }
+
+  function fillFilterOptions(rows) {
+    [["categoryFilter", "CATEGORY"], ["groupFilter", "CATEGORY_GROUP"], ["ownerFilter", "OWNER"]].forEach(function (pair) {
+      var sel = $(pair[0]), current = sel.value, values = {};
+      rows.forEach(function (r) { if (r[pair[1]]) values[r[pair[1]]] = true; });
+      while (sel.options.length > 1) sel.remove(1);
+      Object.keys(values).sort().forEach(function (v) { sel.add(new Option(v, v)); });
+      if (current && values[current]) sel.value = current;
+    });
+  }
+
+  function refreshSummary() {
+    var list = grid.getRows(), order = 0, ship = 0, carry = 0;
+    list.forEach(function (r) { order += r.ORDER_QTY; ship += r.SHIP_QTY; if (r.__selected__) carry += Number(r.CARRY_QTY) || 0; });
+    $("sumItemCount").textContent = nf.format(list.length);
+    $("sumOrder").textContent = nf.format(order);
+    $("sumShip").textContent = nf.format(ship);
+    $("sumShipRate").textContent = order > 0 ? (Math.round(ship / order * 1000) / 10) + "%" : "-";
+    $("sumCarry").textContent = nf.format(carry);
+  }
+
+  function resizeGrid() {
+    var el = $("gridWrap");
+    var h = Math.max(240, window.innerHeight - el.getBoundingClientRect().top - 10);
+    el.style.height = h + "px"; // PyoGrid는 크기 변화를 스스로 감지한다
+  }
+
+  $("btnSearch").addEventListener("click", load);
+  $("btnExcelDownload").addEventListener("click", function () {
+    var info = D.getWeekInfo($("baseDate").value);
+    grid.exportExcel("주간출고_" + info.curWeekNo + "_" + info.curStart + ".xlsx");
+  });
+  $("btnResetState").addEventListener("click", function () { grid.resetState(); load(); });
+  $("rowCount").addEventListener("change", load);
+  ["chkBacklogOnly", "storeFilter", "categoryFilter", "groupFilter", "ownerFilter"].forEach(function (id) {
+    $(id).addEventListener("change", function () { if (allRows.length) applyClientFilter(); });
+  });
+  $("baseDate").addEventListener("change", load);
+  $("btnPrevWeek").addEventListener("click", function () { $("baseDate").value = D.formatDate(D.addDays(D.parseDate($("baseDate").value), -7)); load(); });
+  $("btnNextWeek").addEventListener("click", function () { $("baseDate").value = D.formatDate(D.addDays(D.parseDate($("baseDate").value), 7)); load(); });
+  window.addEventListener("resize", resizeGrid);
+
+  $("baseDate").value = new URLSearchParams(location.search).get("date") || D.formatDate(new Date());
+  if (new URLSearchParams(location.search).get("rows")) $("rowCount").value = new URLSearchParams(location.search).get("rows");
+  load();
+</script>
+</body>
+</html>

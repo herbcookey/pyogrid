@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>PyoGrid 그룹 합계·트리·셀 병합</title>
+  <link rel="stylesheet" href="../dist/pyogrid.css">
+  <style>
+    body { margin: 8px; font-family: sans-serif; font-size: 13px; }
+    h4 { margin: 14px 0 4px; font-size: 13px; color: #344054; }
+    .box { height: 300px; width: 760px; }
+  </style>
+</head>
+<body>
+<h4>그룹 합계 (grouping: 매장 → 구역, 소계 행) + 합계 행 (footSum)</h4>
+<div id="group" class="box"></div>
+<h4>트리 (부모 키 parentId, 펼침 단추 클릭)</h4>
+<div id="tree" class="box"></div>
+<h4>셀 병합 (mergeCells: 대분류, 중분류)</h4>
+<div id="merge" class="box" style="height:240px"></div>
+<script src="../dist/pyogrid.js"></script>
+<script>
+  // 그룹 합계: 가상 매장 재고
+  var stores = ["서울점", "부산점"], sections = ["A구역", "B구역", "C구역"], g = [];
+  for (var i = 0; i < 36; i++) g.push({ STORE: stores[i % 2], SECTION: sections[i % 3], ITEM: "ITEM-" + (100 + i), QTY: (i * 37) % 200 + 10, AMT: ((i * 7919) % 90000) + 1000 });
+  window.groupGrid = new PyoGrid(document.getElementById("group"), {
+    lineNumber: true, headerAlign: "center", sortable: true, filter: true,
+    columns: [
+      { key: "STORE", label: "매장", width: 80, align: "center" },
+      { key: "SECTION", label: "구역", width: 80, align: "center" },
+      { key: "ITEM", label: "상품", width: 120, align: "center" },
+      { key: "QTY", label: "수량", width: 100, align: "right", formatter: "money", editor: { type: "number" } },
+      { key: "AMT", label: "금액", width: "*", align: "right", formatter: "money" }
+    ],
+    grouping: {
+      by: ["STORE", "SECTION"],
+      columns: [
+        { label: function () { return this.groupBy.labels.join(" / ") + (this.groupBy.keys.length === 1 ? " 합계" : " 소계"); }, colspan: 3, align: "center" },
+        { key: "QTY", collector: "sum", formatter: "money", align: "right" },
+        { key: "AMT", collector: "sum", formatter: "money", align: "right" }
+      ]
+    },
+    footSum: [[
+      { label: "총계", colspan: 3, align: "center" },
+      { key: "QTY", collector: "sum", formatter: "money", align: "right" },
+      { key: "AMT", collector: "avg", formatter: "money", align: "right" }
+    ]]
+  });
+  groupGrid.setData(g);
+
+  // 트리: 상품 분류
+  var t = [
+    { id: "C-100", parentId: "", name: "문구", count: 3 },
+    { id: "C-110", parentId: "C-100", name: "필기구", count: 2 },
+    { id: "C-111", parentId: "C-110", name: "볼펜", count: 24 },
+    { id: "C-112", parentId: "C-110", name: "연필", count: 12 },
+    { id: "C-120", parentId: "C-100", name: "지류", count: 2 },
+    { id: "C-121", parentId: "C-120", name: "노트", count: 30 },
+    { id: "C-122", parentId: "C-120", name: "메모지", count: 18 },
+    { id: "C-200", parentId: "", name: "생활", count: 1, collapse: true },
+    { id: "C-210", parentId: "C-200", name: "가방", count: 9 }
+  ];
+  window.treeGrid = new PyoGrid(document.getElementById("tree"), {
+    rowSelector: true, headerAlign: "center",
+    tree: { parentKey: "parentId", selfKey: "id", indentWidth: 14 },
+    columns: [
+      { key: "id", label: "분류 코드", width: 220, treeControl: true },
+      { key: "name", label: "분류명", width: 200 },
+      { key: "count", label: "상품 수", width: 90, align: "right", editor: { type: "number" } }
+    ]
+  });
+  treeGrid.setData(t);
+
+  // 셀 병합: 메뉴판
+  var m = [
+    { KIND: "음료", SUB: "커피", NAME: "아메리카노", PRICE: "4,000원" },
+    { KIND: "음료", SUB: "커피", NAME: "카페라테", PRICE: "4,500원" },
+    { KIND: "음료", SUB: "차", NAME: "녹차", PRICE: "4,000원" },
+    { KIND: "디저트", SUB: "케이크", NAME: "치즈케이크", PRICE: "6,000원" },
+    { KIND: "디저트", SUB: "케이크", NAME: "초코케이크", PRICE: "6,500원" },
+    { KIND: "디저트", SUB: "쿠키", NAME: "버터쿠키", PRICE: "2,500원" }
+  ];
+  window.mergeGrid = new PyoGrid(document.getElementById("merge"), {
+    headerAlign: "center", mergeCells: ["KIND", "SUB"],
+    columns: [
+      { key: "KIND", label: "대분류", width: 90, align: "center" },
+      { key: "SUB", label: "중분류", width: 100, align: "center" },
+      { key: "NAME", label: "메뉴", width: 120 },
+      { key: "PRICE", label: "가격", width: "*", align: "right" }
+    ]
+  });
+  mergeGrid.setData(m);
+</script>
+</body>
+</html>

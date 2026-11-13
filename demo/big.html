@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>PyoGrid 대량 데이터</title>
+  <link rel="stylesheet" href="../dist/pyogrid.css">
+  <style>body { margin: 8px; font-family: sans-serif; } #info { font-size: 12px; color: #555; margin-bottom: 6px; }</style>
+</head>
+<body>
+<div id="info"></div>
+<div id="grid" style="height:600px;"></div>
+<script src="../dist/pyogrid.js"></script>
+<script>
+  var q = new URLSearchParams(location.search);
+  var ROWS = Number(q.get("rows")) || 50000, COLS = Number(q.get("cols")) || 30;
+  var columns = [
+    { key: "id", label: "번호", width: 70, align: "right" },
+    { key: "name", label: "이름", width: 120 }
+  ];
+  var groups = [];
+  for (var g = 0; g < Math.ceil((COLS - 2) / 4); g++) {
+    var children = [];
+    for (var k = 0; k < 4 && 2 + g * 4 + k < COLS; k++) {
+      var c = g * 4 + k;
+      children.push({ key: "c" + c, label: "값 " + c, width: 90, align: "right", formatter: "money" });
+    }
+    groups.push({ label: "묶음 " + (g + 1), columns: children });
+  }
+  columns = columns.concat(groups);
+
+  var t0 = performance.now();
+  var rows = new Array(ROWS);
+  for (var i = 0; i < ROWS; i++) {
+    var r = { id: i + 1, name: "항목-" + (i + 1) };
+    for (var c = 0; c < COLS - 2; c++) r["c" + c] = (i * 31 + c * 977) % 100000;
+    rows[i] = r;
+  }
+  var t1 = performance.now();
+  var grid = new PyoGrid(document.getElementById("grid"), { columns: columns, frozenColumns: 2, lineNumber: true, lineNumberWidth: 50, headerAlign: "center" });
+  grid.setData(rows);
+  var t2 = performance.now();
+  window.grid = grid;
+  window.timing = { makeData: t1 - t0, initAndSetData: t2 - t1 };
+  document.getElementById("info").textContent = ROWS.toLocaleString() + "행 × " + COLS + "열 · 데이터 생성 " +
+    Math.round(t1 - t0) + "ms · 그리드 생성+setData " + Math.round(t2 - t1) + "ms";
+</script>
+</body>
+</html>

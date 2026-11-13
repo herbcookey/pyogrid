@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>PyoGrid 서버 페이징·서버 정렬</title>
+  <link rel="stylesheet" href="../dist/pyogrid.css">
+  <style>body { margin: 8px; font-family: sans-serif; font-size: 13px; } #log { margin-top: 6px; color: #555; font-size: 12px; }</style>
+</head>
+<body>
+<p>서버 페이징(<code>setData(rows, page)</code> + <code>pagechange</code>)과 서버 정렬(<code>remoteSort</code> + <code>sortchange</code>)을 흉내 낸 페이지입니다.</p>
+<div id="grid" style="height:420px; width: 760px;"></div>
+<div id="log"></div>
+<script src="../dist/pyogrid.js"></script>
+<script>
+  // 가짜 서버: 1,234건
+  var ALL = [];
+  for (var i = 0; i < 1234; i++) ALL.push({ id: i + 1, name: "품목 " + (i + 1), qty: (i * 7919) % 5000, date: "2026-11-" + String(1 + (i % 28)).padStart(2, "0") });
+  var PAGE_SIZE = 50, sort = [];
+
+  function fetchPage(pageNo) {
+    var list = sort.length ? PyoGrid.sortRows(ALL, sort) : ALL;
+    var rows = list.slice(pageNo * PAGE_SIZE, (pageNo + 1) * PAGE_SIZE).map(function (r) { return Object.assign({}, r); });
+    return { rows: rows, page: { currentPage: pageNo, pageSize: PAGE_SIZE, totalElements: ALL.length, totalPages: Math.ceil(ALL.length / PAGE_SIZE) } };
+  }
+
+  var grid = new PyoGrid(document.getElementById("grid"), {
+    lineNumber: true, rowSelector: true, sortable: true, remoteSort: true, headerAlign: "center",
+    pageIcons: { first: "|«", prev: "«", next: "»", last: "»|" },
+    columns: [
+      { key: "id", label: "번호", width: 70, align: "right" },
+      { key: "name", label: "이름", width: "*" },
+      { key: "qty", label: "수량", width: 100, align: "right", formatter: "money" },
+      { key: "date", label: "일자", width: 110, align: "center" }
+    ]
+  });
+  window.grid = grid;
+  function load(pageNo) {
+    var res = fetchPage(pageNo);
+    grid.setData(res.rows, res.page);
+    document.getElementById("log").textContent = "불러온 페이지: " + (pageNo + 1) + " / 정렬: " + JSON.stringify(sort);
+  }
+  grid.on("pagechange", function (e) { load(e.page); });
+  grid.on("sortchange", function (e) { sort = e.sort; load(0); });
+  load(0);
+</script>
+</body>
+</html>

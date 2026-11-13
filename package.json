@@ -1,0 +1,62 @@
+{
+  "name": "pyogrid",
+  "version": "0.7.0",
+  "description": "외부 의존성 없는 순수 JavaScript 데이터 그리드 (가상 스크롤, 셀 편집, Excel 붙여넣기, 필터, 합계, 트리, xlsx 내보내기)",
+  "keywords": [
+    "grid",
+    "datagrid",
+    "table",
+    "virtual-scroll",
+    "spreadsheet",
+    "vanilla-js"
+  ],
+  "author": "Donghyeon Shin",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/pyogrid.esm.js",
+  "module": "dist/pyogrid.esm.js",
+  "types": "dist/types/index.d.ts",
+  "unpkg": "dist/pyogrid.min.js",
+  "jsdelivr": "dist/pyogrid.min.js",
+  "style": "dist/pyogrid.css",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/pyogrid.esm.js",
+      "default": "./dist/pyogrid.esm.js"
+    },
+    "./css": "./dist/pyogrid.css",
+    "./min.css": "./dist/pyogrid.min.css",
+    "./global": "./dist/pyogrid.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "*.css",
+    "./dist/pyogrid.js",
+    "./dist/pyogrid.min.js"
+  ],
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "types": "tsc -p tsconfig.types.json",
+    "test": "node tools/vitest.mjs run",
+    "test:unit": "node tools/vitest.mjs run",
+    "test:e2e": "node tools/build.mjs && playwright test",
+    "test:all": "npm run typecheck && npm run test:unit && npm run test:e2e",
+    "demo": "node tools/serve.mjs",
+    "prepublishOnly": "npm run typecheck && npm run test:unit && npm run build"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "esbuild": "^0.28.2",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}
