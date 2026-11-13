@@ -1006,6 +1006,8 @@ npm run test:all     # typecheck, unit, and e2e
 npm run demo         # demo server at http://127.0.0.1:5179/demo/
 ```
 
+To release, bump the version with `npm version patch` (or `minor`, `major`). It also updates the version in `src/index.js` and this README, then commits and tags. `npm publish` refuses to run if those versions don't match `package.json`. The CDN URLs above (`@0.8`) are changed by hand, only for releases that change the API.
+
 The e2e tests use your installed Chrome. Download Firefox and WebKit for Playwright once with `npx playwright install firefox webkit`. To run one browser: `npx playwright test --project=firefox` (`chrome`, `firefox`, or `webkit`).
 
 Source layout:
@@ -1020,7 +1022,7 @@ src/
   css/pyogrid.css
 test/unit, test/e2e         unit / browser tests
 docs/                       design notes (Korean)
-tools/                      build, test runner, demo server, performance probes, screenshots
+tools/                      build, test runner, version sync, demo server, performance probes, screenshots
 ```
 
 Design decisions are written up in [docs/design.md](docs/design.md) (in Korean).
