@@ -1,0 +1,78 @@
+# GitHub Pages 배포: 그리드를 빌드하고, 문서(Jekyll)와 데모를 함께 올린다.
+# 사이트 구성 (https://herbcookey.github.io/pyogrid/)
+#   /                     README.md (Jekyll)
+#   /README.ko.html       README.ko.md
+#   /docs/design.html     docs/design.md
+#   /demo/                데모 페이지 (빌드한 dist/를 불러온다)
+#   /dist/                npm run build 결과
+#   /node_modules/xlsx/dist/xlsx.full.min.js   weekly 데모의 엑셀 내보내기용 SheetJS
+# 저장소 Settings → Pages → Source를 "GitHub Actions"로 바꿔야 이 워크플로가 배포한다.
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 한 번에 하나만. 진행 중인 배포는 끊지 않는다.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the grid
+        run: npm run build
+
+      - uses: actions/configure-pages@v6
+
+      - name: Build the docs with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      # jekyll-build-pages가 만든 _site는 root 소유라 그 안에 쓰지 않고 새 폴더에 모은다.
+      - name: Add the build output and demos
+        run: |
+          set -euo pipefail
+          mkdir site
+          cp -r _site/. site/
+          cp -r dist site/dist
+          cp -r demo site/demo
+          mkdir -p site/node_modules/xlsx/dist
+          cp node_modules/xlsx/dist/xlsx.full.min.js site/node_modules/xlsx/dist/
+          test -f site/index.html
+          test -f site/dist/pyogrid.js
+          test -f site/demo/index.html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

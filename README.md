@@ -897,6 +897,8 @@ Main classes: `.pyo-row` (`.pyo-selected`, `.pyo-group-row`), `.pyo-cell` (`.pyo
 
 ## Demos
 
+Try them online at **[herbcookey.github.io/pyogrid/demo/](https://herbcookey.github.io/pyogrid/demo/)**, or run them locally:
+
 ```bash
 git clone https://github.com/herbcookey/pyogrid.git
 cd pyogrid

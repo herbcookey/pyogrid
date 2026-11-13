@@ -14,6 +14,8 @@
 
 옵션, 컬럼 정의, 메서드, 이벤트 같은 상세 레퍼런스는 영어 문서([README.md](README.md))에만 있습니다. 아래 [자세한 문서](#자세한-문서)에 절별 링크를 모아 두었습니다.
 
+데모는 **[herbcookey.github.io/pyogrid/demo/](https://herbcookey.github.io/pyogrid/demo/)** 에서 바로 써 볼 수 있습니다.
+
 ## 목차
 
 - [주요 기능](#주요-기능)
