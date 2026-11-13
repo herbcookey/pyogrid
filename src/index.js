@@ -11,4 +11,4 @@ export { userCollectors } from "./features/summary.js";
 export { collectors } from "./features/view.js";
 export { parseTSV, buildTSV } from "./features/clipboard.js";
 export { toXlsxCell, htmlToText } from "./features/excel.js";
-export const version = "0.7.1";
+export const version = "0.7.2";

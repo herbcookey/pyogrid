@@ -1,6 +1,6 @@
 {
   "name": "pyogrid",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "외부 의존성 없는 순수 JavaScript 데이터 그리드 (가상 스크롤, 셀 편집, Excel 붙여넣기, 필터, 합계, 트리, xlsx 내보내기)",
   "keywords": [
     "grid",
