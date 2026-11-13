@@ -171,6 +171,7 @@ import "pyogrid/css";
 export function Grid({ columns, rows }) {
   const el = useRef(null);
   const grid = useRef(null);
+  const style = { height: 400 };
 
   useEffect(() => {
     grid.current = new PyoGrid(el.current, { columns });
@@ -181,7 +182,7 @@ export function Grid({ columns, rows }) {
     grid.current.setData(rows);
   }, [rows]);
 
-  return <div ref={el} style={{ height: 400 }} />;
+  return <div ref={el} style={style} />;
 }
 ```
 

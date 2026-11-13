@@ -1,0 +1,24 @@
+# GitHub Pages (Jekyll) 설정.
+# 사이트 주소: https://herbcookey.github.io/pyogrid/
+# README.md가 첫 화면(index), README.ko.md는 /README.ko.html, docs/design.md는 /docs/design.html이 된다.
+
+title: pyogrid
+description: A fast, dependency-free JavaScript data grid with virtual scrolling, spreadsheet-style editing, and IME-friendly input.
+lang: en
+theme: jekyll-theme-primer
+
+# 사이트에 올리지 않을 파일. 문서(README, docs/)와 그림(docs/images/)만 남긴다.
+# demo/는 빌드 결과물(dist/)을 불러오는데 dist/는 저장소에 없으므로 Pages에서는 동작하지 않는다.
+exclude:
+  - src/
+  - test/
+  - tools/
+  - demo/
+  - node_modules/
+  - dist/
+  - package.json
+  - package-lock.json
+  - tsconfig.json
+  - tsconfig.types.json
+  - vitest.config.js
+  - playwright.config.js
