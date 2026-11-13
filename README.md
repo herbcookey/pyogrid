@@ -18,6 +18,7 @@
 
 - [빠른 시작](#빠른-시작)
 - [설치와 빌드](#설치와-빌드)
+- [프레임워크에서 쓰기 (React·Vue·Angular)](#프레임워크에서-쓰기-reactvueangular)
 - [기본 개념](#기본-개념)
 - [그리드 옵션](#그리드-옵션)
 - [컬럼 옵션](#컬럼-옵션)
@@ -131,6 +132,108 @@ npm run build
 ```html
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 ```
+
+## 프레임워크에서 쓰기 (React·Vue·Angular)
+
+PyoGrid는 DOM을 직접 다루므로 프레임워크와 관계없이 같은 방식으로 씁니다.
+
+1. 그리드를 넣을 빈 `div`를 둡니다. 높이가 있어야 합니다.
+2. 화면에 붙은 뒤(mount) `new PyoGrid(div, 옵션)`으로 만듭니다.
+3. 화면에서 사라질 때(unmount) `grid.destroy()`를 부릅니다.
+
+`import`는 브라우저가 없는 환경에서도 오류가 나지 않으므로 SSR(Next.js, Nuxt, Angular SSR)에서도 그대로 가져올 수 있습니다. 그리드를 만드는 일만 mount 뒤에 합니다.
+
+**React**
+
+```jsx
+import { useEffect, useRef } from "react";
+import { PyoGrid } from "pyogrid";
+import "pyogrid/css";
+
+export function Grid({ columns, rows }) {
+  const el = useRef(null);
+  const grid = useRef(null);
+
+  useEffect(() => {
+    grid.current = new PyoGrid(el.current, { columns });
+    return () => grid.current.destroy(); // StrictMode에서 두 번 mount돼도 정리된다
+  }, []);
+
+  useEffect(() => {
+    grid.current.setData(rows);
+  }, [rows]);
+
+  return <div ref={el} style={{ height: 400 }} />;
+}
+```
+
+**Vue 3**
+
+```vue
+<script setup>
+import { onMounted, onBeforeUnmount, ref, toRaw, watch } from "vue";
+import { PyoGrid } from "pyogrid";
+import "pyogrid/css";
+
+const props = defineProps(["columns", "rows"]);
+const el = ref(null);
+let grid = null; // ref()로 감싸지 않는다
+
+onMounted(() => {
+  grid = new PyoGrid(el.value, { columns: props.columns });
+  grid.setData(toRaw(props.rows));
+});
+watch(() => props.rows, (rows) => grid.setData(toRaw(rows)));
+onBeforeUnmount(() => grid.destroy());
+</script>
+
+<template>
+  <div ref="el" style="height: 400px" />
+</template>
+```
+
+**Angular**
+
+```ts
+import { AfterViewInit, Component, ElementRef, Input, NgZone, OnDestroy, ViewChild } from "@angular/core";
+import { PyoGrid } from "pyogrid";
+
+@Component({
+  selector: "app-grid",
+  template: `<div #host style="height: 400px"></div>`,
+})
+export class GridComponent implements AfterViewInit, OnDestroy {
+  @ViewChild("host") host!: ElementRef<HTMLDivElement>;
+  @Input() columns: any[] = [];
+  @Input() rows: any[] = [];
+  private grid?: PyoGrid;
+
+  constructor(private zone: NgZone) {}
+
+  ngAfterViewInit() {
+    // 스크롤·키 입력마다 변경 감지가 돌지 않게 Angular 밖에서 만든다
+    this.zone.runOutsideAngular(() => {
+      this.grid = new PyoGrid(this.host.nativeElement, { columns: this.columns });
+      this.grid.setData(this.rows);
+    });
+    // 화면 상태를 바꾸는 이벤트 처리만 Angular 안으로 돌려보낸다
+    this.grid!.on("change", (e: any) => this.zone.run(() => { /* ... */ }));
+  }
+
+  ngOnDestroy() {
+    this.grid?.destroy();
+  }
+}
+```
+
+Angular의 CSS는 `angular.json`의 `styles`에 `node_modules/pyogrid/dist/pyogrid.css`를 넣습니다.
+
+**주의할 점**
+
+- **데이터는 그리드가 들고 있게 둡니다.** 셀을 편집하면 넘긴 행 객체의 값이 바로 바뀝니다 ([기본 개념](#기본-개념)). React state나 Vue 반응형 데이터로 같은 행을 따로 관리하지 말고, 저장할 때 `getModifiedRows()`·`getDeletedRows()`로 바뀐 행을 꺼냅니다.
+- **Vue에서는 `toRaw`로 넘깁니다.** 반응형 Proxy를 그대로 넘기면 편집할 때마다 반응성 처리가 돌아 느려집니다. 그리드 인스턴스도 `ref()`에 넣지 않습니다.
+- **셀 안은 HTML 문자열로 그립니다.** 셀 내용은 `formatter`가 돌려주는 HTML이고, 셀 안에 React·Vue 컴포넌트를 넣는 방식은 지원하지 않습니다.
+- **`setData`는 선택·실행 취소 기록을 비웁니다.** 편집할 때마다 부모의 `rows`를 새 배열로 바꿔 다시 넘기면 편집 상태가 초기화되니, 데이터를 새로 불러올 때만 `rows`를 바꿉니다.
 
 ## 기본 개념
 
