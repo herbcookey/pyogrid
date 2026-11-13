@@ -1,6 +1,9 @@
 // @ts-check
 import { escapeHtml } from "../util.js";
 import { toDate, formatDate } from "./types.js";
+import { locales } from "../core/locales.js";
+
+/** @typedef {import("../core/locales.js").Messages} Messages */
 
 /**
  * 편집기 팝업(선택 목록, 달력). document.body에 붙이고 position:fixed로 셀 아래에 둔다.
@@ -47,8 +50,9 @@ export class Dropdown extends Popup {
    * @param {{value:any, text:string}[]} options
    * @param {any} current
    * @param {(value: any) => void} onPick
+   * @param {Messages} [messages]
    */
-  constructor(options, current, onPick) {
+  constructor(options, current, onPick, messages = /** @type {Messages} */ (locales.en)) {
     super("pyo-dropdown");
     this.options = options;
     this.onPick = onPick;
@@ -57,7 +61,7 @@ export class Dropdown extends Popup {
       ? options
           .map((o, i) => `<div class="pyo-option" role="option" data-i="${i}">${escapeHtml(o.text) || "&nbsp;"}</div>`)
           .join("")
-      : '<div class="pyo-option-empty">항목 없음</div>';
+      : `<div class="pyo-option-empty">${escapeHtml(messages.noOptions)}</div>`;
     this.index = options.findIndex((o) => String(o.value) === String(current));
     this._paint();
     this.el.addEventListener("click", (e) => {
@@ -115,16 +119,16 @@ export class Dropdown extends Popup {
  * 달력
  * ---------------------------------------------------------------- */
 
-const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
-
 export class Calendar extends Popup {
   /**
    * @param {any} value  "yyyy-MM-dd"
    * @param {(value: string) => void} onPick
+   * @param {Messages} [messages]
    */
-  constructor(value, onPick) {
+  constructor(value, onPick, messages = /** @type {Messages} */ (locales.en)) {
     super("pyo-calendar");
     this.onPick = onPick;
+    this.m = messages;
     this.selected = toDate(value);
     const base = this.selected || new Date();
     this.year = base.getFullYear();
@@ -165,12 +169,13 @@ export class Calendar extends Popup {
     const start = new Date(this.year, this.month, 1 - first.getDay());
     const today = formatDate(new Date());
     const sel = this.selected ? formatDate(this.selected) : "";
+    const m = this.m;
     let s =
-      `<div class="pyo-cal-head"><button type="button" class="pyo-cal-nav" data-cal="prev" aria-label="이전 달">‹</button>` +
-      `<span class="pyo-cal-title">${this.year}년 ${this.month + 1}월</span>` +
-      `<button type="button" class="pyo-cal-nav" data-cal="next" aria-label="다음 달">›</button></div>` +
+      `<div class="pyo-cal-head"><button type="button" class="pyo-cal-nav" data-cal="prev" aria-label="${escapeHtml(m.prevMonth)}">‹</button>` +
+      `<span class="pyo-cal-title">${escapeHtml(m.calendarTitle(this.year, this.month + 1))}</span>` +
+      `<button type="button" class="pyo-cal-nav" data-cal="next" aria-label="${escapeHtml(m.nextMonth)}">›</button></div>` +
       `<div class="pyo-cal-grid">` +
-      WEEK.map((w, i) => `<span class="pyo-cal-week${i === 0 ? " pyo-sun" : i === 6 ? " pyo-sat" : ""}">${w}</span>`).join("");
+      m.weekdays.map((w, i) => `<span class="pyo-cal-week${i === 0 ? " pyo-sun" : i === 6 ? " pyo-sat" : ""}">${escapeHtml(w)}</span>`).join("");
     for (let i = 0; i < 42; i++) {
       const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
       const v = formatDate(d);
@@ -182,7 +187,7 @@ export class Calendar extends Popup {
       if (v === sel) cls += " pyo-picked";
       s += `<button type="button" class="${cls}" data-cal="day" data-date="${v}">${d.getDate()}</button>`;
     }
-    s += `</div><div class="pyo-cal-foot"><button type="button" class="pyo-cal-today" data-cal="today">오늘</button></div>`;
+    s += `</div><div class="pyo-cal-foot"><button type="button" class="pyo-cal-today" data-cal="today">${escapeHtml(m.today)}</button></div>`;
     this.el.innerHTML = s;
   }
 }

@@ -28,7 +28,7 @@ export class Editing {
 
     const input = document.createElement("textarea");
     input.className = "pyo-input";
-    input.setAttribute("aria-label", "셀 입력");
+    input.setAttribute("aria-label", grid.messages.cellInput);
     input.setAttribute("autocomplete", "off");
     input.setAttribute("autocorrect", "off");
     input.setAttribute("autocapitalize", "off");
@@ -152,17 +152,21 @@ export class Editing {
         input.setSelectionRange(n, n);
       }
       if (info.type.popup === "calendar") {
-        const cal = new Calendar(input.value || value, (v) => {
-          input.value = v;
-          this.commit();
-        });
+        const cal = new Calendar(
+          input.value || value,
+          (v) => {
+            input.value = v;
+            this.commit();
+          },
+          g.messages,
+        );
         this.edit.popup = cal;
         this.placePopup();
       }
     } else if (info.type.kind === "list") {
       input.classList.remove("pyo-input-on");
       if (mode === "edit") input.value = "";
-      const dd = new Dropdown(selectOptions(info.cfg), value, (v) => this.commit({ value: v }));
+      const dd = new Dropdown(selectOptions(info.cfg), value, (v) => this.commit({ value: v }), g.messages);
       this.edit.popup = dd;
       this.position();
       this.placePopup();

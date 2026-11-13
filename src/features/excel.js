@@ -135,7 +135,7 @@ export function toWorksheet(data, XLSX) {
 export function exportXlsx(g, fileName, opts = {}) {
   const XLSX = opts.XLSX || (typeof window !== "undefined" ? /** @type {any} */ (window).XLSX : null);
   if (!XLSX || !XLSX.utils || !isFn(XLSX.writeFile)) {
-    console.warn("[pyogrid] SheetJS(XLSX)가 없어 엑셀로 내보낼 수 없습니다. xlsx.full.min.js를 먼저 불러오세요.");
+    console.warn("[pyogrid] Excel export needs SheetJS (window.XLSX). Load xlsx.full.min.js before calling exportExcel.");
     return false;
   }
   const ws = toWorksheet(buildExportData(g), XLSX);

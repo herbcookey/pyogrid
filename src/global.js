@@ -9,5 +9,6 @@ PyoGrid.sortRows = api.sortRows;
 PyoGrid.formatNumber = api.formatNumber;
 PyoGrid.editors = api.editorTypes;
 PyoGrid.collectors = api.userCollectors;
+PyoGrid.locales = api.locales;
 PyoGrid.util = { getValue: api.getValue, setValue: api.setValue, parseKeyPath: api.parseKeyPath, toNumber: api.toNumber };
 /** @type {any} */ (window).PyoGrid = PyoGrid;

@@ -10,7 +10,8 @@ import { sumRowHtml } from "./features/summary.js";
 import { FilterPopup } from "./features/filter.js";
 import { exportXlsx, buildExportData } from "./features/excel.js";
 import { storageKey, loadState, saveState, removeState } from "./features/state.js";
-import { History, RECORDED_SOURCES, SOURCE_LABEL } from "./features/history.js";
+import { History, RECORDED_SOURCES } from "./features/history.js";
+import { resolveMessages } from "./core/locales.js";
 import { parseTSV, buildTSV, pastePlan, convertPasteValue } from "./features/clipboard.js";
 import { formatNumber } from "./features/pagebar.js";
 import { editorTypes, selectOptions, isChecked, sameValue } from "./editors/types.js";
@@ -68,7 +69,9 @@ import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMer
  * @property {number} [defaultColumnWidth=100]
  * @property {number} [minColumnWidth=10]   너비 조절 최소값
  * @property {boolean} [resizable=true]
- * @property {string|null} [emptyText]
+ * @property {string|null} [emptyText]  데이터가 없을 때 문구. 주지 않으면 locale 문구, null이면 표시 안 함
+ * @property {string} [locale="en"]  화면 문구 언어 ("en", "ko", 또는 PyoGrid.locales에 넣은 이름)
+ * @property {Partial<import("./core/locales.js").Messages>|null} [messages]  화면 문구 일부를 바꾼다
  * @property {number} [overscanRows=6]
  * @property {number} [overscanColumns=2]
  * @property {"left"|"center"|"right"|null} [headerAlign]
@@ -120,7 +123,9 @@ const DEFAULTS = {
   defaultColumnWidth: 100,
   minColumnWidth: 10,
   resizable: true,
-  emptyText: "조회된 데이터가 없습니다.",
+  emptyText: undefined,
+  locale: "en",
+  messages: null,
   overscanRows: 6,
   overscanColumns: 2,
   headerAlign: null,
@@ -141,12 +146,14 @@ export class PyoGrid {
    */
   constructor(target, options = {}) {
     const el = typeof target === "string" ? document.querySelector(target) : target;
-    if (!el || !(el instanceof HTMLElement)) throw new Error("PyoGrid: 대상 요소를 찾을 수 없습니다.");
+    if (!el || !(el instanceof HTMLElement)) throw new Error("PyoGrid: target element not found.");
     this.id = "pyo" + ++uid;
     /** @type {HTMLElement} */
     this.target = el;
     /** @type {Required<GridOptions>} */
     this.options = deepMerge({}, DEFAULTS, options);
+    /** 화면 문구 (locale + messages) */
+    this.messages = resolveMessages(this.options.locale, this.options.messages);
     /** @type {any[]} setData로 받은 순서의 행 */
     this.source = [];
     /** @type {any[]} 화면에 보이는 순서의 행 (정렬 적용) */
@@ -535,6 +542,7 @@ export class PyoGrid {
       values: [...seen],
       label,
       current: cur,
+      messages: this.messages,
       onApply: (allowed) => this.setFilter(key, allowed ? [...allowed] : null),
       onClose: () => {
         this._filterPopup = null;
@@ -878,11 +886,11 @@ export class PyoGrid {
     if (this.editing.active) this.editing.cancel();
     const entry = this.history.popUndo();
     if (!entry) {
-      this._flash("되돌릴 작업이 없습니다");
+      this._flash(this.messages.nothingToUndo);
       return false;
     }
     const n = this._applyHistory(entry, "undo");
-    this._flash("실행 취소: " + (SOURCE_LABEL[entry.source] || "") + " " + formatNumber(n) + "셀");
+    this._flash(this.messages.undone(this.messages.actions[entry.source] || entry.source, formatNumber(n)));
     this.emit("undo", { source: entry.source, count: n });
     return true;
   }
@@ -892,11 +900,11 @@ export class PyoGrid {
     if (this.editing.active) this.editing.cancel();
     const entry = this.history.popRedo();
     if (!entry) {
-      this._flash("다시 실행할 작업이 없습니다");
+      this._flash(this.messages.nothingToRedo);
       return false;
     }
     const n = this._applyHistory(entry, "redo");
-    this._flash("다시 실행: " + (SOURCE_LABEL[entry.source] || "") + " " + formatNumber(n) + "셀");
+    this._flash(this.messages.redone(this.messages.actions[entry.source] || entry.source, formatNumber(n)));
     this.emit("redo", { source: entry.source, count: n });
     return true;
   }
@@ -1046,7 +1054,7 @@ export class PyoGrid {
 
   _afterCopy() {
     const g = this.range;
-    if (g) this._flash("복사: " + formatNumber(g.size) + "셀");
+    if (g) this._flash(this.messages.copied(formatNumber(g.size)));
     this.emit("copy", { range: this.getRange(), text: this.getRangeText() });
   }
 
@@ -1085,7 +1093,7 @@ export class PyoGrid {
     const applied = this.setValues(changes, { source: "paste" });
     if (changes.length || plan.length > skipped) this.setRange(g.r0, g.c0, rMax, cMax);
     const info = { applied: applied.length, skipped, rows: data.length };
-    this._flash("붙여넣기: " + formatNumber(applied.length) + "셀" + (skipped ? " (건너뜀 " + formatNumber(skipped) + ")" : ""));
+    this._flash(this.messages.pasted(formatNumber(applied.length), formatNumber(skipped)));
     this.emit("paste", info);
     return info;
   }
@@ -1678,7 +1686,8 @@ export class PyoGrid {
 
   _updateBodySize() {
     this.el.body.style.height = this.rows.length * this.options.rowHeight + "px";
-    const msg = this.isFilterActive() ? "필터 조건에 맞는 데이터가 없습니다." : this.options.emptyText;
+    const emptyText = this.options.emptyText === undefined ? this.messages.empty : this.options.emptyText;
+    const msg = this.isFilterActive() ? this.messages.noFilterMatch : emptyText;
     const showEmpty = !this.rows.length && !!msg;
     this.el.empty.textContent = showEmpty ? msg : "";
     this.el.empty.hidden = !showEmpty;
@@ -1764,7 +1773,8 @@ export class PyoGrid {
       if (this.isFilterable(this.leaves[cell.leafIndex])) {
         const on = this.isFilterActive() && this.filters.has(def.key);
         cls += " pyo-filterable";
-        sortMark += `<span class="pyo-filter-btn${on ? " pyo-filter-on" : ""}" data-filter="${cell.leafIndex}" role="button" aria-label="필터" title="필터"></span>`;
+        const filterLabel = escapeHtml(this.messages.filter);
+        sortMark += `<span class="pyo-filter-btn${on ? " pyo-filter-on" : ""}" data-filter="${cell.leafIndex}" role="button" aria-label="${filterLabel}" title="${filterLabel}"></span>`;
       }
     }
     const resizer =
@@ -2328,7 +2338,7 @@ export class PyoGrid {
     clearTimeout(this._summaryTimer);
     this._summaryTimer = setTimeout(() => {
       if (this._destroyed || this._flashing) return;
-      this.el.summary.textContent = summaryText(this.getSelectionSummary());
+      this.el.summary.textContent = summaryText(this.getSelectionSummary(), this.messages);
     }, 30);
   }
 

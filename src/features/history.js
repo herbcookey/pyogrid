@@ -52,7 +52,5 @@ export class History {
   }
 }
 
-/** 기록할 변경 출처 (화면 코드의 setValue는 기록하지 않는다) */
+/** 기록할 변경 출처 (화면 코드의 setValue는 기록하지 않는다). 화면 문구는 locales의 actions */
 export const RECORDED_SOURCES = { edit: 1, clear: 1, paste: 1, cut: 1 };
-
-export const SOURCE_LABEL = { edit: "셀 편집", clear: "지우기", paste: "붙여넣기", cut: "잘라내기" };

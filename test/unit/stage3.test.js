@@ -241,7 +241,7 @@ describe("숫자·금액·날짜", () => {
     key(input, "F2");
     const pop = document.querySelector(".pyo-calendar");
     expect(pop).not.toBeNull();
-    expect(pop.querySelector(".pyo-cal-title").textContent).toBe("2026년 11월");
+    expect(pop.querySelector(".pyo-cal-title").textContent).toBe("November 2026");
     expect(pop.querySelector(".pyo-picked").dataset.date).toBe("2026-11-12");
     pop.querySelector('[data-date="2026-11-20"]').click();
     expect(rows[0].dt).toBe("2026-11-20");
@@ -254,10 +254,10 @@ describe("숫자·금액·날짜", () => {
     key(input, "F2");
     const pop = document.querySelector(".pyo-calendar");
     pop.querySelector('[data-cal="next"]').click();
-    expect(pop.querySelector(".pyo-cal-title").textContent).toBe("2026년 12월");
+    expect(pop.querySelector(".pyo-cal-title").textContent).toBe("December 2026");
     input.value = "";
     type(input, "20250301");
-    expect(pop.querySelector(".pyo-cal-title").textContent).toBe("2025년 3월");
+    expect(pop.querySelector(".pyo-cal-title").textContent).toBe("March 2025");
   });
 });
 

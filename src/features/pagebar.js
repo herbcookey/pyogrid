@@ -1,4 +1,6 @@
 // @ts-check
+import { locales } from "../core/locales.js";
+
 /**
  * 아래쪽 페이지 바: [선택 합계] [페이지 이동] ……… [상태 "1 - 15 of 300  Total 1,234"]
  */
@@ -101,12 +103,13 @@ export function defaultStatusHtml(d) {
 /**
  * 선택 합계 문구. 2셀 미만이면 "".
  * @param {{count: number, numCount: number, sum: number}} s
+ * @param {import("../core/locales.js").Messages} [m]
  */
-export function summaryText(s) {
+export function summaryText(s, m = /** @type {import("../core/locales.js").Messages} */ (locales.en)) {
   if (s.count < 2) return "";
-  let text = "선택 " + formatNumber(s.count) + "셀";
+  let text = m.selected(formatNumber(s.count));
   if (s.numCount) {
-    text += " · 숫자 " + formatNumber(s.numCount) + " · 합계 " + formatNumber(s.sum) + " · 평균 " + formatNumber(s.sum / s.numCount);
+    text += m.summarySeparator + m.selectedNumbers(formatNumber(s.numCount), formatNumber(s.sum), formatNumber(s.sum / s.numCount));
   }
   return text;
 }

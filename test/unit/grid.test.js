@@ -118,7 +118,7 @@ describe("PyoGrid 렌더링", () => {
     const grid = new PyoGrid(host, { columns: [{ key: "id" }] });
     grid.setData([]);
     expect(grid.el.empty.hidden).toBe(false);
-    expect(grid.el.empty.textContent).toBe("조회된 데이터가 없습니다.");
+    expect(grid.el.empty.textContent).toBe("No data");
     grid.setData(makeRows(1));
     expect(grid.el.empty.hidden).toBe(true);
     const g2 = new PyoGrid(document.body.appendChild(document.createElement("div")), { emptyText: null });

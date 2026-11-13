@@ -1,6 +1,8 @@
 // @ts-check
 import { escapeHtml } from "../util.js";
 import { compareSmart } from "../core/sort.js";
+import { locales } from "../core/locales.js";
+import { formatNumber } from "./pagebar.js";
 
 /**
  * 헤더 값 필터 팝업 (Excel 자동 필터와 같은 방식: 값 목록에서 고르기).
@@ -23,14 +25,16 @@ export class FilterPopup {
    * @param {(allowed: Set<string>|null) => void} o.onApply
    * @param {() => void} o.onClose
    * @param {number} [o.renderMax]
+   * @param {import("../core/locales.js").Messages} [o.messages]
    */
   constructor(o) {
     this.o = o;
+    const m = (this.m = o.messages || /** @type {import("../core/locales.js").Messages} */ (locales.en));
     this.max = o.renderMax || FILTER_RENDER_MAX;
     /** @type {string[]} 전체 값 (정렬, 빈 값은 맨 뒤) */
     this.values = o.values.slice().sort((a, b) => (a === "" ? 1 : b === "" ? -1 : compareSmart(a, b)));
     /** @type {string[]} 화면 글자 */
-    this.labels = this.values.map((v) => (v === "" ? "(빈 값)" : o.label(v)));
+    this.labels = this.values.map((v) => (v === "" ? m.blank : o.label(v)));
     /** @type {string[]} 검색용 (글자 + 원래 값, 소문자) */
     this.search_ = this.values.map((v, i) => (this.labels[i] + "\u0000" + v).toLowerCase());
     /** @type {Set<number>} 체크를 푼 값의 순번 */
@@ -42,15 +46,15 @@ export class FilterPopup {
     const el = (this.el = document.createElement("div"));
     el.className = "pyo-popup pyo-filter";
     el.setAttribute("role", "dialog");
-    el.setAttribute("aria-label", o.title + " 필터");
+    el.setAttribute("aria-label", m.filterDialog(o.title));
     el.innerHTML =
       `<div class="pyo-f-title">${escapeHtml(o.title)}</div>` +
-      `<input type="text" class="pyo-f-search" placeholder="검색" aria-label="값 검색">` +
-      `<label class="pyo-f-all"><input type="checkbox"> (전체 선택)</label>` +
+      `<input type="text" class="pyo-f-search" placeholder="${escapeHtml(m.filterSearch)}" aria-label="${escapeHtml(m.filterSearch)}">` +
+      `<label class="pyo-f-all"><input type="checkbox"> ${escapeHtml(m.selectAll)}</label>` +
       `<div class="pyo-f-list"></div>` +
       `<div class="pyo-f-note" hidden></div>` +
-      `<div class="pyo-f-btns"><button type="button" class="pyo-f-clear">초기화</button>` +
-      `<button type="button" class="pyo-f-ok">확인</button><button type="button" class="pyo-f-cancel">취소</button></div>`;
+      `<div class="pyo-f-btns"><button type="button" class="pyo-f-clear">${escapeHtml(m.clear)}</button>` +
+      `<button type="button" class="pyo-f-ok">${escapeHtml(m.ok)}</button><button type="button" class="pyo-f-cancel">${escapeHtml(m.cancel)}</button></div>`;
     document.body.append(el);
 
     this.search = /** @type {HTMLInputElement} */ (el.querySelector(".pyo-f-search"));
@@ -110,8 +114,7 @@ export class FilterPopup {
       .join("");
     const cut = this.matching.length - shown.length;
     this.note.hidden = cut <= 0;
-    this.note.textContent =
-      cut > 0 ? `${this.matching.length.toLocaleString("ko-KR")}개 중 앞의 ${this.max.toLocaleString("ko-KR")}개만 표시 (검색으로 좁히세요)` : "";
+    this.note.textContent = cut > 0 ? this.m.filterTruncated(formatNumber(this.max), formatNumber(this.matching.length)) : "";
     this._syncAll();
   }
 

@@ -229,7 +229,7 @@ describe("셀 범위 선택·합계", () => {
     grid.setRange(0, 0, 2, 1);
     expect(grid.getSelectionSummary()).toEqual({ count: 6, numCount: 3, sum: 2502.5, avg: 2502.5 / 3 });
     vi.advanceTimersByTime(40);
-    expect(grid.el.summary.textContent).toBe("선택 6셀 · 숫자 3 · 합계 2,502.5 · 평균 834.17");
+    expect(grid.el.summary.textContent).toBe("6 cells selected · Numbers 3 · Sum 2,502.5 · Average 834.17");
     grid.setRange(0, 0);
     vi.advanceTimersByTime(40);
     expect(grid.el.summary.textContent).toBe("");

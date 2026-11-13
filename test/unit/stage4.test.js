@@ -167,12 +167,12 @@ describe("실행 취소·다시 실행", () => {
     key(grid.editing.input, "z", { ctrlKey: true });
     expect(rows.slice(0, 2).map((r) => [r.name, r.qty])).toEqual([["n0", 0], ["n1", 1]]);
     expect(changes.every((c) => c.source === "undo")).toBe(true);
-    expect(grid.el.summary.textContent).toBe("실행 취소: 붙여넣기 4셀");
+    expect(grid.el.summary.textContent).toBe("Undo paste: 4 cells");
     expect(grid.getRange()).toMatchObject({ r0: 0, c0: 0, r1: 1, c1: 1 });
     key(grid.editing.input, "y", { ctrlKey: true });
     expect(rows.slice(0, 2).map((r) => [r.name, r.qty])).toEqual([["a", 1], ["b", 2]]);
     key(grid.editing.input, "Z", { ctrlKey: true, shiftKey: true }); // 다시 실행할 것 없음
-    expect(grid.el.summary.textContent).toBe("다시 실행할 작업이 없습니다");
+    expect(grid.el.summary.textContent).toBe("Nothing to redo");
     vi.advanceTimersByTime(3000);
     expect(grid.el.summary.dataset.flash).toBeUndefined();
   });

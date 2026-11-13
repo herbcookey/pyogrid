@@ -23,6 +23,7 @@
   var stores = ["서울점", "부산점"], sections = ["A구역", "B구역", "C구역"], g = [];
   for (var i = 0; i < 36; i++) g.push({ STORE: stores[i % 2], SECTION: sections[i % 3], ITEM: "ITEM-" + (100 + i), QTY: (i * 37) % 200 + 10, AMT: ((i * 7919) % 90000) + 1000 });
   window.groupGrid = new PyoGrid(document.getElementById("group"), {
+    locale: "ko",
     lineNumber: true, headerAlign: "center", sortable: true, filter: true,
     columns: [
       { key: "STORE", label: "매장", width: 80, align: "center" },
@@ -60,6 +61,7 @@
     { id: "C-210", parentId: "C-200", name: "가방", count: 9 }
   ];
   window.treeGrid = new PyoGrid(document.getElementById("tree"), {
+    locale: "ko",
     rowSelector: true, headerAlign: "center",
     tree: { parentKey: "parentId", selfKey: "id", indentWidth: 14 },
     columns: [
@@ -80,6 +82,7 @@
     { KIND: "디저트", SUB: "쿠키", NAME: "버터쿠키", PRICE: "2,500원" }
   ];
   window.mergeGrid = new PyoGrid(document.getElementById("merge"), {
+    locale: "ko",
     headerAlign: "center", mergeCells: ["KIND", "SUB"],
     columns: [
       { key: "KIND", label: "대분류", width: 90, align: "center" },

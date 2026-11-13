@@ -36,7 +36,7 @@
     rows[i] = r;
   }
   var t1 = performance.now();
-  var grid = new PyoGrid(document.getElementById("grid"), { columns: columns, frozenColumns: 2, lineNumber: true, lineNumberWidth: 50, headerAlign: "center" });
+  var grid = new PyoGrid(document.getElementById("grid"), { locale: "ko", columns: columns, frozenColumns: 2, lineNumber: true, lineNumberWidth: 50, headerAlign: "center" });
   grid.setData(rows);
   var t2 = performance.now();
   window.grid = grid;

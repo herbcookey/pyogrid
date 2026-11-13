@@ -28,7 +28,7 @@ describe("값이 많은 필터", () => {
     const { el, res } = open();
     expect(labels(el)).toHaveLength(10);
     expect(el.querySelector(".pyo-f-note").hidden).toBe(false);
-    expect(el.querySelector(".pyo-f-note").textContent).toContain("50개 중 앞의 10개");
+    expect(el.querySelector(".pyo-f-note").textContent).toContain("Showing the first 10 of 50");
     el.querySelector(".pyo-f-ok").click();
     expect(res.applied).toBeNull();
   });

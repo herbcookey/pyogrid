@@ -253,7 +253,7 @@ describe("헤더 값 필터", () => {
     expect(grid.getRows().map((r) => r.name)).toEqual(["다"]);
     expect(grid.el.empty.hidden).toBe(true);
     grid.setFilter("name", ["없음"]);
-    expect(grid.el.empty.textContent).toBe("필터 조건에 맞는 데이터가 없습니다.");
+    expect(grid.el.empty.textContent).toBe("No rows match the filter");
   });
 
   it("초기화, 빈 값 표시, filter:false 컬럼, 트리에서는 필터 없음", () => {
@@ -262,7 +262,7 @@ describe("헤더 값 필터", () => {
     expect(grid.el.headSc.querySelector('[data-filter="1"]')).toBeNull();
     grid.openFilter(0);
     const pop = document.querySelector(".pyo-filter");
-    expect([...pop.querySelectorAll(".pyo-f-list label")].map((l) => l.textContent.trim())).toEqual(["x", "(빈 값)"]);
+    expect([...pop.querySelectorAll(".pyo-f-list label")].map((l) => l.textContent.trim())).toEqual(["x", "(Blank)"]);
     pop.querySelectorAll(".pyo-f-list input")[0].click();
     pop.querySelector(".pyo-f-ok").click();
     expect(grid.getRows()).toHaveLength(1);

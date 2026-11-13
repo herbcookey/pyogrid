@@ -10,5 +10,6 @@ export { escapeHtml, getValue, setValue, parseKeyPath, toNumber } from "./util.j
 export { userCollectors } from "./features/summary.js";
 export { collectors } from "./features/view.js";
 export { parseTSV, buildTSV } from "./features/clipboard.js";
+export { locales, resolveMessages } from "./core/locales.js";
 export { toXlsxCell, htmlToText } from "./features/excel.js";
 export const version = "0.7.2";

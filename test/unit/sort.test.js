@@ -106,8 +106,8 @@ describe("페이지 바 도우미", () => {
   });
   it("선택 합계 문구", () => {
     expect(summaryText({ count: 1, numCount: 1, sum: 5 })).toBe("");
-    expect(summaryText({ count: 3, numCount: 0, sum: 0 })).toBe("선택 3셀");
-    expect(summaryText({ count: 4, numCount: 3, sum: 1000.5 })).toBe("선택 4셀 · 숫자 3 · 합계 1,000.5 · 평균 333.5");
+    expect(summaryText({ count: 3, numCount: 0, sum: 0 })).toBe("3 cells selected");
+    expect(summaryText({ count: 4, numCount: 3, sum: 1000.5 })).toBe("4 cells selected · Numbers 3 · Sum 1,000.5 · Average 333.5");
     expect(formatNumber(1 / 3)).toBe("0.33");
   });
 });
