@@ -1,80 +1,136 @@
 # pyogrid
 
-외부 라이브러리 없이 동작하는 순수 JavaScript 데이터 그리드입니다.
-수만 행을 가상 스크롤로 보여 주고, 셀 편집(한글 바로 입력), Excel 붙여넣기, 실행 취소, 헤더 값 필터, 합계 행, 그룹 합계, 트리, xlsx 내보내기를 지원합니다.
+[한국어](https://github.com/herbcookey/pyogrid/blob/main/README.ko.md)
 
-- 의존성 없음. xlsx 내보내기만 [SheetJS](https://sheetjs.com/)가 있을 때 씁니다.
-- `<script>` 태그 하나(전역 `PyoGrid`)로 쓰거나 ES 모듈로 가져옵니다.
+A fast, dependency-free data grid in plain JavaScript. It renders tens of thousands of rows with virtual scrolling and handles spreadsheet-style editing: type straight into a cell (IME input such as Korean included), paste from Excel, undo, filter by header values, show footer totals, group subtotals, trees, and export to xlsx.
 
-> 버전 0.7.1 · 지원 브라우저: Chrome, Edge 최신 (테스트는 이 두 브라우저에서만 합니다)
+- No dependencies. xlsx export uses [SheetJS](https://sheetjs.com/) if it is loaded.
+- Use it from a single `<script>` tag (global `PyoGrid`) or as an ES module.
+- Works with any framework, or none.
 
-![주간 주문·출고 현황 데모: 다단 헤더, 틀 고정, 행 선택, 합계 행](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/weekly.png)
+> Version 0.7.1 · Chrome and Edge (latest). See [Browser support](#browser-support).
 
-![50,000행 × 30열을 가운데까지 스크롤한 화면. 왼쪽 두 열은 고정](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/big.png)
+![Weekly orders demo: multi-level headers, frozen columns, row selection, footer totals](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/weekly.png)
 
-위: 다단 헤더·틀 고정·행 선택·합계 행·선택 합계. 아래: 50,000행 × 30열을 25,001행까지 스크롤한 화면 (가상 스크롤).
+![50,000 rows × 30 columns scrolled to the middle, with two frozen columns](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/big.png)
 
-## 목차
+Top: multi-level headers, frozen columns, row selection, a footer totals row, and the selection summary. Bottom: 50,000 rows × 30 columns scrolled to row 25,001 (virtual scrolling).
 
-- [빠른 시작](#빠른-시작)
-- [설치와 빌드](#설치와-빌드)
-- [프레임워크에서 쓰기 (React·Vue·Angular)](#프레임워크에서-쓰기-reactvueangular)
-- [기본 개념](#기본-개념)
-- [그리드 옵션](#그리드-옵션)
-- [컬럼 옵션](#컬럼-옵션)
-- [formatter와 셀 서식](#formatter와-셀-서식)
-- [셀 편집기](#셀-편집기)
-- [키보드](#키보드)
-- [메서드](#메서드)
-- [이벤트](#이벤트)
-- [합계 행·그룹 합계](#합계-행그룹-합계)
-- [트리](#트리)
-- [헤더 값 필터](#헤더-값-필터)
-- [셀 병합](#셀-병합)
-- [복사·붙여넣기·실행 취소](#복사붙여넣기실행-취소)
-- [서버 페이징·서버 정렬](#서버-페이징서버-정렬)
-- [엑셀 내보내기](#엑셀-내보내기)
-- [컬럼 너비·정렬 기억](#컬럼-너비정렬-기억)
-- [수정·추가·삭제 행 모으기](#수정추가삭제-행-모으기)
-- [전역 확장](#전역-확장)
-- [테마 (CSS)](#테마-css)
-- [개발](#개발)
+## Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Using with React, Vue, and Angular](#using-with-react-vue-and-angular)
+- [Core concepts](#core-concepts)
+- [Grid options](#grid-options)
+- [Column options](#column-options)
+- [Formatters](#formatters)
+- [Cell editors](#cell-editors)
+- [Keyboard](#keyboard)
+- [Methods](#methods)
+- [Events](#events)
+- [Footer totals and group subtotals](#footer-totals-and-group-subtotals)
+- [Tree](#tree)
+- [Header filters](#header-filters)
+- [Merged cells](#merged-cells)
+- [Copy, paste, and undo](#copy-paste-and-undo)
+- [Server-side paging and sorting](#server-side-paging-and-sorting)
+- [Excel export](#excel-export)
+- [Remembering column widths and sort](#remembering-column-widths-and-sort)
+- [Collecting changes for saving](#collecting-changes-for-saving)
+- [Global extensions](#global-extensions)
+- [Theming](#theming)
+- [Demos](#demos)
+- [Browser support](#browser-support)
+- [Development](#development)
+- [License](#license)
 
 ---
 
-## 빠른 시작
+## Features
+
+- **Virtual scrolling.** Only visible rows and columns are in the DOM. 50,000 rows × 30 columns is created and filled in 20–50 ms.
+- **Frozen columns and multi-level headers.** Header, frozen columns, and footer stick in place with `position: sticky`, so they never lag behind the scroll.
+- **Type to edit.** Select a cell and start typing; the first keystroke goes into the cell. IME composition (Korean, Japanese, Chinese) is never cut off, and Enter commits in one press.
+- **Six built-in editors:** text, number, money, date (with a calendar), select, and checkbox. You can register your own.
+- **Excel-style clipboard.** Copy and paste ranges as tab-separated text, with fill and repeat rules like Excel. Pasted values go through the same validation as typed ones.
+- **Undo and redo** for edits, deletes, pastes, and cuts.
+- **Change tracking.** Modified, added, and deleted rows are collected for you, and a row stops counting as modified once its values are back to the originals.
+- **Header value filters** like Excel's AutoFilter, with search across all values.
+- **Footer totals, group subtotals, trees, and merged cells.**
+- **Selection summary** (count, sum, average) for the selected cells.
+- **Server-side paging and sorting.**
+- **xlsx export** of what is on screen, with merged headers and real number cells.
+- **Remembers column widths and sort** per page in `localStorage`.
+- **Themeable** with CSS custom properties. TypeScript declarations included.
+
+## Installation
+
+```bash
+npm install pyogrid
+```
+
+```js
+import { PyoGrid } from "pyogrid";
+import "pyogrid/css"; // with a bundler such as Vite or webpack
+```
+
+Or load it from a CDN without a build step:
 
 ```html
-<link rel="stylesheet" href="dist/pyogrid.min.css">
-<script src="dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.js"></script>
+```
+
+| File | Use |
+|---|---|
+| `dist/pyogrid.js` / `pyogrid.min.js` | `<script>` tag (global `PyoGrid`) |
+| `dist/pyogrid.esm.js` | ES module |
+| `dist/pyogrid.css` / `pyogrid.min.css` | Theme |
+| `dist/types/` | TypeScript declarations (`.d.ts`) |
+
+For Excel export, load SheetJS before the grid:
+
+```html
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+```
+
+To build from source, see [Development](#development).
+
+## Quick start
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.js"></script>
 
 <div id="grid" style="height: 400px"></div>
 
 <script>
   var grid = new PyoGrid(document.getElementById("grid"), {
-    rowSelector: true,         // 왼쪽 행 선택 체크박스
-    frozenColumns: 2,          // 왼쪽 2개 컬럼 틀 고정
-    sortable: true,            // 헤더 클릭 정렬
+    rowSelector: true,         // row selection checkboxes on the left
+    frozenColumns: 2,          // freeze the first two columns
+    sortable: true,            // click a header to sort
     headerAlign: "center",
     columns: [
-      { key: "SKU", label: "상품 코드", width: 120, align: "center" },
-      { key: "NAME", label: "상품명", width: "*" },
-      { label: "이번 주", columns: [                       // 다단 헤더
-        { key: "QTY", label: "수량", width: 80, align: "right", formatter: "money",
+      { key: "SKU", label: "SKU", width: 120, align: "center" },
+      { key: "NAME", label: "Product", width: "*" },
+      { label: "This week", columns: [                     // grouped header
+        { key: "QTY", label: "Qty", width: 80, align: "right", formatter: "money",
           editor: { type: "number" } },
-        { key: "AMT", label: "금액", width: 100, align: "right", formatter: "money" }
+        { key: "AMT", label: "Amount", width: 100, align: "right", formatter: "money" }
       ] }
     ],
     footSum: [[
-      { label: "합계", colspan: 2, align: "center" },
+      { label: "Total", colspan: 2, align: "center" },
       { key: "QTY", collector: "sum", formatter: "money", align: "right" },
       { key: "AMT", collector: "sum", formatter: "money", align: "right" }
     ]]
   });
 
   grid.setData([
-    { SKU: "SKU-A1001", NAME: "볼펜 0.5mm", QTY: 12000, AMT: 3500000 },
-    { SKU: "SKU-A1002", NAME: "스프링 노트", QTY: 8000, AMT: 1200000 }
+    { SKU: "SKU-A1001", NAME: "Ballpoint pen 0.5mm", QTY: 12000, AMT: 3500000 },
+    { SKU: "SKU-A1002", NAME: "Spiral notebook", QTY: 8000, AMT: 1200000 }
   ]);
 
   grid.on("change", function (e) {
@@ -83,65 +139,25 @@
 </script>
 ```
 
-ES 모듈로 쓸 때:
+As an ES module:
 
 ```js
-import { PyoGrid } from "pyogrid";             // npm으로 설치했을 때
-// import { PyoGrid } from "./dist/pyogrid.esm.js";  // 직접 빌드한 파일
+import { PyoGrid } from "pyogrid";                     // installed from npm
+// import { PyoGrid } from "./dist/pyogrid.esm.js";  // a local build
 const grid = new PyoGrid("#grid", { columns: [...] });
 ```
 
-대상 요소에는 높이를 주세요. 그리드는 대상 요소의 크기를 채우고, 크기가 바뀌면(창 크기, 부모 레이아웃) 스스로 다시 배치합니다.
+Give the target element a height. The grid fills it and lays itself out again whenever its size changes (window resize, parent layout).
 
-## 설치와 빌드
+## Using with React, Vue, and Angular
 
-npm으로 설치합니다.
+PyoGrid works with the DOM directly, so it is used the same way everywhere:
 
-```bash
-npm install pyogrid
-```
+1. Render an empty `div` with a height.
+2. After it is mounted, create the grid with `new PyoGrid(div, options)`.
+3. When it is unmounted, call `grid.destroy()`.
 
-```js
-import { PyoGrid } from "pyogrid";
-import "pyogrid/css";            // 번들러(Vite, webpack 등)에서 CSS 불러오기
-```
-
-빌드 도구 없이 CDN으로 쓸 수도 있습니다.
-
-```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid/dist/pyogrid.min.js"></script>
-```
-
-저장소에서 직접 빌드하려면 Node.js 22 이상이 필요합니다. `dist/`는 저장소에 넣지 않으므로 처음 한 번 빌드합니다.
-
-```bash
-npm install
-npm run build
-```
-
-| 파일 | 용도 |
-|---|---|
-| `dist/pyogrid.js` / `pyogrid.min.js` | `<script>` 태그용 (전역 `PyoGrid`) |
-| `dist/pyogrid.esm.js` | ES 모듈 |
-| `dist/pyogrid.css` / `pyogrid.min.css` | 테마 |
-| `dist/types/` | TypeScript 선언 (`.d.ts`) |
-
-엑셀 내보내기를 쓰려면 SheetJS를 그리드보다 먼저 불러옵니다.
-
-```html
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-```
-
-## 프레임워크에서 쓰기 (React·Vue·Angular)
-
-PyoGrid는 DOM을 직접 다루므로 프레임워크와 관계없이 같은 방식으로 씁니다.
-
-1. 그리드를 넣을 빈 `div`를 둡니다. 높이가 있어야 합니다.
-2. 화면에 붙은 뒤(mount) `new PyoGrid(div, 옵션)`으로 만듭니다.
-3. 화면에서 사라질 때(unmount) `grid.destroy()`를 부릅니다.
-
-`import`는 브라우저가 없는 환경에서도 오류가 나지 않으므로 SSR(Next.js, Nuxt, Angular SSR)에서도 그대로 가져올 수 있습니다. 그리드를 만드는 일만 mount 뒤에 합니다.
+Importing the package does not touch `window` or `document`, so it is safe to import during server-side rendering (Next.js, Nuxt, Angular SSR). Only create the grid after mount.
 
 **React**
 
@@ -156,7 +172,7 @@ export function Grid({ columns, rows }) {
 
   useEffect(() => {
     grid.current = new PyoGrid(el.current, { columns });
-    return () => grid.current.destroy(); // StrictMode에서 두 번 mount돼도 정리된다
+    return () => grid.current.destroy(); // also cleans up StrictMode's double mount
   }, []);
 
   useEffect(() => {
@@ -177,7 +193,7 @@ import "pyogrid/css";
 
 const props = defineProps(["columns", "rows"]);
 const el = ref(null);
-let grid = null; // ref()로 감싸지 않는다
+let grid = null; // keep it out of ref()
 
 onMounted(() => {
   grid = new PyoGrid(el.value, { columns: props.columns });
@@ -211,12 +227,12 @@ export class GridComponent implements AfterViewInit, OnDestroy {
   constructor(private zone: NgZone) {}
 
   ngAfterViewInit() {
-    // 스크롤·키 입력마다 변경 감지가 돌지 않게 Angular 밖에서 만든다
+    // Create it outside Angular so scrolling and typing don't trigger change detection
     this.zone.runOutsideAngular(() => {
       this.grid = new PyoGrid(this.host.nativeElement, { columns: this.columns });
       this.grid.setData(this.rows);
     });
-    // 화면 상태를 바꾸는 이벤트 처리만 Angular 안으로 돌려보낸다
+    // Re-enter Angular only for handlers that update component state
     this.grid!.on("change", (e: any) => this.zone.run(() => { /* ... */ }));
   }
 
@@ -226,395 +242,395 @@ export class GridComponent implements AfterViewInit, OnDestroy {
 }
 ```
 
-Angular의 CSS는 `angular.json`의 `styles`에 `node_modules/pyogrid/dist/pyogrid.css`를 넣습니다.
+In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.json`.
 
-**주의할 점**
+**Things to keep in mind**
 
-- **데이터는 그리드가 들고 있게 둡니다.** 셀을 편집하면 넘긴 행 객체의 값이 바로 바뀝니다 ([기본 개념](#기본-개념)). React state나 Vue 반응형 데이터로 같은 행을 따로 관리하지 말고, 저장할 때 `getModifiedRows()`·`getDeletedRows()`로 바뀐 행을 꺼냅니다.
-- **Vue에서는 `toRaw`로 넘깁니다.** 반응형 Proxy를 그대로 넘기면 편집할 때마다 반응성 처리가 돌아 느려집니다. 그리드 인스턴스도 `ref()`에 넣지 않습니다.
-- **셀 안은 HTML 문자열로 그립니다.** 셀 내용은 `formatter`가 돌려주는 HTML이고, 셀 안에 React·Vue 컴포넌트를 넣는 방식은 지원하지 않습니다.
-- **`setData`는 선택·실행 취소 기록을 비웁니다.** 편집할 때마다 부모의 `rows`를 새 배열로 바꿔 다시 넘기면 편집 상태가 초기화되니, 데이터를 새로 불러올 때만 `rows`를 바꿉니다.
+- **Let the grid own the data.** Editing a cell writes straight into the row object you passed in ([Core concepts](#core-concepts)). Don't mirror the same rows in React state or Vue reactive data; when saving, read the changes with `getModifiedRows()` and `getDeletedRows()`.
+- **In Vue, pass plain objects with `toRaw`.** A reactive proxy makes every edit go through Vue's reactivity and slows the grid down. Don't put the grid instance in `ref()` either.
+- **Cells are HTML strings.** Cell content is whatever HTML your `formatter` returns. Rendering React or Vue components inside cells is not supported.
+- **`setData` resets selection and undo history.** If the parent hands down a new `rows` array after every edit, the editing state is lost. Change `rows` only when you load new data.
 
-## 기본 개념
+## Core concepts
 
-**행 객체는 복사하지 않습니다.** `setData(rows)`에 넘긴 객체를 그대로 쓰고, 편집하면 그 객체의 값이 바뀝니다. 그리드가 붙이는 표시는 행 객체의 속성으로 남습니다.
+**Rows are not copied.** The grid uses the objects you pass to `setData(rows)`, and edits change those objects. State the grid keeps per row lives on the row object too:
 
-| 속성 (옵션으로 이름 변경) | 뜻 |
+| Property (rename with option) | Meaning |
 |---|---|
-| `__selected__` (`selectedKey`) | 행 선택 상태. 데이터에 넣어 두면 선택된 채로 보입니다 |
-| `__modified__` (`modifiedKey`) | 값이 바뀌었거나 `addRow`로 넣은 행 |
-| `__deleted__` (`deletedKey`) | `deleteRows`로 지운 행 |
-| `__disable_selection__` (`disableSelectionKey`) | true면 선택할 수 없는 행 |
-| `collapse` (`tree.collapseKey`) | 트리에서 접힌 노드 |
+| `__selected__` (`selectedKey`) | Row is selected. Set it in your data to start with the row selected |
+| `__modified__` (`modifiedKey`) | A value changed, or the row was added with `addRow` |
+| `__deleted__` (`deletedKey`) | Row was removed with `deleteRows` |
+| `__disable_selection__` (`disableSelectionKey`) | If true, the row can't be selected |
+| `collapse` (`tree.collapseKey`) | Tree node is collapsed |
 
-**행 순번(rowIndex)은 화면 순번입니다.** 정렬·필터·그룹·트리를 거쳐 화면에 그린 순서이고, 그룹 합계 행도 한 줄로 셉니다. 정렬하면 순번이 바뀌므로 오래 들고 있을 값이면 행 객체를 쓰세요.
+**`rowIndex` is the view index.** It is the position on screen after sorting, filtering, grouping, and tree expansion, and a group subtotal row counts as one row. Sorting changes it, so hold on to the row object if you need a stable reference.
 
-**컬럼 순번(colIndex)은 잎 컬럼 순번입니다.** 다단 헤더의 묶음은 세지 않고, 줄 번호·행 선택 칸도 세지 않습니다.
+**`colIndex` counts leaf columns.** Header groups are not counted, and neither are the line-number and row-selector columns.
 
-**행 목록 세 가지**
+**Three ways to get rows**
 
-| 메서드 | 내용 |
+| Method | Returns |
 |---|---|
-| `getRows()` | 필터·정렬을 거친 데이터 행. 그룹 합계 행은 빠지고, 트리는 접힌 자식도 들어갑니다 |
-| `getViewRows()` | 화면에 그리는 행 그대로 (그룹 합계 행 포함, 트리는 펼친 행만) |
-| `getAllRows()` | setData·addRow로 받은 전체 (필터로 숨은 행 포함, 지운 행 제외) |
+| `getRows()` | Data rows after filtering and sorting. No subtotal rows; trees include collapsed children |
+| `getViewRows()` | Exactly the rows on screen (subtotal rows included, trees only expanded rows) |
+| `getAllRows()` | Everything from `setData` and `addRow`, including rows hidden by filters, excluding deleted rows |
 
-## 그리드 옵션
+## Grid options
 
-`new PyoGrid(target, options)`의 `options`입니다. `target`은 요소 또는 CSS 선택자입니다.
+`new PyoGrid(target, options)`. `target` is an element or a CSS selector.
 
-### 화면
+### Layout
 
-| 옵션 | 기본값 | 설명 |
+| Option | Default | Description |
 |---|---|---|
-| `columns` | `[]` | [컬럼 정의](#컬럼-옵션) |
-| `frozenColumns` | `0` | 왼쪽부터 고정할 잎 컬럼 수 |
-| `rowHeight` | `26` | 본문 행 높이(px) |
-| `headerRowHeight` | `26` | 헤더 한 줄 높이(px) |
-| `height` | `null` | 숫자면 그 높이(px), null이면 대상 요소 높이를 채움 |
-| `lineNumber` | `false` | 왼쪽 줄 번호 칸 |
+| `columns` | `[]` | [Column definitions](#column-options) |
+| `frozenColumns` | `0` | Number of leaf columns to freeze on the left |
+| `rowHeight` | `26` | Body row height (px) |
+| `headerRowHeight` | `26` | Height of one header row (px) |
+| `height` | `null` | A number sets the height in px; `null` fills the target element |
+| `lineNumber` | `false` | Line-number column on the left |
 | `lineNumberWidth` | `30` | |
-| `rowSelector` | `false` | 왼쪽 행 선택 체크박스 칸 |
+| `rowSelector` | `false` | Row selection checkbox column on the left |
 | `rowSelectorWidth` | `26` | |
-| `headerSelector` | `true` | 행 선택 칸 헤더의 전체 선택 체크박스 |
-| `headerAlign` | `null` | 헤더 기본 정렬 `"left"`·`"center"`·`"right"` |
-| `align` | `null` | 본문 기본 정렬 |
-| `rowClass` | `null` | 행 class. 문자열 또는 `function (row, rowIndex)` |
-| `defaultColumnWidth` | `100` | width가 없는 컬럼 너비 |
-| `minColumnWidth` | `10` | 너비 조절 최솟값 |
-| `resizable` | `true` | 헤더 경계를 끌어 너비 조절 |
-| `emptyText` | `"조회된 데이터가 없습니다."` | 데이터가 없을 때 문구. null이면 표시 안 함 |
-| `overscanRows` / `overscanColumns` | `6` / `2` | 보이는 범위 밖으로 더 그려 둘 행·열 수 |
+| `headerSelector` | `true` | "Select all" checkbox in the row selector header |
+| `headerAlign` | `null` | Default header alignment: `"left"`, `"center"`, or `"right"` |
+| `align` | `null` | Default body alignment |
+| `rowClass` | `null` | Row class: a string or `function (row, rowIndex)` |
+| `defaultColumnWidth` | `100` | Width of columns without `width` |
+| `minColumnWidth` | `10` | Minimum width when resizing |
+| `resizable` | `true` | Drag header edges to resize columns |
+| `emptyText` | `"조회된 데이터가 없습니다."` | Message when there are no rows ("No data found."); `null` shows nothing |
+| `overscanRows` / `overscanColumns` | `6` / `2` | Extra rows and columns rendered outside the visible area |
 
-### 선택·정렬
+### Selection and sorting
 
-| 옵션 | 기본값 | 설명 |
+| Option | Default | Description |
 |---|---|---|
-| `multipleSelect` | `true` | false면 행을 하나만 선택 |
-| `cellSelect` | `true` | 셀 클릭·끌기로 범위 선택 |
-| `selectionSummary` | `true` | 셀을 둘 이상 고르면 아래 바에 개수·합계·평균. 값이 number이거나 숫자 컬럼(money formatter, number·money 편집기, 컬럼 `numeric: true`)의 숫자 글자만 더한다. 바코드·품번 같은 코드 글자는 세지 않는다 |
-| `sortable` | `false` | 헤더 클릭 정렬 (컬럼 `sortable`이 우선) |
-| `multiSort` | `false` | 여러 컬럼 정렬 (클릭한 순서대로 우선) |
-| `sortCompare` | `"smart"` | `"smart"`: "1,200" 같은 숫자 문자열은 숫자로, 한글 자연 정렬, 빈 값은 항상 맨 뒤. `"plain"`: 값을 그대로 비교 (타입이 다르면 문자열로 바꿔 비교). 함수: `(a, b) => number` |
-| `remoteSort` | `false` | true면 순서를 바꾸지 않고 `sortchange`만 알림 (서버 정렬) |
+| `multipleSelect` | `true` | If false, only one row can be selected |
+| `cellSelect` | `true` | Select cell ranges by clicking and dragging |
+| `selectionSummary` | `true` | When two or more cells are selected, show count, sum, and average in the bottom bar. Only numbers, or numeric text in numeric columns (money formatter, number or money editor, or column `numeric: true`), are added up, so codes like barcodes and part numbers are left out |
+| `sortable` | `false` | Sort by clicking headers (column `sortable` takes precedence) |
+| `multiSort` | `false` | Sort by several columns, in the order they were clicked |
+| `sortCompare` | `"smart"` | `"smart"`: numeric strings like "1,200" compare as numbers, natural sort for text (Korean collation), empty values always last. `"plain"`: compare values as they are (converted to strings if their types differ). Or a function `(a, b) => number` |
+| `remoteSort` | `false` | If true, rows keep their order and only `sortchange` fires (sort on the server) |
 
-### 편집·클립보드
+### Editing and clipboard
 
-| 옵션 | 기본값 | 설명 |
+| Option | Default | Description |
 |---|---|---|
-| `editable` | `true` | false면 모든 편집기를 끔 |
-| `clipboard` | `true` | Ctrl+C·X·V |
-| `undo` | `true` | Ctrl+Z·Ctrl+Y |
-| `undoLimit` | `50` | 실행 취소 기록 수 |
+| `editable` | `true` | If false, all editors are off |
+| `clipboard` | `true` | Ctrl+C, X, V |
+| `undo` | `true` | Ctrl+Z, Ctrl+Y |
+| `undoLimit` | `50` | Number of undo steps kept |
 | `modifiedKey` | `"__modified__"` | |
 | `deletedKey` | `"__deleted__"` | |
 | `selectedKey` | `"__selected__"` | |
 | `disableSelectionKey` | `"__disable_selection__"` | |
-| `markAddedModified` | `true` | `addRow`로 넣은 행에 `modifiedKey`를 붙임 |
+| `markAddedModified` | `true` | Mark rows added with `addRow` with `modifiedKey` |
 
-### 합계·그룹·트리·필터·병합
+### Totals, groups, tree, filters, merging
 
-| 옵션 | 기본값 | 설명 |
+| Option | Default | Description |
 |---|---|---|
-| `footSum` | `null` | 아래 합계 행. [합계 행](#합계-행그룹-합계) |
-| `grouping` | `null` | `{ by: [키...], columns: [칸...] }` 그룹 합계 행 |
-| `tree` | `null` | [트리](#트리) 설정 객체 |
-| `filter` | `false` | 헤더 값 필터 단추 |
-| `mergeCells` | `false` | true(모든 컬럼) 또는 키 배열. 위아래 같은 값 합치기 |
+| `footSum` | `null` | Footer totals rows. See [Footer totals](#footer-totals-and-group-subtotals) |
+| `grouping` | `null` | `{ by: [keys...], columns: [cells...] }` for group subtotal rows |
+| `tree` | `null` | [Tree](#tree) settings |
+| `filter` | `false` | Header filter buttons |
+| `mergeCells` | `false` | `true` (all columns) or an array of keys. Merges equal values vertically |
 
-### 페이지 바 (아래쪽)
+### Bottom bar
 
-| 옵션 | 기본값 | 설명 |
+| Option | Default | Description |
 |---|---|---|
-| `pageBar` | `true` | 아래 바 표시 (선택 합계·페이지 이동·상태 문구) |
+| `pageBar` | `true` | Show the bottom bar (selection summary, page navigation, status text) |
 | `pageHeight` | `25` | |
-| `statusDisplay` | `true` | 오른쪽 `"1 - 15 of 300"` 문구 |
-| `statusFormat` | `null` | 상태 문구 HTML을 만드는 함수 `(d) => string`. `d = {fromRowIndex, toRowIndex, dataRowCount, totalElements}` (모두 쉼표 넣은 글자, totalElements는 페이지 정보가 없으면 false) |
-| `pageNavigationCount` | `5` | 페이지 번호 버튼 수 |
-| `pageIcons` | `{first:null, prev:"«", next:"»", last:null}` | 이동 버튼 HTML. null이면 그 버튼 없음 |
+| `statusDisplay` | `true` | Status text on the right, such as `"1 - 15 of 300"` |
+| `statusFormat` | `null` | Function `(d) => string` returning the status HTML. `d = {fromRowIndex, toRowIndex, dataRowCount, totalElements}` (all formatted with thousands separators; `totalElements` is false without page info) |
+| `pageNavigationCount` | `5` | Number of page buttons |
+| `pageIcons` | `{first:null, prev:"«", next:"»", last:null}` | HTML for the navigation buttons; `null` hides that button |
 
-### 기억·내보내기
+### Persistence and export
 
-| 옵션 | 기본값 | 설명 |
+| Option | Default | Description |
 |---|---|---|
-| `stateKey` | `null` | 주면 컬럼 너비·정렬을 브라우저에 기억 |
-| `sheetName` | `null` | 엑셀 시트 이름 |
+| `stateKey` | `null` | If set, column widths and sort are remembered in the browser |
+| `sheetName` | `null` | Worksheet name for Excel export |
 
-## 컬럼 옵션
+## Column options
 
 ```js
 {
-  key: "QTY",            // 행 속성. "a.b", "a['한글 키']", "list[0].name" 같은 경로도 됩니다
-  label: "수량",          // 헤더 글자 (HTML로 들어갑니다)
-  width: 80,             // 숫자, "120", "50px", "*", "30%"
-  align: "right",        // 본문 정렬
-  headerAlign: "center", // 이 컬럼 헤더 정렬
-  formatter: "money",    // 이름 또는 함수
+  key: "QTY",            // row property; paths like "a.b", "a['key with spaces']", "list[0].name" work too
+  label: "Qty",          // header text (inserted as HTML)
+  width: 80,             // number, "120", "50px", "*", or "30%"
+  align: "right",        // body alignment
+  headerAlign: "center", // header alignment for this column
+  formatter: "money",    // name or function
   cellClass: function (c) { return c.value < 0 ? "minus" : ""; },
   headerClass: "my-head",
   editor: { type: "number" },
-  sortable: true,        // false면 정렬 안 함, true면 그리드 sortable과 관계없이 정렬
-  filter: false,         // false면 헤더 필터 없음, true면 이 컬럼만 필터
-  multiLine: false,      // true면 줄바꿈해서 보여 줌
+  sortable: true,        // false: never sort; true: sortable even if the grid's sortable is off
+  filter: false,         // false: no header filter; true: filter only this column
+  multiLine: false,      // true: wrap text in the cell
   resizable: true,
   hidden: false,
-  treeControl: false,    // 트리 펼침 단추를 그릴 컬럼
-  columns: [...]         // 있으면 묶음 헤더 (하위 컬럼)
+  treeControl: false,    // column that shows the tree expand button
+  columns: [...]         // child columns make this a header group
 }
 ```
 
-| 속성 | 설명 |
+| Property | Description |
 |---|---|
-| `key` | 값을 읽고 쓸 행 속성. 없으면 빈 칸 (formatter로만 그리는 칸) |
-| `label` | 헤더 글자. HTML로 넣으므로 사용자 입력을 그대로 넣지 마세요 |
-| `width` | 숫자·`"120"`·`"50px"`는 픽셀, `"*"`는 남은 너비를 나눔, `"30%"`는 그리드 너비 기준. 없으면 `defaultColumnWidth` |
-| `align`, `headerAlign` | `"left"`·`"center"`·`"right"` |
-| `formatter` | [formatter](#formatter와-셀-서식) |
-| `cellClass` | 셀 class. 문자열 또는 함수 (formatter와 같은 인자) |
-| `headerClass` | 헤더 칸 class. 문자열 또는 `function (column)` |
-| `editor` | [셀 편집기](#셀-편집기) |
-| `sortable`, `filter`, `resizable` | 위 설명 |
-| `multiLine` | 셀 안 줄바꿈 허용 (편집할 때 Alt+Enter로 줄바꿈) |
-| `numeric` | 선택 합계에서 숫자 컬럼으로 볼지. 없으면 money formatter·number/money 편집기 컬럼이 숫자 컬럼 |
-| `hidden` | true면 그리지 않음 |
-| `columns` | 묶음 헤더. 몇 단이든 됩니다. 틀 고정 경계를 걸치면 양쪽에 같은 제목이 나뉘어 보입니다 |
+| `key` | Row property to read and write. Without it the cell is empty (useful for formatter-only cells) |
+| `label` | Header text. It is inserted as HTML, so don't put raw user input here |
+| `width` | Numbers, `"120"`, and `"50px"` are pixels; `"*"` shares the remaining width; `"30%"` is relative to the grid width. Defaults to `defaultColumnWidth` |
+| `align`, `headerAlign` | `"left"`, `"center"`, or `"right"` |
+| `formatter` | See [Formatters](#formatters) |
+| `cellClass` | Cell class: a string or a function (same argument as a formatter) |
+| `headerClass` | Header cell class: a string or `function (column)` |
+| `editor` | See [Cell editors](#cell-editors) |
+| `sortable`, `filter`, `resizable` | See above |
+| `multiLine` | Allow line breaks in the cell (Alt+Enter while editing) |
+| `numeric` | Treat the column as numeric for the selection summary. By default, columns with the money formatter or a number or money editor are numeric |
+| `hidden` | If true, the column is not rendered |
+| `columns` | Header group, nested to any depth. A group that spans the frozen edge shows its title on both sides |
 
-## formatter와 셀 서식
+## Formatters
 
-formatter가 돌려준 글자는 **HTML로** 셀에 들어갑니다. formatter가 없으면 값을 이스케이프해서 넣습니다. 사용자가 입력한 값을 formatter에서 쓸 때는 `PyoGrid.escapeHtml`로 감싸세요.
+Whatever a formatter returns is inserted into the cell **as HTML**. Without a formatter, the value is escaped. Wrap user-entered values with `PyoGrid.escapeHtml` when you use them in a formatter.
 
 ```js
 {
   key: "STATUS",
   formatter: function (c) {
-    // c와 this는 같습니다
-    // c.value, c.row(= c.item), c.key, c.rowIndex(= c.dindex), c.column, c.grid
-    var color = c.value === "완료" ? "green" : "gray";
+    // c and this are the same object:
+    // c.value, c.row (= c.item), c.key, c.rowIndex (= c.dindex), c.column, c.grid
+    var color = c.value === "Done" ? "green" : "gray";
     return '<span style="color:' + color + '">' + PyoGrid.escapeHtml(c.value) + "</span>";
   }
 }
 ```
 
-기본 formatter는 `"money"` 하나입니다. 숫자가 아닌 글자를 지우고 천 단위 쉼표를 넣으며, 소수는 둘째 자리까지 자릅니다. 직접 등록하려면 [전역 확장](#전역-확장)을 보세요.
+The only built-in formatter is `"money"`: it strips non-numeric characters, adds thousands separators, and truncates to two decimal places. To register your own, see [Global extensions](#global-extensions).
 
-## 셀 편집기
+## Cell editors
 
-컬럼에 `editor`를 주면 편집할 수 있습니다.
+Give a column an `editor` to make it editable.
 
-![날짜 칸에 숫자를 치는 중에 달력이 열린 모습](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/editors.png)
+![Typing digits into a date cell, with the calendar open](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/editors.png)
 
 ```js
 editor: {
-  type: "text",                      // 아래 표
-  config: { ... },                   // 종류별 설정
-  disabled: function (c) {           // true면 그 셀은 편집 안 함 (값도 됩니다)
+  type: "text",                      // see the table below
+  config: { ... },                   // per-type settings
+  disabled: function (c) {           // true: this cell can't be edited (a plain value works too)
     return c.row.LOCKED === "Y";
   },
-  attributes: { maxlength: 30 }      // 입력칸에 붙일 속성
+  attributes: { maxlength: 30 }      // attributes set on the input
 }
 ```
 
-| type | 저장되는 값 | config |
+| type | Stored value | config |
 |---|---|---|
-| `text` | 입력한 글자 | |
-| `number` | 숫자 (빈 칸은 `""`) | `decimal` 소수 자리 수(0이면 정수만), `min`, `max` |
-| `money` | 숫자 (빈 칸은 `""`). 입력하는 동안 쉼표가 붙음 | `decimal`, `min`, `max` |
-| `date` | `"yyyy-MM-dd"` 글자. 숫자만 쳐도 하이픈이 들어가고, 셀 아래에 달력이 열림 | |
-| `select` | 고른 항목 값. 목록에서 방향키·Enter·클릭, 글자(한글 포함)로 찾기 | `options` 배열, `columnKeys: { optionValue: "value", optionText: "text" }` |
-| `checkbox` | `trueValue`/`falseValue` (없으면 `true`/`false`). 셀을 누르거나 Space로 바뀜 | `trueValue`, `falseValue` |
+| `text` | The text as typed | |
+| `number` | A number (`""` when empty) | `decimal` digits after the point (0 for integers only), `min`, `max` |
+| `money` | A number (`""` when empty). Thousands separators appear while typing | `decimal`, `min`, `max` |
+| `date` | A `"yyyy-MM-dd"` string. Typing digits inserts the hyphens, and a calendar opens below the cell | |
+| `select` | The chosen option's value. Pick with arrow keys, Enter, or a click, or type to search (Korean included) | `options` array, `columnKeys: { optionValue: "value", optionText: "text" }` |
+| `checkbox` | `trueValue` / `falseValue` (`true` / `false` if not set). Toggles on click or Space | `trueValue`, `falseValue` |
 
-- 숫자·날짜 칸에서 잘못된 값으로 Enter를 누르면 빨간 테두리가 생기고 편집이 계속됩니다. 포커스가 그리드 밖으로 나가면 취소됩니다.
-- `select` 컬럼에 formatter가 없으면 셀에 값 대신 항목 글자를 보여 줍니다.
-- `checkbox`는 formatter보다 우선해서 체크박스로 그립니다. `disabled`인 셀은 값을 글자로 보여 줍니다.
-- 편집기가 있는 셀을 더블클릭하면 편집이 시작되고, 이때 `dblclick` 이벤트는 나가지 않습니다.
+- Pressing Enter on an invalid number or date shows a red border and keeps editing. If focus leaves the grid, the edit is cancelled.
+- A `select` column without a formatter shows the option text instead of the value.
+- `checkbox` cells are drawn as checkboxes, ahead of any formatter. A `disabled` checkbox cell shows its value as text.
+- Double-clicking a cell with an editor starts editing, and no `dblclick` event is fired.
 
 ```js
-// select 예
-{ key: "KIND", label: "구분", editor: { type: "select", config: {
+// select example
+{ key: "KIND", label: "Type", editor: { type: "select", config: {
     columnKeys: { optionValue: "CD", optionText: "NM" },
-    options: [{ CD: "A", NM: "가공" }, { CD: "B", NM: "부품" }]
+    options: [{ CD: "A", NM: "Machining" }, { CD: "B", NM: "Parts" }]
 } } }
 ```
 
-**한글 바로 입력:** 셀을 고르고 그냥 치면 그 자리에서 편집이 시작되고 첫 글자부터 들어갑니다. 한글 조합 중에 누른 Enter·Tab·방향키도 조합이 끝난 뒤 처리하므로 Enter 한 번으로 저장됩니다.
+**Type to edit, IME included:** select a cell and start typing; editing begins in place and the first character is kept. Enter, Tab, and arrow keys pressed during IME composition are handled after the composition ends, so one Enter commits the value.
 
-## 키보드
+## Keyboard
 
-그리드 셀을 누르면 키보드 포커스가 그리드로 옵니다 (`grid.focus()`로도 줄 수 있음).
+Clicking a cell gives the grid keyboard focus (or call `grid.focus()`).
 
-**편집하지 않을 때**
+**Not editing**
 
-| 키 | 동작 |
+| Key | Action |
 |---|---|
-| 방향키 | 이동 |
-| Shift+방향키 | 범위 넓히기 |
-| Ctrl+방향키 | 끝까지 이동 |
-| Home / End | 줄 처음 / 끝 |
-| Ctrl+Home / Ctrl+End | 첫 셀 / 마지막 셀 |
-| PageUp / PageDown | 한 화면씩 |
-| Tab / Shift+Tab | 오른쪽 / 왼쪽 (줄 끝이면 다음 줄) |
-| 글자 키 | 빈 값으로 편집 시작 (그 글자가 들어감) |
-| F2, Enter, Space | 지금 값으로 편집 시작 (체크박스는 바꾸기, 목록은 열기). 편집기가 없으면 Enter는 아래로 |
-| Backspace | 비우고 편집 시작 |
-| Delete | 선택 범위에서 편집할 수 있는 셀 비우기 (체크박스 제외) |
-| Ctrl+A | 전체 셀 선택 |
-| Ctrl+C / Ctrl+X / Ctrl+V | 복사 / 잘라내기 / 붙여넣기 |
-| Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z) | 실행 취소 / 다시 실행 |
+| Arrow keys | Move |
+| Shift+Arrow | Extend the range |
+| Ctrl+Arrow | Move to the edge |
+| Home / End | Start / end of the row |
+| Ctrl+Home / Ctrl+End | First / last cell |
+| PageUp / PageDown | One page |
+| Tab / Shift+Tab | Right / left (wraps to the next row) |
+| Character keys | Start editing with an empty value (the character is entered) |
+| F2, Enter, Space | Start editing with the current value (toggles checkboxes, opens selects). Without an editor, Enter moves down |
+| Backspace | Clear and start editing |
+| Delete | Clear the editable cells in the range (except checkboxes) |
+| Ctrl+A | Select all cells |
+| Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste |
+| Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z) | Undo / redo |
 
-**편집 중**
+**Editing**
 
-| 키 | 동작 |
+| Key | Action |
 |---|---|
-| Enter / Shift+Enter | 저장하고 아래 / 위 |
-| Tab / Shift+Tab | 저장하고 오른쪽 / 왼쪽 |
-| ↑ / ↓ | 저장하고 위 / 아래 (목록은 항목 이동) |
-| ← / → | 글자 안에서 커서 이동 |
-| Esc | 취소 |
-| Alt+Enter | 줄바꿈 (`multiLine` 컬럼만) |
+| Enter / Shift+Enter | Commit and move down / up |
+| Tab / Shift+Tab | Commit and move right / left |
+| ↑ / ↓ | Commit and move up / down (moves through options in a select) |
+| ← / → | Move the caret in the text |
+| Esc | Cancel |
+| Alt+Enter | Line break (`multiLine` columns only) |
 
-다른 셀을 누르거나 그리드 밖을 누르면 편집 중인 값이 저장됩니다.
+Clicking another cell or outside the grid commits the current edit.
 
-## 메서드
+## Methods
 
-대부분 그리드 자신을 돌려주므로 이어 쓸 수 있습니다 (`grid.setData(rows).scrollToRow(0)`).
+Most methods return the grid, so calls can be chained (`grid.setData(rows).scrollToRow(0)`).
 
-### 데이터
+### Data
 
-| 메서드 | 설명 |
+| Method | Description |
 |---|---|
-| `setData(rows, page?)` | 데이터를 바꾼다. 선택 범위·실행 취소 기록·지운 행 기록을 비우고 맨 위로 스크롤. `page`는 [서버 페이징](#서버-페이징서버-정렬) 정보. 필터 조건과 정렬은 유지 |
-| `getRows()` | 필터·정렬 뒤 데이터 행 (배열은 복사본, 행은 원본 객체) |
-| `getViewRows()` | 화면 행 (그룹 합계 행 포함) |
-| `getAllRows()` | 전체 행 (필터로 숨은 행 포함) |
-| `getRow(rowIndex)` | 화면 순번의 행 |
-| `rowCount` | 화면 행 수 (읽기 전용 속성) |
-| `addRow(rows, at?, opts?)` | 행(또는 배열)을 넣는다. `at`: `"last"`(기본)·`"first"`·화면 순번(그 행 앞). `opts.focus: true`면 넣은 행으로 이동 |
-| `removeRows(targets)` | 목록에서 뺀다 (지운 행 기록에 남지 않음). 행 객체·화면 순번·그 배열 |
-| `deleteRows(targets)` | 지운다. 목록에서 빠지고 `getDeletedRows()`에 남는다. 트리는 자손도 |
-| `getDeletedRows()` | 지운 행 |
-| `getModifiedRows()` | 값이 바뀌었거나 넣은 행. 실행 취소 등으로 모든 셀이 처음 값으로 돌아오면 빠진다 |
-| `clearModified(rows?)` | 수정 표시를 지운다 (rows가 없으면 전부). 저장한 뒤 부른다 |
-| `clearDeleted()` | 지운 행 기록을 비운다 |
-| `acceptChanges()` | 저장한 뒤: 수정 표시·지운 행 기록·실행 취소 기록을 모두 비운다 |
-| `replaceRow(rowIndex, row)` | 그 자리의 행을 다른 객체로 바꾼다 |
-| `setValue(rowIndex, key, value)` | 셀 값을 바꾼다. 바뀌면 true, `__modified__`를 붙이고 `change`를 알린다. null·undefined·""는 같은 값으로 본다 |
-| `setValues([{rowIndex, key, value}], {source?})` | 여러 셀을 한 번에 바꾸고 한 번만 다시 그린다. 실제로 바뀐 목록을 돌려준다 |
+| `setData(rows, page?)` | Replace the data. Clears the cell range, undo history, and deleted-row list, and scrolls to the top. `page` is [server paging](#server-side-paging-and-sorting) info. Filters and sort are kept |
+| `getRows()` | Data rows after filtering and sorting (a new array of the original row objects) |
+| `getViewRows()` | Rows on screen (subtotal rows included) |
+| `getAllRows()` | All rows (including rows hidden by filters) |
+| `getRow(rowIndex)` | Row at a view index |
+| `rowCount` | Number of rows on screen (read-only property) |
+| `addRow(rows, at?, opts?)` | Add a row or an array of rows. `at`: `"last"` (default), `"first"`, or a view index (inserts before that row). `opts.focus: true` moves to the new row |
+| `removeRows(targets)` | Take rows out of the list without recording them as deleted. Accepts row objects, view indexes, or an array of either |
+| `deleteRows(targets)` | Delete rows: they leave the list and are kept in `getDeletedRows()`. In a tree, descendants are deleted too |
+| `getDeletedRows()` | Deleted rows |
+| `getModifiedRows()` | Rows that changed or were added. A row drops out once every cell is back to its original value (for example, after undo) |
+| `clearModified(rows?)` | Clear the modified flag (all rows if `rows` is omitted). Call after saving |
+| `clearDeleted()` | Clear the deleted-row list |
+| `acceptChanges()` | After saving: clear modified flags, the deleted-row list, and undo history |
+| `replaceRow(rowIndex, row)` | Replace the row at that position with another object |
+| `setValue(rowIndex, key, value)` | Set a cell value. Returns true if it changed, marks the row `__modified__`, and fires `change`. `null`, `undefined`, and `""` count as the same value |
+| `setValues([{rowIndex, key, value}], {source?})` | Set many cells and redraw once. Returns the list of cells that actually changed |
 
-### 행 선택
+### Row selection
 
-| 메서드 | 설명 |
+| Method | Description |
 |---|---|
-| `selectRow(rowIndex, selected?)` | 선택·해제. selected를 빼면 반전. 바뀐 뒤 상태를 돌려준다 |
-| `selectRowRange(from, to, selected)` | from~to를 같은 상태로 |
-| `selectAll(selected = true, filter?)` | 전체 선택·해제. `filter(row, i)`가 true인 행만 |
-| `clearSelection()` | 전체 해제 |
-| `getSelectedRows()` | 선택된 행 (getRows 순서) |
-| `getSelectedIndexes()` | 선택된 행의 화면 순번 |
+| `selectRow(rowIndex, selected?)` | Select or deselect; toggles if `selected` is omitted. Returns the new state |
+| `selectRowRange(from, to, selected)` | Set rows `from` through `to` to the same state |
+| `selectAll(selected = true, filter?)` | Select or deselect all; only rows where `filter(row, i)` is true |
+| `clearSelection()` | Deselect all |
+| `getSelectedRows()` | Selected rows (in `getRows()` order) |
+| `getSelectedIndexes()` | View indexes of the selected rows |
 | `isRowSelected(row)` / `isRowSelectable(row)` | |
 
-### 셀 범위
+### Cell range
 
-| 메서드 | 설명 |
+| Method | Description |
 |---|---|
-| `setRange(r0, c0, r1?, c1?)` | 범위 선택. 표 밖 좌표는 안으로 맞춤 |
+| `setRange(r0, c0, r1?, c1?)` | Select a range. Out-of-bounds coordinates are clamped |
 | `clearRange()` | |
-| `getRange()` | `{r0, c0, r1, c1, active: {r, c}}` 또는 null |
-| `getActiveCell()` | `{rowIndex, colIndex, row, column, key, value}` 또는 null |
-| `getRangeCells()` | 범위 안 셀 목록 `[{rowIndex, colIndex, row, key, value}]` |
+| `getRange()` | `{r0, c0, r1, c1, active: {r, c}}` or null |
+| `getActiveCell()` | `{rowIndex, colIndex, row, column, key, value}` or null |
+| `getRangeCells()` | Cells in the range: `[{rowIndex, colIndex, row, key, value}]` |
 | `getSelectionSummary()` | `{count, numCount, sum, avg}` |
-| `getRangeText()` | 범위를 Excel 형식(탭·줄바꿈) 글자로. 원래 값 기준 |
+| `getRangeText()` | The range as Excel-style text (tabs and newlines), using raw values |
 
-### 정렬·필터·트리
+### Sorting, filtering, tree
 
-| 메서드 | 설명 |
+| Method | Description |
 |---|---|
-| `setSort([{key, dir}])` | 정렬. dir은 `"asc"`·`"desc"`. 빈 배열이면 원래 순서 |
+| `setSort([{key, dir}])` | Sort. `dir` is `"asc"` or `"desc"`. An empty array restores the original order |
 | `getSort()` | |
-| `toggleSort(colIndex)` | 헤더 클릭과 같음: 없음 → 내림 → 오름 → 없음 |
-| `setFilter(key, values \| null)` | 그 컬럼에서 보여 줄 값 목록. null이면 조건 지움 |
+| `toggleSort(colIndex)` | Same as clicking the header: none → desc → asc → none |
+| `setFilter(key, values \| null)` | Values to show for that column; `null` removes the condition |
 | `clearFilters()` | |
-| `getFilters()` | `{key: [값...]}` |
-| `openFilter(colIndex)` | 필터 팝업 열기 |
+| `getFilters()` | `{key: [values...]}` |
+| `openFilter(colIndex)` | Open the filter popup |
 | `isFilterActive()` | |
-| `toggleNode(rowIndex \| row, collapsed?)` | 트리 접기·펼치기 |
+| `toggleNode(rowIndex \| row, collapsed?)` | Collapse or expand a tree node |
 | `expandAll()` / `collapseAll()` | |
 | `getTreeInfo(row)` | `{depth, children, parent}` |
 
-### 편집·클립보드·실행 취소
+### Editing, clipboard, undo
 
-| 메서드 | 설명 |
+| Method | Description |
 |---|---|
-| `startEdit(rowIndex, colIndex, {mode?})` | 편집 시작. mode `"edit"`(지금 값, 기본) 또는 `"type"`(빈 값) |
-| `commitEdit()` | 저장. 잘못된 값이면 false |
+| `startEdit(rowIndex, colIndex, {mode?})` | Start editing. `mode` is `"edit"` (current value, default) or `"type"` (empty) |
+| `commitEdit()` | Commit. Returns false if the value is invalid |
 | `cancelEdit()` | |
-| `isEditing` | 편집 중인가 (속성) |
-| `focus()` | 그리드에 키보드 포커스 |
-| `copy()` | 범위를 클립보드로 (Promise, 클립보드 권한 필요. Ctrl+C는 권한 없이 됨) |
-| `paste(text)` | 글자를 범위 왼쪽 위부터 붙여넣기. `{applied, skipped, rows}` |
-| `cut()` | 범위 글자를 돌려주고 비운다 |
-| `undo()` / `redo()` | 되돌릴 것이 없으면 false |
-| `canUndo` / `canRedo` | (속성) |
+| `isEditing` | Whether a cell is being edited (property) |
+| `focus()` | Give the grid keyboard focus |
+| `copy()` | Copy the range to the clipboard (returns a Promise and needs clipboard permission; Ctrl+C doesn't) |
+| `paste(text)` | Paste text starting at the top-left of the range. Returns `{applied, skipped, rows}` |
+| `cut()` | Return the range as text and clear it |
+| `undo()` / `redo()` | Return false when there is nothing to undo or redo |
+| `canUndo` / `canRedo` | (properties) |
 | `clearHistory()` | |
 
-### 컬럼·화면
+### Columns and layout
 
-| 메서드 | 설명 |
+| Method | Description |
 |---|---|
-| `setColumns(columns)` | 컬럼을 통째로 바꾼다 (사용자가 조절한 너비는 초기화, `stateKey` 저장값은 되살림). 새 컬럼에 없거나 필터·정렬할 수 없게 된 키의 필터·정렬은 지우고 `filterchange`·`sortchange`를 알린다 (addColumn·removeColumn·updateColumn도 같음) |
+| `setColumns(columns)` | Replace all columns (resets user-resized widths and restores widths saved under `stateKey`). Filters and sorts on keys that no longer exist, or are no longer filterable or sortable, are removed and `filterchange` / `sortchange` fire. The same applies to `addColumn`, `removeColumn`, and `updateColumn` |
 | `getColumns()` | |
-| `addColumn(column, index?)` | 맨 위 수준에 넣는다. index가 없으면 맨 끝 |
-| `removeColumn(index?)` | index가 없으면 마지막 컬럼 |
+| `addColumn(column, index?)` | Add a top-level column, at the end if `index` is omitted |
+| `removeColumn(index?)` | Remove a column, the last one if `index` is omitted |
 | `updateColumn(column, index)` | |
 | `setColumnWidth(colIndex, px)` | |
-| `getColumnWidths()` | 잎 컬럼 너비 배열 |
-| `layout()` | 크기·컬럼을 다시 계산하고 그린다 |
-| `refresh()` | 보이는 행을 다시 그린다 (행 객체 값을 직접 바꾼 뒤) |
-| `refreshRow(rowIndex)` | 한 행만 다시 그린다 |
-| `scrollToRow(rowIndex, align?)` | `"nearest"`(기본)·`"top"` |
+| `getColumnWidths()` | Widths of the leaf columns |
+| `layout()` | Recalculate size and columns, then redraw |
+| `refresh()` | Redraw the visible rows (after changing row objects directly) |
+| `refreshRow(rowIndex)` | Redraw one row |
+| `scrollToRow(rowIndex, align?)` | `"nearest"` (default) or `"top"` |
 | `scrollToCell(rowIndex, colIndex)` | |
-| `setHeight(px \| css 값 \| null)` | |
-| `setPage(page)` | 페이지 정보만 바꾼다 |
-| `cellContext(r, c)` / `cellText(r, c)` | 셀 정보 / 화면 글자 |
+| `setHeight(px \| css value \| null)` | |
+| `setPage(page)` | Update only the page info |
+| `cellContext(r, c)` / `cellText(r, c)` | Cell info / text as displayed |
 
-### 내보내기·기억·기타
+### Export, persistence, misc
 
-| 메서드 | 설명 |
+| Method | Description |
 |---|---|
-| `exportExcel(fileName, {sheetName?, XLSX?})` | xlsx 저장. SheetJS가 없으면 false |
-| `getExportData()` | 내보낼 표 (`{rows, merges, widths, headerRows}`) |
-| `resetState()` | 기억한 너비·정렬 지우기 |
-| `on(name, fn)` / `off(name, fn?)` | 이벤트 |
-| `destroy()` | 그리드를 지우고 이벤트를 푼다 |
+| `exportExcel(fileName, {sheetName?, XLSX?})` | Save as xlsx. Returns false without SheetJS |
+| `getExportData()` | The table to export (`{rows, merges, widths, headerRows}`) |
+| `resetState()` | Forget saved widths and sort |
+| `on(name, fn)` / `off(name, fn?)` | Events |
+| `destroy()` | Remove the grid and its listeners |
 
-## 이벤트
+## Events
 
 ```js
-grid.on("change", function (e) { ... });   // this는 grid
-grid.off("change", handler);               // handler를 빼면 그 이벤트 전부
+grid.on("change", function (e) { ... });   // `this` is the grid
+grid.off("change", handler);               // omit handler to remove all listeners for the event
 ```
 
-| 이벤트 | 언제 | 내용 |
+| Event | When | Payload |
 |---|---|---|
-| `click` / `dblclick` | 셀 클릭 | `{row, item, rowIndex, dindex, colIndex, column, key, value, event, grid}`. 줄 번호·행 선택 칸이면 `special`이 붙고 colIndex가 없음 |
-| `selectionchange` | 행 선택이 바뀜 | `{index, row, selected, source, changed: [행], indexes: [순번]}`. source: `"click"`·`"range"`·`"all"`·`"api"` |
-| `rangechange` | 셀 범위가 바뀜 | `{range}` |
-| `sortchange` | 정렬이 바뀜 | `{sort}` |
-| `filterchange` | 필터가 바뀜 | `{filters, count}` |
-| `pagechange` | 페이지 버튼 클릭 | `{page, current, info}` (page는 0부터) |
-| `change` | 셀 값이 바뀜 | `{row, item, rowIndex, dindex, key, value, oldValue, source, batch}`. source: `"edit"`·`"clear"`·`"paste"`·`"cut"`·`"undo"`·`"redo"`·`"api"` |
-| `batchchange` | 여러 셀이 한 번에 바뀜 (Delete, 붙여넣기 등) | `{source, changes: [{rowIndex, row, key, value, oldValue}]}` |
-| `beforeedit` | 편집 시작 전 | 셀 정보 + `mode`. **false를 돌려주면 시작하지 않음** |
-| `editstart` / `editend` | 편집 시작 / 끝 | 셀 정보 + `mode` / `committed` |
-| `keydown` | 그리드에서 키를 누름 | `{event, editing}`. **false를 돌려주면 그리드가 처리하지 않음** |
-| `copy` / `paste` | 복사 / 붙여넣기 | `{range, text}` / `{applied, skipped, rows}` |
+| `click` / `dblclick` | A cell is clicked | `{row, item, rowIndex, dindex, colIndex, column, key, value, event, grid}`. For the line-number and row-selector columns, `special` is set and there is no `colIndex` |
+| `selectionchange` | Row selection changes | `{index, row, selected, source, changed: [rows], indexes: [indexes]}`. `source`: `"click"`, `"range"`, `"all"`, `"api"` |
+| `rangechange` | The cell range changes | `{range}` |
+| `sortchange` | Sort changes | `{sort}` |
+| `filterchange` | Filters change | `{filters, count}` |
+| `pagechange` | A page button is clicked | `{page, current, info}` (`page` is zero-based) |
+| `change` | A cell value changes | `{row, item, rowIndex, dindex, key, value, oldValue, source, batch}`. `source`: `"edit"`, `"clear"`, `"paste"`, `"cut"`, `"undo"`, `"redo"`, `"api"` |
+| `batchchange` | Many cells change at once (Delete, paste, and so on) | `{source, changes: [{rowIndex, row, key, value, oldValue}]}` |
+| `beforeedit` | Before editing starts | Cell info plus `mode`. **Return false to prevent editing** |
+| `editstart` / `editend` | Editing starts / ends | Cell info plus `mode` / `committed` |
+| `keydown` | A key is pressed in the grid | `{event, editing}`. **Return false to stop the grid from handling it** |
+| `copy` / `paste` | Copy / paste | `{range, text}` / `{applied, skipped, rows}` |
 | `undo` / `redo` | | `{source, count}` |
-| `rowsadd` / `rowsremove` / `rowsdelete` | 행 넣기 / 빼기 / 지우기 | `{rows}` |
-| `treetoggle` | 트리 접기·펼치기 | `{row, collapsed}` |
-| `columnresize` | 너비 조절 | `{index, column, width}` |
-| `scroll` | 스크롤 | `{top, left}` |
-| `datachange` | setData | `{rows}` |
+| `rowsadd` / `rowsremove` / `rowsdelete` | Rows are added / removed / deleted | `{rows}` |
+| `treetoggle` | A tree node is collapsed or expanded | `{row, collapsed}` |
+| `columnresize` | A column is resized | `{index, column, width}` |
+| `scroll` | Scroll | `{top, left}` |
+| `datachange` | `setData` | `{rows}` |
 
-**여러 셀 변경과 change:** Delete·붙여넣기·실행 취소는 셀마다 `change`(`batch: true`)를 보내고 끝에 `batchchange`를 한 번 보냅니다. 셀마다 무거운 계산을 하는 화면은 `batch`인 change를 건너뛰고 `batchchange`에서 한 번에 처리하세요.
+**`change` during bulk edits:** Delete, paste, and undo fire `change` for each cell with `batch: true`, then one `batchchange` at the end. If you do heavy work per cell, skip the batched `change` events and handle `batchchange` once.
 
 ```js
 grid.on("change", function (e) {
@@ -625,119 +641,119 @@ grid.on("change", function (e) {
 grid.on("batchchange", function () { grid.refresh(); });
 ```
 
-## 합계 행·그룹 합계
+## Footer totals and group subtotals
 
-**합계 행 (`footSum`)**은 본문 아래에 붙어 있고, 가로로는 컬럼과 같이 스크롤됩니다. 배열 하나가 한 줄입니다.
+**Footer totals (`footSum`)** sit below the body and scroll horizontally with the columns. Each array is one row.
 
-![그룹 합계·합계 행, 트리, 셀 병합 데모](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/summary.png)
+![Group subtotals and footer totals, a tree, and merged cells](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/summary.png)
 
-위에서부터 그룹 합계와 합계 행, [트리](#트리), [셀 병합](#셀-병합)입니다.
+From the top: group subtotals with a footer totals row, a [tree](#tree), and [merged cells](#merged-cells).
 
 ```js
 footSum: [[
-  { label: "합계", colspan: 3, align: "center" },          // key가 없으면 label
+  { label: "Total", colspan: 3, align: "center" },          // no key: show the label
   { key: "QTY", collector: "sum", formatter: "money", align: "right" },
-  { key: "AMT", collector: function () {                   // 직접 계산
+  { key: "AMT", collector: function () {                    // custom calculation
       return this.list.reduce(function (s, r) { return s + (r.AMT || 0); }, 0);
     }, formatter: "money", align: "right" }
 ]]
 ```
 
-| 칸 속성 | 설명 |
+| Cell property | Description |
 |---|---|
-| `label` | key가 없을 때 글자 (HTML) 또는 함수 (`this = {key, list, groupBy}`) |
-| `key` + `collector` | 계산값. 이름(`"sum"`·`"avg"`·`"count"`·`"min"`·`"max"`) 또는 함수 (`this = {key, list}`) |
-| `formatter` | 계산값에 적용 (`this.value`) |
-| `colspan` | 왼쪽 잎 컬럼부터 차지할 칸 수 (줄 번호·행 선택 칸은 세지 않음) |
+| `label` | Text when there is no `key` (HTML), or a function (`this = {key, list, groupBy}`) |
+| `key` + `collector` | A calculated value. A name (`"sum"`, `"avg"`, `"count"`, `"min"`, `"max"`) or a function (`this = {key, list}`) |
+| `formatter` | Applied to the calculated value (`this.value`) |
+| `colspan` | Number of leaf columns to span, starting from the left (line-number and row-selector columns don't count) |
 | `align`, `className` | |
 
-합계는 필터를 거친 행(`getRows()`)으로 계산하고, 값을 바꾸면 다시 계산됩니다. `avg`는 소수 둘째 자리에서 반올림합니다.
+Totals are calculated from the filtered rows (`getRows()`) and update when values change. `avg` is rounded to two decimal places.
 
-**그룹 합계 (`grouping`)**는 그룹 키로 먼저 오름차순 정렬하고, 그룹이 끝나는 자리 뒤에 소계 행을 넣습니다. 키가 여러 개면 안쪽 단계 소계가 먼저 옵니다. 칸 정의는 footSum과 같습니다.
+**Group subtotals (`grouping`)** sort by the group keys (ascending) and insert a subtotal row after each group. With several keys, inner subtotals come first. Cells are defined the same way as in `footSum`.
 
 ```js
 grouping: {
   by: ["STORE", "SECTION"],
   columns: [
-    { label: function () { return this.groupBy.labels.join(" / ") + " 소계"; }, colspan: 3 },
+    { label: function () { return this.groupBy.labels.join(" / ") + " subtotal"; }, colspan: 3 },
     { key: "QTY", collector: "sum", formatter: "money", align: "right" }
   ]
 }
 ```
 
-`this.groupBy`는 `{keys: [...], labels: [...]}`입니다. 소계 행은 `{__isGrouping: true, __groupingList, __groupingBy}` 모양의 객체로 화면 행에 들어가고, 선택·편집·붙여넣기 대상이 아니며 줄 번호도 세지 않습니다.
+`this.groupBy` is `{keys: [...], labels: [...]}`. Subtotal rows are objects shaped like `{__isGrouping: true, __groupingList, __groupingBy}` in the view rows. They can't be selected, edited, or pasted into, and they don't get a line number.
 
-## 트리
+## Tree
 
-부모 키로 이어진 평평한 목록을 트리로 보여 줍니다. 부모 값이 없거나 비었거나 `"top"`이면 맨 위 노드입니다.
+Shows a flat list linked by parent keys as a tree. A row whose parent value is missing, empty, or `"top"` is a root node.
 
 ```js
 var grid = new PyoGrid("#grid", {
   tree: {
-    parentKey: "parentId",    // 기본 "pid"
-    selfKey: "id",            // 기본 "id"
-    collapseKey: "collapse",  // 접힘 상태를 담는 행 속성
-    indentWidth: 14,          // 기본 10
+    parentKey: "parentId",    // default "pid"
+    selfKey: "id",            // default "id"
+    collapseKey: "collapse",  // row property holding the collapsed state
+    indentWidth: 14,          // default 10
     arrowWidth: 15,
     iconWidth: 18,
-    icons: {                  // HTML도 됩니다. 빈 글자면 아이콘 없음
+    icons: {                  // HTML works too; an empty string hides the icon
       openedArrow: "▾", collapsedArrow: "▸",
       groupIcon: "⊚", collapsedGroupIcon: "⊚", itemIcon: "⊙"
     }
   },
   columns: [
-    { key: "id", label: "분류 코드", width: 220, treeControl: true },
-    { key: "name", label: "분류명" }
+    { key: "id", label: "Category code", width: 220, treeControl: true },
+    { key: "name", label: "Category" }
   ]
 });
 grid.setData([
-  { id: "C-100", parentId: "", name: "문구" },
-  { id: "C-110", parentId: "C-100", name: "필기구" },
-  { id: "C-111", parentId: "C-110", name: "볼펜", collapse: false }
+  { id: "C-100", parentId: "", name: "Stationery" },
+  { id: "C-110", parentId: "C-100", name: "Writing tools" },
+  { id: "C-111", parentId: "C-110", name: "Ballpoint pens", collapse: false }
 ]);
 ```
 
-정렬은 형제끼리 합니다. 트리에서는 헤더 값 필터를 쓰지 않습니다.
+Sorting applies among siblings. Header filters are not available in tree mode.
 
-## 헤더 값 필터
+## Header filters
 
-`filter: true`면 헤더마다 ▾ 단추가 생기고, Excel 자동 필터처럼 값 목록에서 고릅니다 (검색, 전체 선택, 초기화·확인·취소, Enter·Esc).
+With `filter: true`, each header gets a ▾ button that opens a value list, like Excel's AutoFilter (search, select all, reset / OK / cancel, Enter and Esc).
 
-![헤더 값 필터 팝업: 검색, 전체 선택, 값 목록](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/filter.png)
+![Header filter popup with search, select all, and a value list](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/filter.png)
 
-- 목록에는 다른 컬럼 조건에 걸린 행의 값만 나옵니다. 값이 많으면 앞의 2,000개만 그리지만, 검색·전체 선택·확인은 모든 값을 대상으로 합니다 (그대로 확인하면 조건이 생기지 않습니다).
-- select 편집기 컬럼은 항목 이름, money 컬럼은 쉼표 넣은 숫자로 보입니다. 빈 값은 "(빈 값)".
-- 조건은 `setData` 뒤에도 유지됩니다. 조건에 맞는 행이 없으면 "필터 조건에 맞는 데이터가 없습니다."
-- 트리와 서버 페이징(`setData(rows, page)`)에서는 쓰지 않습니다.
-- 코드로: `grid.setFilter("MANAGER", ["홍길동", "김철수"])`, `grid.clearFilters()`
+- The list shows only values from rows that pass the other columns' filters. With many values only the first 2,000 are drawn, but search, select all, and OK apply to every value (pressing OK without changes adds no condition).
+- Select-editor columns list option names, and money columns list formatted numbers. Empty values appear as "(빈 값)" ("(empty)").
+- Filters survive `setData`. When no rows match, the grid shows "필터 조건에 맞는 데이터가 없습니다." ("No rows match the filter.")
+- Not available in tree mode or with server paging (`setData(rows, page)`).
+- From code: `grid.setFilter("MANAGER", ["Alice", "Bob"])`, `grid.clearFilters()`
 
-## 셀 병합
+## Merged cells
 
 ```js
-mergeCells: ["KIND", "SUB"]   // 또는 true (모든 컬럼)
+mergeCells: ["KIND", "SUB"]   // or true for all columns
 ```
 
-위 행과 글자가 같고 왼쪽 병합 컬럼도 이어질 때 합칩니다. 편집기가 있는 컬럼과 그룹 합계 행은 합치지 않습니다. 가상 스크롤과 함께 쓰려고 칸을 실제로 합치지 않고, 덩어리 안 가로선을 지우고 글자는 덩어리 중 화면에 보이는 부분의 가운데 행에만 보입니다. 덩어리가 화면보다 길어도 스크롤하면 글자가 따라옵니다.
+A cell merges with the one above when the text is the same and the merge columns to its left continue as well. Columns with an editor and subtotal rows are never merged. To work with virtual scrolling, cells are not actually spanned: the horizontal lines inside a block are hidden and the text shows only on the middle row of the block's visible part. If a block is taller than the viewport, the text follows as you scroll.
 
-## 복사·붙여넣기·실행 취소
+## Copy, paste, and undo
 
-- **복사 (Ctrl+C):** 선택 범위를 Excel 형식(탭·줄바꿈)으로. formatter를 거치지 않은 원래 값이라 다시 붙여넣으면 그대로 돌아옵니다.
-- **붙여넣기 (Ctrl+V):** Excel에서 복사한 여러 셀을 범위 왼쪽 위부터 넣습니다.
-  - 따옴표로 감싼 칸(칸 안 줄바꿈·탭), "1,234" 같은 쉼표 숫자, `2026.11.12` 같은 날짜를 알아듣습니다.
-  - 1칸을 여러 칸 범위에 붙이면 채우고, 범위가 붙인 묶음의 정수배면 반복합니다.
-  - 편집기가 없거나 막힌 칸, 종류에 맞지 않는 값(숫자 칸의 글자, 목록에 없는 항목), 표 밖 칸은 건너뛰고 아래 바에 "붙여넣기: n셀 (건너뜀 m)"을 보여 줍니다.
-  - 붙인 값은 편집할 때와 같은 검증을 거칩니다: number·money의 `min`·`max`·`decimal`, 날짜 확인, `editor.attributes.maxlength`(넘치면 자름), 사용자 편집기의 `parse`.
-  - 지금 값과 같은 뜻의 값(text 칸의 0과 "0", money 칸의 "1,200"과 1200)은 바꾸지 않아서 수정된 행이 되지 않습니다. 편집에서 값을 안 바꾸고 Enter를 눌러도 마찬가지입니다.
-  - select 칸은 항목 값이나 이름, checkbox 칸은 trueValue/falseValue·Y/N·true/false·1/0을 받습니다.
-- **잘라내기 (Ctrl+X):** 복사하고 비웁니다.
-- **실행 취소 (Ctrl+Z):** 셀 편집·Delete·붙여넣기·잘라내기를 한 동작씩(붙여넣기는 통째로) 되돌립니다. 다시 실행은 Ctrl+Y. 정렬로 순서가 바뀌어도 그 행을 되돌립니다. 코드에서 부른 `setValue`는 기록하지 않습니다.
+- **Copy (Ctrl+C):** copies the range as Excel-style text (tabs and newlines). Values are raw, not formatted, so pasting them back gives the same values.
+- **Paste (Ctrl+V):** pastes cells copied from Excel, starting at the top-left of the range.
+  - Understands quoted cells (newlines and tabs inside a cell), numbers with thousands separators like "1,234", and dates like `2026.11.12`.
+  - Pasting one cell into a larger range fills it. If the range is a whole multiple of the copied block, the block repeats.
+  - Cells without an editor or with a disabled one, values that don't fit (text in a number cell, an unknown select option), and cells outside the grid are skipped. The bottom bar shows how many cells were pasted and skipped.
+  - Pasted values are validated like typed ones: `min`, `max`, and `decimal` for number and money, date checks, `editor.attributes.maxlength` (longer text is cut), and `parse` for custom editors.
+  - A value that means the same as the current one (0 and "0" in a text cell, "1,200" and 1200 in a money cell) is left alone, so the row isn't marked modified. The same goes for pressing Enter without changing a value while editing.
+  - Select cells accept the option value or its name. Checkbox cells accept `trueValue`/`falseValue`, Y/N, true/false, and 1/0.
+- **Cut (Ctrl+X):** copies, then clears.
+- **Undo (Ctrl+Z):** undoes one action at a time: a cell edit, a Delete, a paste (as a whole), or a cut. Redo is Ctrl+Y. Undo finds the right row even after the order changes through sorting. `setValue` calls from code are not recorded.
 
-## 서버 페이징·서버 정렬
+## Server-side paging and sorting
 
 ```js
 var grid = new PyoGrid("#grid", {
   sortable: true,
-  remoteSort: true,                         // 정렬은 서버가
+  remoteSort: true,                         // the server sorts
   pageIcons: { first: "|«", prev: "«", next: "»", last: "»|" },
   columns: [...]
 });
@@ -747,7 +763,7 @@ function load(pageNo, sort) {
     .then(function (r) { return r.json(); })
     .then(function (res) {
       grid.setData(res.list, {
-        currentPage: pageNo,                // 0부터
+        currentPage: pageNo,                // zero-based
         pageSize: 50,
         totalElements: res.total,
         totalPages: Math.ceil(res.total / 50)
@@ -759,47 +775,47 @@ grid.on("sortchange", function (e) { load(0, e.sort); });
 load(0);
 ```
 
-페이지 정보를 주면 아래 바에 페이지 번호가 생기고 상태 문구에 `Total 1,234`가 붙습니다.
+With page info, the bottom bar shows page numbers and the status text gains `Total 1,234`.
 
-## 엑셀 내보내기
+## Excel export
 
 ```js
-grid.exportExcel("주간출고_W46.xlsx");          // ".xls"로 주어도 .xlsx로 저장
-grid.exportExcel("목록", { sheetName: "목록" });
+grid.exportExcel("weekly-shipments-W46.xlsx");   // ".xls" is saved as .xlsx
+grid.exportExcel("list", { sheetName: "List" });
 ```
 
-- SheetJS(`window.XLSX`)가 필요합니다. 모듈로 쓸 때는 `{ XLSX }`로 넘길 수 있습니다. 없으면 콘솔에 경고를 남기고 false를 돌려줍니다.
-- 화면 그대로 내보냅니다: 필터·정렬, 그룹 합계 행, 합계 행, 컬럼 너비.
-- 다단 헤더와 합계 칸의 colspan은 병합 셀로 남습니다.
-- 셀 글자는 formatter 결과에서 HTML을 걷어낸 것입니다. 숫자는 숫자 셀로 넣습니다:
-  - "1,234"처럼 쉼표 숫자 → 숫자 + `#,##0` 서식
-  - 원래 값이 숫자이거나, money formatter·오른쪽 정렬 컬럼·합계 칸의 숫자 모양 글자 → 숫자
-  - 앞자리 0이 있는 코드(`0012`)는 글자
-- 줄 번호·행 선택 칸은 넣지 않습니다. 트리는 펼친 행만 들어갑니다.
+- Requires SheetJS (`window.XLSX`). As a module, pass it as `{ XLSX }`. Without it, the grid logs a warning and returns false.
+- Exports what is on screen: filters and sort, subtotal rows, footer totals, and column widths.
+- Multi-level headers and footer `colspan` become merged cells.
+- Cell text is the formatter output with HTML stripped. Numbers become number cells:
+  - Numbers with thousands separators like "1,234" → a number with the `#,##0` format
+  - Number values, and number-like text in money-formatter columns, right-aligned columns, or total cells → numbers
+  - Codes with leading zeros (`0012`) stay text
+- The line-number and row-selector columns are left out. Trees export only expanded rows.
 
-## 컬럼 너비·정렬 기억
+## Remembering column widths and sort
 
 ```js
 new PyoGrid("#grid", { stateKey: "weekly-grid", columns: [...] });
 ```
 
-사용자가 너비를 끌어 바꾸거나 헤더로 정렬하면 localStorage(`"pyogrid:" + 화면 경로 + ":" + stateKey`)에 저장하고, 그리드를 만들 때와 `setColumns` 때 되살립니다. 컬럼은 key로 찾으므로 컬럼 구성이 바뀌어도(예: 주차별 헤더) 같은 key는 남습니다. `grid.resetState()`로 지웁니다.
+When the user resizes a column or sorts by a header, the grid saves it to `localStorage` under `"pyogrid:" + page path + ":" + stateKey` and restores it when the grid is created and on `setColumns`. Columns are matched by `key`, so saved widths survive changes to the column set (for example, week-by-week headers). `grid.resetState()` clears it.
 
-## 수정·추가·삭제 행 모으기
+## Collecting changes for saving
 
-저장 버튼에서 서버로 보낼 행을 모으는 예입니다.
+A typical save button:
 
 ```js
 function save() {
-  if (!grid.commitEdit()) return;               // 편집 중인 값이 잘못됐으면 멈춤
-  var changed = grid.getModifiedRows();         // 수정 + addRow로 넣은 행
-  var deleted = grid.getDeletedRows();          // deleteRows로 지운 행
+  if (!grid.commitEdit()) return;               // stop if the cell being edited is invalid
+  var changed = grid.getModifiedRows();         // modified rows plus rows added with addRow
+  var deleted = grid.getDeletedRows();          // rows removed with deleteRows
   return fetch("/api/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ changed: changed, deleted: deleted })
   }).then(function (res) {
-    if (res.ok) grid.acceptChanges();           // 저장한 값이 새 기준: 수정 표시·지운 행 기록을 비움
+    if (res.ok) grid.acceptChanges();           // saved values become the new baseline
   });
 }
 
@@ -811,110 +827,128 @@ document.getElementById("btnDelete").onclick = function () {
 };
 ```
 
-## 전역 확장
+## Global extensions
 
-`<script>`로 불러오면 `PyoGrid`에 다음이 붙어 있습니다.
+The `<script>` build attaches these to `PyoGrid`:
 
 ```js
-// formatter 등록: 컬럼에서 formatter: "yn"으로 씀
-PyoGrid.formatters.yn = function (c) { return c.value === "Y" ? "예" : "아니오"; };
+// Register a formatter: use it with formatter: "yn"
+PyoGrid.formatters.yn = function (c) { return c.value === "Y" ? "Yes" : "No"; };
 
-// 합계 계산기 등록: collector: "nonZeroCount"
+// Register a collector: collector: "nonZeroCount"
 PyoGrid.collectors.nonZeroCount = function () {
   var k = this.key;
   return this.list.filter(function (r) { return Number(r[k]) !== 0; }).length;
 };
 
-// 입력칸 편집기 등록: editor: { type: "upper" }
+// Register an input editor: editor: { type: "upper" }
 PyoGrid.editors.upper = {
-  kind: "input",                 // 그리드 입력칸으로 편집
-  typeToEdit: true,              // 셀에서 바로 타이핑
-  clearable: true,               // Delete로 비우기
-  format: function (v) { return v == null ? "" : String(v); },          // 편집 시작 글자
-  parse: function (s) { return { ok: true, value: s.toUpperCase() }; }, // 저장 값 (ok:false면 거부). 붙여넣기도 이 함수를 거침
-  sanitize: function (s) { return s.replace(/[^A-Za-z0-9]/g, ""); }    // 타이핑 중 정리 (선택, 붙여넣기에는 쓰지 않음)
+  kind: "input",                 // edit in the grid's input box
+  typeToEdit: true,              // start editing by typing in the cell
+  clearable: true,               // Delete clears it
+  format: function (v) { return v == null ? "" : String(v); },          // text shown when editing starts
+  parse: function (s) { return { ok: true, value: s.toUpperCase() }; }, // stored value (ok: false rejects it); paste goes through this too
+  sanitize: function (s) { return s.replace(/[^A-Za-z0-9]/g, ""); }    // cleanup while typing (optional, not used for paste)
 };
 ```
 
-| 이름 | 설명 |
+| Name | Description |
 |---|---|
 | `PyoGrid.version` | |
-| `PyoGrid.escapeHtml(v)` | HTML 이스케이프 |
-| `PyoGrid.formatNumber(n)` | 천 단위 쉼표, 소수 2자리 |
-| `PyoGrid.sortRows(rows, sort, compare?)` | 그리드와 같은 규칙으로 배열 정렬 (새 배열) |
-| `PyoGrid.util.getValue(row, key)` / `setValue(row, key, v)` | 경로 키 읽기·쓰기 |
-| `PyoGrid.util.toNumber(v)` | "1,200" → 1200, 숫자가 아니면 null |
+| `PyoGrid.escapeHtml(v)` | Escape HTML |
+| `PyoGrid.formatNumber(n)` | Thousands separators, up to two decimal places |
+| `PyoGrid.sortRows(rows, sort, compare?)` | Sort an array with the grid's rules (returns a new array) |
+| `PyoGrid.util.getValue(row, key)` / `setValue(row, key, v)` | Read and write path keys |
+| `PyoGrid.util.toNumber(v)` | "1,200" → 1200; null if not a number |
 
-ES 모듈에서는 같은 기능을 이름으로 가져옵니다: `formatters`, `editorTypes`, `userCollectors`, `escapeHtml`, `sortRows`, `parseTSV`, `buildTSV` 등 (`src/index.js` 참고).
+The ES module exports the same things by name: `formatters`, `editorTypes`, `userCollectors`, `escapeHtml`, `sortRows`, `parseTSV`, `buildTSV`, and more (see `src/index.js`).
 
-## 테마 (CSS)
+## Theming
 
-기본 테마는 밝은 회색 헤더에 파란 강조색입니다. `.pyo`의 CSS 변수로 바꿀 수 있습니다.
+The default theme has a light gray header and a blue accent. Override the CSS custom properties on `.pyo`:
 
 ```css
 #myGrid .pyo {
-  --pyo-accent: #0f766e;        /* 포커스·선택·정렬 표시 */
+  --pyo-accent: #0f766e;        /* focus, selection, sort marks */
   --pyo-head-bg: #f0fdfa;
   --pyo-row-odd: #fafafa;
 }
-/* 화면별 셀 서식은 cellClass로 붙인 class에 */
+/* per-page cell styles go on classes added with cellClass */
 #myGrid .minus { color: #c9302c !important; }
 ```
 
-| 변수 | 기본값 | 쓰는 곳 |
+| Variable | Default | Used for |
 |---|---|---|
-| `--pyo-border` | `#cfd6de` | 그리드 테두리 |
-| `--pyo-text` | `#1f2937` | 글자 |
-| `--pyo-head-bg` / `--pyo-head-text` | `#f4f6f9` / `#344054` | 헤더 |
-| `--pyo-head-line` / `--pyo-head-bottom` | `#dde2e8` / `#c9d1da` | 헤더 선 |
-| `--pyo-cell-line` | `#e6e9ee` | 셀 선 |
-| `--pyo-row-even` / `--pyo-row-odd` | `#fff` / `#f8fafc` | 줄무늬 |
-| `--pyo-row-hover` / `--pyo-row-selected` | `#eef4fd` / `#e3edfc` | 행 강조·선택 |
-| `--pyo-range-bg` / `--pyo-active-bg` | `#cfe0fa` / `#eaf2fe` | 셀 범위·포커스 셀 |
-| `--pyo-accent` | `#2f6fd6` | 강조색 |
-| `--pyo-frozen-line` | `#b9c3cf` | 틀 고정 경계·합계 행 위 선 |
+| `--pyo-border` | `#cfd6de` | Grid border |
+| `--pyo-text` | `#1f2937` | Text |
+| `--pyo-head-bg` / `--pyo-head-text` | `#f4f6f9` / `#344054` | Header |
+| `--pyo-head-line` / `--pyo-head-bottom` | `#dde2e8` / `#c9d1da` | Header lines |
+| `--pyo-cell-line` | `#e6e9ee` | Cell lines |
+| `--pyo-row-even` / `--pyo-row-odd` | `#fff` / `#f8fafc` | Stripes |
+| `--pyo-row-hover` / `--pyo-row-selected` | `#eef4fd` / `#e3edfc` | Row hover and selection |
+| `--pyo-range-bg` / `--pyo-active-bg` | `#cfe0fa` / `#eaf2fe` | Cell range and focused cell |
+| `--pyo-accent` | `#2f6fd6` | Accent color |
+| `--pyo-frozen-line` | `#b9c3cf` | Frozen-column edge and the line above the footer |
 
-주요 class: `.pyo-row`(`.pyo-selected`, `.pyo-group-row`), `.pyo-cell`(`.pyo-in-range`, `.pyo-active`, `.pyo-merged`), `.pyo-hcell`, `.pyo-foot`, `.pyo-page`, `.pyo-popup`(편집기·필터 팝업).
+Main classes: `.pyo-row` (`.pyo-selected`, `.pyo-group-row`), `.pyo-cell` (`.pyo-in-range`, `.pyo-active`, `.pyo-merged`), `.pyo-hcell`, `.pyo-foot`, `.pyo-page`, `.pyo-popup` (editor and filter popups).
 
-## 개발
+## Demos
+
+```bash
+git clone https://github.com/herbcookey/pyogrid.git
+cd pyogrid
+npm install
+npm run build
+npm run demo         # http://127.0.0.1:5179/demo/
+```
+
+All demo data is made up.
+
+| Page | Shows |
+|---|---|
+| `weekly.html` | Weekly orders and shipments: multi-level headers, frozen columns, editing, paste, filters, footer totals, Excel export, saved state |
+| `editors.html` | The six editors, keyboard, IME input, change log |
+| `summary.html` | Group subtotals, tree, merged cells |
+| `paging.html` | Simulated server paging and sorting |
+| `big.html` | Performance check with 50,000 rows × 30 columns |
+
+## Browser support
+
+- Latest Chrome and Edge. Tests run only in these two browsers.
+- The grid relies on `position: sticky`, `ResizeObserver`, and `::-webkit-scrollbar`.
+- Built-in UI text is in Korean: the empty message, filter popup, calendar, and bottom-bar messages. Only the empty message can be changed (`emptyText`); `statusFormat` replaces the status text on the right.
+
+## Development
+
+Building from source requires Node.js 22 or later. `dist/` is not committed, so build once after cloning.
 
 ```bash
 npm install
 npm run build        # dist/ (js, min.js, esm.js, css, min.css, types)
-npm run typecheck    # JSDoc 타입 검사 (// @ts-check)
-npm test             # 단위 테스트 (vitest + jsdom)
-npm run test:e2e     # 빌드 후 헤드리스 Chrome 테스트 (Playwright, 설치된 Chrome 사용)
-npm run test:all     # 위 셋 모두
-npm run demo         # 데모 서버 http://127.0.0.1:5179/demo/
+npm run typecheck    # type-check the JSDoc types (// @ts-check)
+npm test             # unit tests (vitest + jsdom)
+npm run test:e2e     # build, then run headless Chrome tests (Playwright with the installed Chrome)
+npm run test:all     # typecheck, unit, and e2e
+npm run demo         # demo server at http://127.0.0.1:5179/demo/
 ```
 
-데모 페이지 (`demo/`, 모든 데이터는 가상 데이터):
-
-| 페이지 | 내용 |
-|---|---|
-| `weekly.html` | 주간 주문·출고 현황(가상 데이터): 다단 헤더, 틀 고정, 편집, 붙여넣기, 필터, 합계 행, 엑셀, 상태 기억 |
-| `editors.html` | 편집기 6종, 키보드, 한글 입력, 변경 기록 |
-| `summary.html` | 그룹 합계, 트리, 셀 병합 |
-| `paging.html` | 서버 페이징·서버 정렬 흉내 |
-| `big.html` | 50,000행 × 30열 성능 확인 |
-
-소스 구조:
+Source layout:
 
 ```
 src/
-  index.js / global.js      ES 모듈 / <script> 진입점
-  grid.js                   PyoGrid 클래스 (DOM, 배치, 가상 스크롤, 공개 API)
-  core/                     컬럼 모델·너비, 정렬, 셀 범위, formatter
-  editors/                  편집기 종류, 달력·선택 목록 팝업
-  features/                 편집·키보드, 클립보드, 실행 취소, 필터, 합계, 화면 행 만들기, 엑셀, 상태 기억, 페이지 바
+  index.js / global.js      ES module / <script> entry points
+  grid.js                   PyoGrid class (DOM, layout, virtual scrolling, public API)
+  core/                     column model and widths, sorting, cell range, formatters
+  editors/                  editor types, calendar and select popups
+  features/                 editing and keyboard, clipboard, undo, filters, totals, view rows, Excel, saved state, bottom bar
   css/pyogrid.css
-test/unit, test/e2e         단위 / Chrome 테스트
-docs/                       설계 문서
-tools/                      빌드, 테스트 실행기, 데모 서버, 성능 측정, 스크린샷
+test/unit, test/e2e         unit / Chrome tests
+docs/                       design notes (Korean)
+tools/                      build, test runner, demo server, performance probes, screenshots
 ```
 
-설계 결정은 [docs/design.md](docs/design.md)에 적어 두었습니다.
+Design decisions are written up in [docs/design.md](docs/design.md) (in Korean).
 
-## 라이선스
+## License
 
 [MIT](LICENSE) © Donghyeon Shin
