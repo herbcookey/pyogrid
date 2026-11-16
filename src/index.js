@@ -12,4 +12,4 @@ export { collectors } from "./features/view.js";
 export { parseTSV, buildTSV } from "./features/clipboard.js";
 export { locales, resolveMessages } from "./core/locales.js";
 export { toXlsxCell, htmlToText } from "./features/excel.js";
-export const version = "0.8.0";
+export const version = "0.9.0";
