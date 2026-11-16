@@ -167,10 +167,10 @@ test("200행 병합 덩어리: 화면 안에 글자가 하나 보이고 스크�
         .map((e) => e.getBoundingClientRect())
         .filter((r) => r.top >= sc.top && r.bottom <= sc.bottom).length;
     });
-  expect(await visibleLabels()).toBe(1);
+  await expect.poll(visibleLabels).toBe(1);
   await page.locator(".pyo-scroll").evaluate((el) => (el.scrollTop = 26 * 120));
-  await page.waitForTimeout(100);
-  expect(await visibleLabels()).toBe(1);
+  // 스크롤 뒤 다시 그리기는 다음 프레임이다. 부하가 큰 PC에서도 기다리도록 고정 시간 대신 될 때까지 본다
+  await expect.poll(visibleLabels).toBe(1);
   await expect(page.locator('.pyo-body .pyo-merge-text:visible').first()).toHaveText("같은 값");
 });
 

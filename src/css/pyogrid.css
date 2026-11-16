@@ -434,3 +434,4 @@
 .pyo-f-btns button { margin-left: 4px; padding: 3px 12px; border: 1px solid #d0d6de; border-radius: 4px; background: #fff; color: #344054; font-size: 12px; cursor: pointer; }
 .pyo-f-btns button:hover { background: #f4f6f9; }
 .pyo-f-btns .pyo-f-ok, .pyo-f-btns .pyo-f-ok:hover { background: #2f6fd6; border-color: #2f6fd6; color: #fff; }
+.pyo-f-btns .pyo-f-ok:disabled { opacity: 0.45; cursor: default; }

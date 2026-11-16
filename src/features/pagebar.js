@@ -1,15 +1,39 @@
 // @ts-check
 import { locales } from "../core/locales.js";
+import { escapeHtml } from "../util.js";
 
 /**
  * 아래쪽 페이지 바: [선택 합계] [페이지 이동] ……… [상태 "1 - 15 of 300  Total 1,234"]
  */
 
-const nf = typeof Intl !== "undefined" ? new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }) : null;
+/** @type {Map<string, Intl.NumberFormat|null>} 언어별 숫자 서식 (만들기 비싸서 기억해 둔다) */
+const numberFormats = new Map();
 
-/** 천 단위 쉼표, 소수 2자리까지 (반올림) */
-export function formatNumber(n) {
+/**
+ * Intl에 넘길 수 있는 언어 이름. 모르는 이름(사용자가 등록한 locale 이름 등)이면 "en".
+ * @param {string|null|undefined} locale
+ */
+export function intlLocale(locale) {
+  if (!locale || typeof Intl === "undefined") return "en";
+  try {
+    return Intl.NumberFormat.supportedLocalesOf([locale]).length ? locale : "en";
+  } catch (e) {
+    return "en";
+  }
+}
+
+/**
+ * 천 단위 구분, 소수 2자리까지 (반올림). locale에 맞는 기호를 쓴다 (기본 "en": 1,234.5).
+ * @param {number} n
+ * @param {string} [locale]
+ */
+export function formatNumber(n, locale = "en") {
   const r = Math.round(n * 100) / 100;
+  let nf = numberFormats.get(locale);
+  if (nf === undefined) {
+    nf = typeof Intl !== "undefined" ? new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 2 }) : null;
+    numberFormats.set(locale, nf);
+  }
   return nf ? nf.format(r) : String(r);
 }
 
@@ -84,32 +108,40 @@ export function targetPage(move, page) {
  * @param {number} visibleCount 한 화면 행 수
  * @param {number} rowCount
  * @param {PageInfo|null} page
+ * @param {string} [locale]  숫자 서식 언어
  */
-export function statusData(first, visibleCount, rowCount, page) {
+export function statusData(first, visibleCount, rowCount, page, locale = "en") {
   const to = Math.min(rowCount, first + visibleCount);
+  const f = (n) => formatNumber(n, locale);
   return {
-    fromRowIndex: rowCount ? formatNumber(first + 1) : "0",
-    toRowIndex: formatNumber(to),
-    dataRowCount: formatNumber(rowCount),
-    totalElements: page && page.totalElements !== undefined ? formatNumber(page.totalElements) : false,
+    fromRowIndex: rowCount ? f(first + 1) : "0",
+    toRowIndex: f(to),
+    dataRowCount: f(rowCount),
+    totalElements: page && page.totalElements !== undefined ? f(page.totalElements) : false,
   };
 }
 
-/** @param {ReturnType<typeof statusData>} d */
-export function defaultStatusHtml(d) {
-  return `<span>${d.fromRowIndex} - ${d.toRowIndex} of ${d.dataRowCount}${d.totalElements !== false ? "&nbsp; Total " + d.totalElements : ""}</span>`;
+/**
+ * @param {ReturnType<typeof statusData>} d
+ * @param {import("../core/locales.js").Messages} [m]
+ */
+export function defaultStatusHtml(d, m = /** @type {import("../core/locales.js").Messages} */ (locales.en)) {
+  const total = d.totalElements !== false ? "&nbsp; " + escapeHtml(m.statusTotal(String(d.totalElements))) : "";
+  return `<span>${escapeHtml(m.status(d.fromRowIndex, d.toRowIndex, d.dataRowCount))}${total}</span>`;
 }
 
 /**
  * 선택 합계 문구. 2셀 미만이면 "".
  * @param {{count: number, numCount: number, sum: number}} s
  * @param {import("../core/locales.js").Messages} [m]
+ * @param {string} [locale]  숫자 서식 언어
  */
-export function summaryText(s, m = /** @type {import("../core/locales.js").Messages} */ (locales.en)) {
+export function summaryText(s, m = /** @type {import("../core/locales.js").Messages} */ (locales.en), locale = "en") {
   if (s.count < 2) return "";
-  let text = m.selected(formatNumber(s.count));
+  const f = (n) => formatNumber(n, locale);
+  let text = m.selected(f(s.count));
   if (s.numCount) {
-    text += m.summarySeparator + m.selectedNumbers(formatNumber(s.numCount), formatNumber(s.sum), formatNumber(s.sum / s.numCount));
+    text += m.summarySeparator + m.selectedNumbers(f(s.numCount), f(s.sum), f(s.sum / s.numCount));
   }
   return text;
 }

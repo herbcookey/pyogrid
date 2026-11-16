@@ -16,9 +16,10 @@ describe("sortRows smart (기본)", () => {
     expect(keysOf(sortRows(rows, [{ key: "v", dir: "asc" }]))).toEqual([1, 2, 3, null, "", undefined]);
     expect(keysOf(sortRows(rows, [{ key: "v", dir: "desc" }]))).toEqual([3, 2, 1, null, "", undefined]);
   });
-  it("한글·자연 정렬 (ko 규칙: 한글이 영문보다 앞)", () => {
+  it("자연 정렬은 그리드 언어를 따른다 (ko: 한글이 영문보다 앞, en: 영문이 앞)", () => {
     const rows = R("나", "가", "item10", "item2", "다");
-    expect(keysOf(sortRows(rows, [{ key: "v", dir: "asc" }]))).toEqual(["가", "나", "다", "item2", "item10"]);
+    expect(keysOf(sortRows(rows, [{ key: "v", dir: "asc" }], "smart", "ko"))).toEqual(["가", "나", "다", "item2", "item10"]);
+    expect(keysOf(sortRows(rows, [{ key: "v", dir: "asc" }]))).toEqual(["item2", "item10", "가", "나", "다"]);
   });
   it("같은 값은 원래 순서를 지킨다 (안정 정렬)", () => {
     const rows = [{ v: 1, i: 0 }, { v: 0, i: 1 }, { v: 1, i: 2 }, { v: 0, i: 3 }];

@@ -102,9 +102,9 @@ test.describe("weekly 데모", () => {
 
   test("페이지 바 상태 문구는 스크롤을 따라간다", async ({ page }) => {
     const status = page.locator("#gridWrap .pyo-page-status");
-    await expect(status).toHaveText(/^1 - \d+ of 300$/);
+    await expect(status).toHaveText(/^1 - \d+ \/ 300$/);
     await page.locator("#gridWrap .pyo-scroll").evaluate((el) => (el.scrollTop = 26 * 100));
-    await expect(status).toHaveText(/^101 - \d+ of 300$/);
+    await expect(status).toHaveText(/^101 - \d+ \/ 300$/);
   });
 });
 
@@ -130,7 +130,7 @@ test("끌다가 아래로 벗어나면 자동 스크롤하며 범위가 늘어�
 test("서버 페이징·서버 정렬", async ({ page }) => {
   await page.goto("/demo/paging.html?lang=ko");
   const status = page.locator(".pyo-page-status");
-  await expect(status).toHaveText(/^1 - \d+ of 50\u00a0 Total 1,234$/);
+  await expect(status).toHaveText(/^1 - \d+ \/ 50\u00a0 전체 1,234$/);
   await expect(page.locator(".pyo-page-nums button")).toHaveText(["1", "2", "3", "4", "5"]);
   await page.locator('[data-page-move="next"]').click();
   await expect(page.locator('.pyo-page-btn[data-selected="true"]')).toHaveText("2");

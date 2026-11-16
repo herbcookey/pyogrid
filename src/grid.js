@@ -13,7 +13,7 @@ import { storageKey, loadState, saveState, removeState } from "./features/state.
 import { History, RECORDED_SOURCES } from "./features/history.js";
 import { resolveMessages } from "./core/locales.js";
 import { parseTSV, buildTSV, pastePlan, convertPasteValue } from "./features/clipboard.js";
-import { formatNumber } from "./features/pagebar.js";
+import { formatNumber, intlLocale } from "./features/pagebar.js";
 import { editorTypes, selectOptions, isChecked, sameValue } from "./editors/types.js";
 import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMerge, toNumber } from "./util.js";
 
@@ -157,6 +157,8 @@ export class PyoGrid {
     this.options = deepMerge({}, DEFAULTS, options);
     /** 화면 문구 (locale + messages) */
     this.messages = resolveMessages(this.options.locale, this.options.messages);
+    /** Intl에 넘길 언어 이름 (숫자 서식·정렬). 모르는 locale 이름이면 "en" */
+    this._intl = intlLocale(this.options.locale);
     /** @type {any[]} setData로 받은 순서의 행 */
     this.source = [];
     /** @type {any[]} 화면에 보이는 순서의 행 (정렬 적용) */
@@ -550,7 +552,7 @@ export class PyoGrid {
         const o = opts.find((x) => String(x.value) === v);
         if (o) return o.text;
       }
-      if (def.formatter === "money" && toNumber(v) !== null) return formatNumber(toNumber(v));
+      if (def.formatter === "money" && toNumber(v) !== null) return this._fmt(toNumber(v));
       return v;
     };
     const title = def.label === undefined || def.label === null ? String(key) : def.html ? String(def.label).replace(/<[^>]*>/g, "") : String(def.label);
@@ -560,6 +562,7 @@ export class PyoGrid {
       label,
       current: cur,
       messages: this.messages,
+      locale: this._intl,
       onApply: (allowed) => this.setFilter(key, allowed ? [...allowed] : null),
       onClose: () => {
         this._filterPopup = null;
@@ -589,6 +592,8 @@ export class PyoGrid {
    * @param {Event} e
    */
   _onPageMove(e) {
+    // 창 크기 변화(확대·축소 포함)는 스크롤바 너비를 바꿀 수 있다
+    if (e && e.type === "resize") this._sbw = undefined;
     if (!this.editing.edit || !this.editing.edit.popup) {
       if (!this._filterPopup) return;
     }
@@ -920,12 +925,7 @@ export class PyoGrid {
       this.history.push({ source, changes: [{ row, key, oldValue: old, value }] });
     }
     if (opts.refresh !== false) {
-      // 그룹 합계·셀 병합은 다른 행에도 걸리므로 전체를, 아니면 그 행과 합계 행만 다시 그린다
-      if (this.options.grouping || this.options.mergeCells) this.refresh();
-      else {
-        if (rowIndex >= 0) this.refreshRow(rowIndex);
-        this._renderFoot();
-      }
+      this._redrawAfterValues([key], rowIndex);
       this._scheduleSummary();
     }
     this.emit("change", {
@@ -972,7 +972,7 @@ export class PyoGrid {
       if (this.options.undo && RECORDED_SOURCES[source]) {
         this.history.push({ source, changes: applied.map((a) => ({ row: a.row, key: a.key, oldValue: a.oldValue, value: a.value })) });
       }
-      this.refresh();
+      this._redrawAfterValues(new Set(applied.map((a) => a.key)));
       this._scheduleSummary();
       this.emit("batchchange", { source, changes: applied });
     }
@@ -992,7 +992,7 @@ export class PyoGrid {
       return false;
     }
     const n = this._applyHistory(entry, "undo");
-    this._flash(this.messages.undone(this.messages.actions[entry.source] || entry.source, formatNumber(n)));
+    this._flash(this.messages.undone(this.messages.actions[entry.source] || entry.source, this._fmt(n)));
     this.emit("undo", { source: entry.source, count: n });
     return true;
   }
@@ -1006,7 +1006,7 @@ export class PyoGrid {
       return false;
     }
     const n = this._applyHistory(entry, "redo");
-    this._flash(this.messages.redone(this.messages.actions[entry.source] || entry.source, formatNumber(n)));
+    this._flash(this.messages.redone(this.messages.actions[entry.source] || entry.source, this._fmt(n)));
     this.emit("redo", { source: entry.source, count: n });
     return true;
   }
@@ -1162,14 +1162,15 @@ export class PyoGrid {
     } catch (e) {
       return false;
     }
-    this._afterCopy();
+    this._afterCopy(text);
     return true;
   }
 
-  _afterCopy() {
+  /** @param {string} [text] 이미 만든 범위 글자 (없으면 만든다) */
+  _afterCopy(text) {
     const g = this.range;
-    if (g) this._flash(this.messages.copied(formatNumber(g.size)));
-    this.emit("copy", { range: this.getRange(), text: this.getRangeText() });
+    if (g) this._flash(this.messages.copied(this._fmt(g.size)));
+    this.emit("copy", { range: this.getRange(), text: text === undefined ? this.getRangeText() : text });
   }
 
   /**
@@ -1207,7 +1208,7 @@ export class PyoGrid {
     const applied = this.setValues(changes, { source: "paste" });
     if (changes.length || plan.length > skipped) this.setRange(g.r0, g.c0, rMax, cMax);
     const info = { applied: applied.length, skipped, rows: data.length };
-    this._flash(this.messages.pasted(formatNumber(applied.length), formatNumber(skipped)));
+    this._flash(this.messages.pasted(this._fmt(applied.length), this._fmt(skipped)));
     this.emit("paste", info);
     return info;
   }
@@ -1478,12 +1479,65 @@ export class PyoGrid {
     if (this._destroyed) return this;
     this._measure();
     const mc = this.options.mergeCells;
-    this._merge = mc ? computeMerge(this.rows, this.leaves, mc === true ? true : mc) : new Map();
+    if (!mc) this._merge = new Map();
+    else if (this._mergeDirty || this._mergeRows !== this.rows || this._mergeLeaves !== this.leaves) {
+      // 병합 덩어리는 행 목록·컬럼·병합 컬럼 값이 바뀔 때만 다시 센다 (셀 하나 고칠 때마다 전체를 세지 않게)
+      this._merge = computeMerge(this.rows, this.leaves, mc === true ? true : mc);
+      this._mergeRows = this.rows;
+      this._mergeLeaves = this.leaves;
+      this._mergeDirty = false;
+    }
     this._clearRows();
     this._render();
     this._renderFoot();
     this._renderStatus();
     return this;
+  }
+
+  /**
+   * 이 키를 바꾸면 셀 병합이 달라지는가 (computeMerge와 같은 기준: 편집기 없는 병합 컬럼)
+   * @param {string} key
+   */
+  _isMergeKey(key) {
+    const mc = this.options.mergeCells;
+    if (!mc) return false;
+    for (const l of this.leaves) {
+      const def = l.def;
+      if (def.key !== key || def.editor) continue;
+      if (mc === true || (Array.isArray(mc) && mc.includes(key))) return true;
+    }
+    return false;
+  }
+
+  /** @param {string} key 그룹 합계 기준 키인가 (값이 바뀌면 그룹을 다시 나눠야 한다) */
+  _isGroupKey(key) {
+    const gr = this.options.grouping;
+    return !!(gr && Array.isArray(gr.by) && gr.by.includes(key));
+  }
+
+  /**
+   * 값을 바꾼 뒤 다시 그리기. 그룹 기준 키면 그룹을 다시 나누고, 병합 컬럼이면 병합을 다시 센다.
+   * @param {Iterable<string>} keys 바뀐 키
+   * @param {number} [rowIndex] 한 셀만 바뀌었을 때 그 화면 순번 (-1이면 화면에 없는 행)
+   */
+  _redrawAfterValues(keys, rowIndex) {
+    let regroup = false;
+    let remerge = false;
+    for (const k of keys) {
+      if (this._isGroupKey(k)) regroup = true;
+      if (this._isMergeKey(k)) remerge = true;
+    }
+    if (regroup) {
+      // 행이 다른 그룹으로 옮겨 가야 하므로 화면 행을 다시 만든다
+      this._afterRowsChanged();
+      return;
+    }
+    if (remerge) this._mergeDirty = true;
+    if (this.options.grouping || remerge || rowIndex === undefined) this.refresh(); // 소계 행은 다른 행에 걸린다
+    else {
+      if (rowIndex >= 0) this.refreshRow(rowIndex);
+      this._renderFoot();
+    }
   }
 
   /**
@@ -1746,15 +1800,29 @@ export class PyoGrid {
    * 이 브라우저의 세로 스크롤바 너비. ::-webkit-scrollbar를 쓰는 Chrome·Edge·Safari는 15,
    * Firefox는 운영체제 기본(Windows 17, 겹쳐 그리는 스크롤바면 0).
    * 스크롤 영역과 같은 class의 숨은 상자를 overflow:scroll로 만들어 잰다. 잴 수 없으면 SCROLLBAR.
+   * 한 번 잰 값은 기억하고, 창 크기가 바뀌면(브라우저 확대·축소 포함) 다시 잰다.
    * @returns {number}
    */
+  /**
+   * 이 그리드 언어로 숫자 서식 (천 단위 구분, 소수 2자리)
+   * @param {number} n
+   */
+  _fmt(n) {
+    return formatNumber(n, this._intl);
+  }
+
   _scrollbarWidth() {
+    if (this._sbw !== undefined) return this._sbw;
     const probe = h("div", "pyo-scroll");
     probe.style.cssText = "position:absolute;visibility:hidden;overflow:scroll;width:100px;height:100px;top:0;left:0";
     this.el.root.append(probe);
-    const w = probe.offsetWidth ? probe.offsetWidth - probe.clientWidth : SCROLLBAR;
+    const measured = probe.offsetWidth > 0;
+    const w = measured ? probe.offsetWidth - probe.clientWidth : SCROLLBAR;
     probe.remove();
-    return w >= 0 && w < 100 ? w : SCROLLBAR;
+    const out = w >= 0 && w < 100 ? w : SCROLLBAR;
+    // 화면에 붙기 전이라 잴 수 없었던 값은 기억하지 않는다
+    if (measured) this._sbw = out;
+    return out;
   }
 
   _computeLayout() {
@@ -1821,6 +1889,7 @@ export class PyoGrid {
       filters: this.isFilterActive() ? this.filters : new Map(),
       sort: this.sort,
       compare: o.sortCompare,
+      locale: this._intl,
       remoteSort: o.remoteSort,
       grouping: o.grouping && Array.isArray(o.grouping.by) ? o.grouping : null,
       tree: this._treeCfg(),
@@ -2474,8 +2543,8 @@ export class PyoGrid {
     const rh = o.rowHeight;
     const first = Math.floor(s.scrollTop / rh);
     const visible = Math.max(1, Math.ceil(Math.max(0, this._vh - this._headerHeight - this._footHeight) / rh));
-    const data = statusData(Math.min(first, Math.max(0, this.rows.length - 1)), visible, this.rows.length, this.page);
-    const html = isFn(o.statusFormat) ? o.statusFormat.call(this, data) : defaultStatusHtml(data);
+    const data = statusData(Math.min(first, Math.max(0, this.rows.length - 1)), visible, this.rows.length, this.page, this._intl);
+    const html = isFn(o.statusFormat) ? o.statusFormat.call(this, data) : defaultStatusHtml(data, this.messages);
     if (this._lastStatus !== html) {
       this._lastStatus = html;
       this.el.status.innerHTML = html;
@@ -2497,7 +2566,7 @@ export class PyoGrid {
     clearTimeout(this._summaryTimer);
     this._summaryTimer = setTimeout(() => {
       if (this._destroyed || this._flashing) return;
-      this.el.summary.textContent = summaryText(this.getSelectionSummary(), this.messages);
+      this.el.summary.textContent = summaryText(this.getSelectionSummary(), this.messages, this._intl);
     }, 30);
   }
 

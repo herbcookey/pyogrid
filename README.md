@@ -319,7 +319,7 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 | `selectionSummary` | `true` | When two or more cells are selected, show count, sum, and average in the bottom bar. Only numbers, or numeric text in numeric columns (money formatter, number or money editor, or column `numeric: true`), are added up, so codes like barcodes and part numbers are left out |
 | `sortable` | `false` | Sort by clicking headers (column `sortable` takes precedence) |
 | `multiSort` | `false` | Sort by several columns, in the order they were clicked |
-| `sortCompare` | `"smart"` | `"smart"`: numeric strings like "1,200" compare as numbers, natural sort for text (Korean collation), empty values always last. `"plain"`: compare values as they are (converted to strings if their types differ). Or a function `(a, b) => number` |
+| `sortCompare` | `"smart"` | `"smart"`: numeric strings like "1,200" compare as numbers, natural sort for text in the grid's `locale`, empty values always last. `"plain"`: compare values as they are (converted to strings if their types differ). Or a function `(a, b) => number` |
 | `remoteSort` | `false` | If true, rows keep their order and only `sortchange` fires (sort on the server) |
 
 ### Editing and clipboard
@@ -685,7 +685,7 @@ footSum: [[
 
 Totals are calculated from the filtered rows (`getRows()`) and update when values change. `sum`, `avg`, `min`, and `max` skip empty cells and text without digits, the same rule as the selection summary, so an empty cell doesn't pull `min` to 0 or lower the average. Sums are rounded to the longest decimal place among the values (`0.1 + 0.2` is `0.3`). `avg` is rounded to two decimal places and is empty when there are no numbers.
 
-**Group subtotals (`grouping`)** sort by the group keys (ascending) and insert a subtotal row after each group. With several keys, inner subtotals come first. Cells are defined the same way as in `footSum`.
+**Group subtotals (`grouping`)** sort by the group keys (ascending) and insert a subtotal row after each group. With several keys, inner subtotals come first. Changing a group key value (by editing, paste, `setValue`, or undo) moves the row to its new group right away. Cells are defined the same way as in `footSum`.
 
 ```js
 grouping: {
@@ -701,7 +701,7 @@ grouping: {
 
 ## Tree
 
-Shows a flat list linked by parent keys as a tree. A row whose parent value is missing, empty, or `"top"` is a root node.
+Shows a flat list linked by parent keys as a tree. A row whose parent value is missing, empty, or `"top"` is a root node. Keys are compared as text, so a parent `id: 1` and a child `pid: "1"` match.
 
 ```js
 var grid = new PyoGrid("#grid", {
@@ -737,7 +737,7 @@ With `filter: true`, each header gets a ▾ button that opens a value list, like
 
 ![Header filter popup with search, select all, and a value list](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/filter.png)
 
-- The list shows only values from rows that pass the other columns' filters. With many values only the first 2,000 are drawn, but search, select all, and OK apply to every value (pressing OK without changes adds no condition).
+- The list shows only values from rows that pass the other columns' filters. With many values only the first 2,000 are drawn, but search, select all, and OK apply to every value (pressing OK without changes adds no condition). OK is disabled while nothing is checked, so the filter can't hide every row by accident.
 - Select-editor columns list option names, and money columns list formatted numbers. Empty values appear as "(Blank)".
 - Filters survive `setData`. When no rows match, the grid shows "No rows match the filter". Both texts can be changed; see [Localization](#localization).
 - Rows added with `addRow` stay visible even when they don't match, so a new empty row doesn't vanish the moment it is added. After saving (`acceptChanges()` or `clearModified()`) they follow the filters like any other row.
@@ -877,8 +877,8 @@ PyoGrid.editors.upper = {
 | `PyoGrid.version` | |
 | `PyoGrid.locales` | Built-in text per language. Add a language here; see [Localization](#localization) |
 | `PyoGrid.escapeHtml(v)` | Escape HTML |
-| `PyoGrid.formatNumber(n)` | Thousands separators, up to two decimal places |
-| `PyoGrid.sortRows(rows, sort, compare?)` | Sort an array with the grid's rules (returns a new array) |
+| `PyoGrid.formatNumber(n, locale?)` | Thousands separators, up to two decimal places, in `locale` (default `"en"`) |
+| `PyoGrid.sortRows(rows, sort, compare?, locale?)` | Sort an array with the grid's rules (returns a new array) |
 | `PyoGrid.util.getValue(row, key)` / `setValue(row, key, v)` | Read and write path keys |
 | `PyoGrid.util.toNumber(v)` | "1,200" → 1200; null if not a number |
 
@@ -973,8 +973,10 @@ Numbers passed to message functions are already formatted with thousands separat
 | `undone(action, count)` / `redone(action, count)` | `"Undo paste: 4 cells"` | Bottom bar |
 | `copied(count)` | `"Copied 6 cells"` | Bottom bar |
 | `pasted(count, skipped)` | `"Pasted 5 cells (1 skipped)"` | Bottom bar (`skipped` is `"0"` when nothing was skipped) |
+| `status(from, to, count)` | `"1 - 15 of 300"` | Status text on the right |
+| `statusTotal(total)` | `"Total 1,234"` | Added to the status text with server paging |
 
-The status text on the right (`"1 - 15 of 300"`) is replaced with the `statusFormat` option.
+Numbers in all of these, and in the status text, use the locale's separators (`1,234.5` in English, `1.234,5` in German). Text sorting (`sortCompare: "smart"`) uses the locale too. To build the whole status HTML yourself, use the `statusFormat` option.
 
 ## Demos
 

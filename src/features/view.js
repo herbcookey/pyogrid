@@ -162,10 +162,11 @@ export function insertGroupRows(sorted, by) {
  * @returns {{rows: any[], meta: Map<any, {depth:number, children:any[], parent:any}>}}
  */
 export function buildTree(list, cfg, sortSiblings) {
+  // 키는 글자로 맞춰 비교한다 (id 1과 pid "1"이 같은 부모가 되게)
   const byId = new Map();
   for (const r of list) {
     const id = r[cfg.selfKey];
-    if (id !== undefined && id !== null && !byId.has(id)) byId.set(id, r);
+    if (id !== undefined && id !== null && id !== "" && !byId.has(String(id))) byId.set(String(id), r);
   }
   /** @type {Map<any, {depth:number, children:any[], parent:any}>} */
   const meta = new Map();
@@ -173,7 +174,7 @@ export function buildTree(list, cfg, sortSiblings) {
   const roots = [];
   for (const r of list) {
     const p = r[cfg.parentKey];
-    const parent = p === undefined || p === null || p === "" || p === "top" ? null : byId.get(p);
+    const parent = p === undefined || p === null || p === "" || p === "top" ? null : byId.get(String(p));
     if (parent && parent !== r) {
       meta.get(r).parent = parent;
       meta.get(parent).children.push(r);
@@ -224,6 +225,7 @@ function isUnderCollapsed(row, meta, cfg) {
  * @param {Map<string, Set<string>>} o.filters
  * @param {import("../core/sort.js").SortItem[]} o.sort
  * @param {import("../core/sort.js").SortCompare} o.compare
+ * @param {string} [o.locale]  글자 정렬 언어
  * @param {boolean} o.remoteSort
  * @param {{by: string[]}|null} o.grouping
  * @param {{parentKey:string, selfKey:string, collapseKey:string}|null} o.tree
@@ -234,7 +236,7 @@ export function buildView(o) {
   const filtered = o.filters.size ? filterRows(o.source, o.filters, undefined, o.pass) : o.source.slice();
   if (o.tree) {
     const sort = o.remoteSort ? [] : o.sort;
-    const t = buildTree(filtered, o.tree, (sib) => (sort.length ? sortRows(sib, sort, o.compare) : sib));
+    const t = buildTree(filtered, o.tree, (sib) => (sort.length ? sortRows(sib, sort, o.compare, o.locale) : sib));
     return { rows: t.rows, dataRows: filtered, treeMeta: t.meta };
   }
   let sort = o.remoteSort ? [] : o.sort;
@@ -246,7 +248,7 @@ export function buildView(o) {
     });
     sort = fixed.concat(sort.filter((s) => !o.grouping.by.includes(s.key)));
   }
-  const sorted = sort.length ? sortRows(filtered, sort, o.compare) : filtered;
+  const sorted = sort.length ? sortRows(filtered, sort, o.compare, o.locale) : filtered;
   if (o.grouping && o.grouping.by.length) return { rows: insertGroupRows(sorted, o.grouping.by), dataRows: sorted, treeMeta: null };
   return { rows: sorted, dataRows: sorted, treeMeta: null };
 }

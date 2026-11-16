@@ -14,14 +14,21 @@ import { sumCellValue } from "./summary.js";
  * @typedef {{rows: (XCell|null)[][], merges: {s:{r:number,c:number}, e:{r:number,c:number}}[], widths: number[], headerRows: number}} ExportData
  */
 
-/** HTML 글자 → 일반 글자 (DOMParser는 스크립트를 실행하지 않는다) */
+/** 글자를 뽑아낼 때 쓰는 문서 하나 (셀마다 DOMParser를 새로 만들지 않게). 스크립트를 실행하지 않는 빈 문서다 */
+let scratch = null;
+
+/** HTML 글자 → 일반 글자 (스크립트를 실행하지 않는다) */
 export function htmlToText(v) {
   if (v === null || v === undefined) return "";
   const s = String(v);
   if (!/[<&]/.test(s)) return s;
   const t = s.replace(/<br\s*\/?>/gi, " ");
   try {
-    return new DOMParser().parseFromString(t, "text/html").body.textContent || "";
+    if (!scratch) scratch = document.implementation.createHTMLDocument("").createElement("div");
+    scratch.innerHTML = t;
+    const out = scratch.textContent || "";
+    scratch.textContent = "";
+    return out;
   } catch (e) {
     return t.replace(/<[^>]*>/g, "");
   }

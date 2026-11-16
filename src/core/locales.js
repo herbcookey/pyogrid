@@ -26,6 +26,8 @@
  * @property {string} today
  * @property {(count: string) => string} selected                      선택 합계: 셀 수
  * @property {(numCount: string, sum: string, avg: string) => string} selectedNumbers  선택 합계: 숫자
+ * @property {(from: string, to: string, count: string) => string} status  오른쪽 상태 문구 (보이는 행 범위와 전체 행 수)
+ * @property {(total: string) => string} statusTotal  서버 페이징일 때 상태 문구 뒤에 붙는 전체 건수
  * @property {string} summarySeparator      선택 합계 조각 사이
  * @property {{edit: string, clear: string, paste: string, cut: string}} actions  실행 취소 대상
  * @property {string} nothingToUndo
@@ -63,6 +65,8 @@ const en = {
   today: "Today",
   selected: (count) => cells(count) + " selected",
   selectedNumbers: (numCount, sum, avg) => `Numbers ${numCount} · Sum ${sum} · Average ${avg}`,
+  status: (from, to, count) => `${from} - ${to} of ${count}`,
+  statusTotal: (total) => "Total " + total,
   summarySeparator: " · ",
   actions: { edit: "edit", clear: "clear", paste: "paste", cut: "cut" },
   nothingToUndo: "Nothing to undo",
@@ -95,6 +99,8 @@ const ko = {
   today: "오늘",
   selected: (count) => `선택 ${count}셀`,
   selectedNumbers: (numCount, sum, avg) => `숫자 ${numCount} · 합계 ${sum} · 평균 ${avg}`,
+  status: (from, to, count) => `${from} - ${to} / ${count}`,
+  statusTotal: (total) => "전체 " + total,
   summarySeparator: " · ",
   actions: { edit: "셀 편집", clear: "지우기", paste: "붙여넣기", cut: "잘라내기" },
   nothingToUndo: "되돌릴 작업이 없습니다",

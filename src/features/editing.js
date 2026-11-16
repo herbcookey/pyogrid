@@ -485,9 +485,11 @@ export class Editing {
       g.paste(cd.getData("text/plain"));
       return;
     }
-    cd.setData("text/plain", g.getRangeText());
-    if (type === "cut") g.cut();
-    else g._afterCopy();
+    // 범위 글자는 한 번만 만든다 (범위가 크면 비용이 크다)
+    const text = g.getRangeText();
+    cd.setData("text/plain", text);
+    if (type === "cut") this.clearRange("cut");
+    else g._afterCopy(text);
   }
 
   /** @param {KeyboardEvent} e */

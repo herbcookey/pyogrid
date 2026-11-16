@@ -26,13 +26,14 @@ export class FilterPopup {
    * @param {() => void} o.onClose
    * @param {number} [o.renderMax]
    * @param {import("../core/locales.js").Messages} [o.messages]
+   * @param {string} [o.locale]  숫자 서식 언어 (Intl 이름)
    */
   constructor(o) {
     this.o = o;
     const m = (this.m = o.messages || /** @type {import("../core/locales.js").Messages} */ (locales.en));
     this.max = o.renderMax || FILTER_RENDER_MAX;
     /** @type {string[]} 전체 값 (정렬, 빈 값은 맨 뒤) */
-    this.values = o.values.slice().sort((a, b) => (a === "" ? 1 : b === "" ? -1 : compareSmart(a, b)));
+    this.values = o.values.slice().sort((a, b) => (a === "" ? 1 : b === "" ? -1 : compareSmart(a, b, o.locale)));
     /** @type {string[]} 화면 글자 */
     this.labels = this.values.map((v) => (v === "" ? m.blank : o.label(v)));
     /** @type {string[]} 검색용 (글자 + 원래 값, 소문자) */
@@ -61,6 +62,7 @@ export class FilterPopup {
     this.all = /** @type {HTMLInputElement} */ (el.querySelector(".pyo-f-all input"));
     this.list = /** @type {HTMLElement} */ (el.querySelector(".pyo-f-list"));
     this.note = /** @type {HTMLElement} */ (el.querySelector(".pyo-f-note"));
+    this.ok = /** @type {HTMLButtonElement} */ (el.querySelector(".pyo-f-ok"));
     this._render();
 
     // 전체 선택: 그리지 않은 값까지 검색에 걸린 값 전부
@@ -70,6 +72,7 @@ export class FilterPopup {
         else this.unchecked.add(i);
       }
       this.list.querySelectorAll("input").forEach((b) => (/** @type {HTMLInputElement} */ (b).checked = this.all.checked));
+      this._syncAll();
     });
     this.list.addEventListener("change", (e) => {
       const b = /** @type {HTMLInputElement} */ (e.target);
@@ -118,21 +121,31 @@ export class FilterPopup {
       .join("");
     const cut = this.matching.length - shown.length;
     this.note.hidden = cut <= 0;
-    this.note.textContent = cut > 0 ? this.m.filterTruncated(formatNumber(this.max), formatNumber(this.matching.length)) : "";
+    this.note.textContent = cut > 0 ? this.m.filterTruncated(formatNumber(this.max, this.o.locale), formatNumber(this.matching.length, this.o.locale)) : "";
     this._syncAll();
   }
 
   _syncAll() {
-    this.all.checked = this.matching.length > 0 && this.matching.every((i) => !this.unchecked.has(i));
+    let any = false;
+    let all = this.matching.length > 0;
+    for (const i of this.matching) {
+      if (this.unchecked.has(i)) all = false;
+      else any = true;
+      if (any && !all) break;
+    }
+    this.all.checked = all;
+    // 아무것도 고르지 않으면 확인을 막는다 (그대로 누르면 모든 행이 사라진다. Excel과 같음)
+    this.ok.disabled = !any;
   }
 
   /**
    * 검색 중이면 검색에 걸린 값 중 체크한 것만 허용 (Excel과 같음).
-   * 결과가 모든 값을 허용하면 조건 없음(null).
+   * 결과가 모든 값을 허용하면 조건 없음(null). 고른 값이 없으면 아무것도 하지 않는다.
    */
   apply() {
     const allowed = new Set();
     for (const i of this.matching) if (!this.unchecked.has(i)) allowed.add(this.values[i]);
+    if (!allowed.size) return;
     this.o.onApply(allowed.size === this.values.length ? null : allowed);
     this.close();
   }
