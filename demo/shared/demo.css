@@ -40,6 +40,13 @@ code { font: 12.5px var(--d-mono); background: #f1f4f8; border-radius: 4px; padd
 .d-links { margin-left: auto; display: flex; gap: 14px; font-size: 13px; white-space: nowrap; }
 .d-links a { color: var(--d-muted); }
 .d-links a:hover { color: var(--d-text); }
+.d-lang { display: flex; gap: 2px; margin-left: 4px; padding: 2px; background: #f1f4f8; border-radius: 7px; font-size: 12px; white-space: nowrap; }
+.d-lang a { padding: 3px 8px; border-radius: 5px; color: var(--d-muted); }
+.d-lang a:hover { color: var(--d-text); text-decoration: none; }
+.d-lang a[aria-current] { color: var(--d-text); background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1); font-weight: 600; }
+
+/* 언어: <html class="lang-en|lang-ko">에 맞는 글자만 보인다 (shared/i18n.js) */
+html.lang-en .ko, html.lang-ko .en { display: none !important; }
 
 /* ---------- 데모 본문 ---------- */
 .d-main { padding: 20px 24px 28px; }
@@ -116,6 +123,7 @@ code { font: 12.5px var(--d-mono); background: #f1f4f8; border-radius: 4px; padd
 @media (max-width: 720px) {
   .d-top { gap: 12px; padding: 0 14px; }
   .d-links { display: none; }
+  .d-lang { margin-left: auto; }
   .d-main { padding: 16px 14px 24px; }
   .d-actions { margin-left: 0; }
   .d-hero { padding-top: 36px; }

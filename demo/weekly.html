@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>주간 주문·출고 현황 (PyoGrid 데모)</title>
+  <title>Weekly orders · PyoGrid demo</title>
+  <script src="shared/i18n.js"></script>
   <link rel="stylesheet" href="shared/demo.css">
   <link rel="stylesheet" href="../dist/pyogrid.css">
   <style>
@@ -21,46 +22,48 @@
 <header class="d-top">
   <a class="d-brand" href="index.html"><span class="d-logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>PyoGrid</a>
   <nav class="d-nav" aria-label="Demos">
-    <a href="index.html">Demos</a>
-    <a href="weekly.html" aria-current="page">Weekly</a>
-    <a href="editors.html">Editors</a>
-    <a href="summary.html">Totals &amp; tree</a>
-    <a href="paging.html">Paging</a>
-    <a href="big.html">50,000 rows</a>
+    <a href="index.html"><span class="en">Demos</span><span class="ko">데모 목록</span></a>
+    <a href="weekly.html" aria-current="page"><span class="en">Weekly</span><span class="ko">주간 현황</span></a>
+    <a href="editors.html"><span class="en">Editors</span><span class="ko">편집기</span></a>
+    <a href="summary.html"><span class="en">Totals &amp; tree</span><span class="ko">합계·트리</span></a>
+    <a href="paging.html"><span class="en">Paging</span><span class="ko">페이징</span></a>
+    <a href="big.html"><span class="en">50,000 rows</span><span class="ko">5만 행</span></a>
   </nav>
   <div class="d-links">
     <a href="https://herbcookey.github.io/pyogrid/">Docs</a>
     <a href="https://github.com/herbcookey/pyogrid">GitHub</a>
   </div>
+  <div class="d-lang" aria-label="Language"><a data-lang-switch="en" href="?lang=en">EN</a><a data-lang-switch="ko" href="?lang=ko">한국어</a></div>
 </header>
 
 <main class="d-main">
   <div class="d-head">
-    <h1>주간 주문·출고 현황</h1>
-    <p>가상 데이터입니다. 헤더 ▾로 필터, 이월 수량 칸은 편집·Excel 붙여넣기·Ctrl+Z, 컬럼 너비와 정렬은 새로 고쳐도 기억합니다.</p>
+    <h1><span class="en">Weekly orders and shipments</span><span class="ko">주간 주문·출고 현황</span></h1>
+    <p class="en">Made-up data. Filter with the ▾ in each header. The carry-over column can be edited, pasted into from Excel, and undone with Ctrl+Z. Column widths and sort are remembered across reloads.</p>
+    <p class="ko">가상 데이터입니다. 헤더 ▾로 필터, 이월 수량 칸은 편집·Excel 붙여넣기·Ctrl+Z, 컬럼 너비와 정렬은 새로 고쳐도 기억합니다.</p>
   </div>
 
   <div class="d-toolbar">
-    <span class="d-field">기준 주차
+    <span class="d-field"><span class="en">Week</span><span class="ko">기준 주차</span>
       <span class="wk-week">
-        <button type="button" id="btnPrevWeek" class="d-btn d-btn-icon" title="이전 주" aria-label="이전 주">&#8249;</button>
-        <input type="date" id="baseDate" aria-label="기준 날짜">
-        <button type="button" id="btnNextWeek" class="d-btn d-btn-icon" title="다음 주" aria-label="다음 주">&#8250;</button>
+        <button type="button" id="btnPrevWeek" class="d-btn d-btn-icon" aria-label="Previous week">&#8249;</button>
+        <input type="date" id="baseDate" aria-label="Base date">
+        <button type="button" id="btnNextWeek" class="d-btn d-btn-icon" aria-label="Next week">&#8250;</button>
       </span>
-      <span class="wk-range">이번 주 <strong id="curWeekLabel"></strong> &rarr; 다음 주 <strong id="nextWeekLabel"></strong></span>
+      <span class="wk-range"><span class="en">This week</span><span class="ko">이번 주</span> <strong id="curWeekLabel"></strong> &rarr; <span class="en">next week</span><span class="ko">다음 주</span> <strong id="nextWeekLabel"></strong></span>
     </span>
-    <label class="d-field">매장
+    <label class="d-field"><span class="en">Branch</span><span class="ko">매장</span>
       <select id="storeFilter">
-        <option value="">전체</option>
-        <option value="SEOUL">서울점</option>
-        <option value="BUSAN">부산점</option>
+        <option value="" data-en="All">전체</option>
+        <option value="SEOUL" data-en="Seoul branch">서울점</option>
+        <option value="BUSAN" data-en="Busan branch">부산점</option>
       </select>
     </label>
-    <label class="d-field">분류 <select id="categoryFilter"><option value="">전체</option></select></label>
-    <label class="d-field">분류 그룹 <select id="groupFilter"><option value="">전체</option></select></label>
-    <label class="d-field">담당자 <select id="ownerFilter"><option value="">전체</option></select></label>
-    <label class="d-field"><input type="checkbox" id="chkBacklogOnly"> 미출고만</label>
-    <label class="d-field">행 수
+    <label class="d-field"><span class="en">Category</span><span class="ko">분류</span> <select id="categoryFilter"><option value="" data-en="All">전체</option></select></label>
+    <label class="d-field"><span class="en">Group</span><span class="ko">분류 그룹</span> <select id="groupFilter"><option value="" data-en="All">전체</option></select></label>
+    <label class="d-field"><span class="en">Owner</span><span class="ko">담당자</span> <select id="ownerFilter"><option value="" data-en="All">전체</option></select></label>
+    <label class="d-field"><input type="checkbox" id="chkBacklogOnly"> <span class="en">Backlog only</span><span class="ko">미출고만</span></label>
+    <label class="d-field"><span class="en">Rows</span><span class="ko">행 수</span>
       <select id="rowCount">
         <option value="6">6</option>
         <option value="300" selected>300</option>
@@ -68,18 +71,18 @@
       </select>
     </label>
     <span class="d-actions">
-      <button id="btnSearch" class="d-btn d-btn-primary">조회</button>
-      <button id="btnExcelDownload" class="d-btn">엑셀 다운</button>
-      <button id="btnResetState" class="d-btn" title="기억한 컬럼 너비·정렬 지우기">화면 설정 초기화</button>
+      <button id="btnSearch" class="d-btn d-btn-primary"><span class="en">Load</span><span class="ko">조회</span></button>
+      <button id="btnExcelDownload" class="d-btn"><span class="en">Export to Excel</span><span class="ko">엑셀 다운</span></button>
+      <button id="btnResetState" class="d-btn"><span class="en">Reset layout</span><span class="ko">화면 설정 초기화</span></button>
     </span>
   </div>
 
   <div class="d-stats">
-    <div class="d-stat"><div class="d-stat-label">상품 수</div><div class="d-stat-value" id="sumItemCount">0</div></div>
-    <div class="d-stat"><div class="d-stat-label">이번 주 주문</div><div class="d-stat-value" id="sumOrder">0</div></div>
-    <div class="d-stat"><div class="d-stat-label">이번 주 출고</div><div class="d-stat-value" id="sumShip">0</div></div>
-    <div class="d-stat"><div class="d-stat-label">출고율</div><div class="d-stat-value" id="sumShipRate">-</div></div>
-    <div class="d-stat d-stat-accent"><div class="d-stat-label">이월 수량 (선택한 행)</div><div class="d-stat-value" id="sumCarry">0</div></div>
+    <div class="d-stat"><div class="d-stat-label"><span class="en">Products</span><span class="ko">상품 수</span></div><div class="d-stat-value" id="sumItemCount">0</div></div>
+    <div class="d-stat"><div class="d-stat-label"><span class="en">Ordered this week</span><span class="ko">이번 주 주문</span></div><div class="d-stat-value" id="sumOrder">0</div></div>
+    <div class="d-stat"><div class="d-stat-label"><span class="en">Shipped this week</span><span class="ko">이번 주 출고</span></div><div class="d-stat-value" id="sumShip">0</div></div>
+    <div class="d-stat"><div class="d-stat-label"><span class="en">Ship rate</span><span class="ko">출고율</span></div><div class="d-stat-value" id="sumShipRate">-</div></div>
+    <div class="d-stat d-stat-accent"><div class="d-stat-label"><span class="en">Carry-over (selected rows)</span><span class="ko">이월 수량 (선택한 행)</span></div><div class="d-stat-value" id="sumCarry">0</div></div>
   </div>
 
   <div id="gridWrap" style="height:400px;"></div>
@@ -90,51 +93,64 @@
 <script src="../node_modules/xlsx/dist/xlsx.full.min.js"></script>
 <script src="../dist/pyogrid.js"></script>
 <script>
+  var L = DemoI18n.lang, T = DemoI18n.t;
   var D = window.WeeklyData;
+  D.setLang(L);
   var $ = function (id) { return document.getElementById(id); };
   var allRows = [];
-  var nf = new Intl.NumberFormat("ko-KR");
+  var nf = new Intl.NumberFormat(L === "ko" ? "ko-KR" : "en-US");
+  if (L === "en") {
+    document.querySelectorAll("option[data-en]").forEach(function (o) { o.textContent = o.getAttribute("data-en"); });
+    document.title = "Weekly orders · PyoGrid demo";
+  } else {
+    document.title = "주간 주문·출고 현황 · PyoGrid 데모";
+  }
+  [["btnPrevWeek", "Previous week", "이전 주"], ["btnNextWeek", "Next week", "다음 주"]].forEach(function (b) {
+    $(b[0]).title = T(b[1], b[2]);
+    $(b[0]).setAttribute("aria-label", T(b[1], b[2]));
+  });
+  $("btnResetState").title = T("Forget saved column widths and sort", "기억한 컬럼 너비·정렬 지우기");
 
   function buildColumns(info) {
     var num = { align: "right", formatter: "money", width: 80 };
     var ext = function (a, b, c) { return Object.assign({}, a, b, c || {}); };
     return [
-      { key: "OWNER", label: "담당자", width: 70, align: "center" },
-      { key: "SKU", label: "상품 코드", width: 120, align: "center" },
-      { key: "BARCODE", label: "바코드", width: 110, align: "center" },
-      { key: "VENDOR_CODE", label: "공급처 코드", width: 110, align: "center" },
-      { key: "CHANNEL", label: "판매처", width: 80, align: "center" },
-      { key: "REGION", label: "지역", width: 70, align: "center" },
-      { key: "CATEGORY", label: "분류", width: 70, align: "center" },
-      { key: "CATEGORY_GROUP", label: "분류 그룹", width: 90, align: "center" },
-      { label: "이번 주 " + info.curWeekNo, columns: [
-        ext({ key: "ORDER_QTY", label: "주문" }, num),
-        ext({ key: "SHIP_QTY", label: "출고" }, num),
-        ext({ key: "BACKLOG_QTY", label: "미출고", cellClass: function (c) { return c.row.BACKLOG_QTY > 0 ? "wk-backlog-cell" : ""; } }, num)
+      { key: "OWNER", label: T("Owner", "담당자"), width: 70, align: "center" },
+      { key: "SKU", label: T("SKU", "상품 코드"), width: 120, align: "center" },
+      { key: "BARCODE", label: T("Barcode", "바코드"), width: 110, align: "center" },
+      { key: "VENDOR_CODE", label: T("Vendor", "공급처 코드"), width: 110, align: "center" },
+      { key: "CHANNEL", label: T("Channel", "판매처"), width: 80, align: "center" },
+      { key: "REGION", label: T("Region", "지역"), width: 70, align: "center" },
+      { key: "CATEGORY", label: T("Category", "분류"), width: 80, align: "center" },
+      { key: "CATEGORY_GROUP", label: T("Group", "분류 그룹"), width: 90, align: "center" },
+      { label: T("This week ", "이번 주 ") + info.curWeekNo, columns: [
+        ext({ key: "ORDER_QTY", label: T("Ordered", "주문") }, num),
+        ext({ key: "SHIP_QTY", label: T("Shipped", "출고") }, num),
+        ext({ key: "BACKLOG_QTY", label: T("Backlog", "미출고"), cellClass: function (c) { return c.row.BACKLOG_QTY > 0 ? "wk-backlog-cell" : ""; } }, num)
       ] },
-      ext({ key: "CARRY_QTY", label: "이월 수량", editor: { type: "number" }, cellClass: function (c) {
+      ext({ key: "CARRY_QTY", label: T("Carry-over", "이월 수량"), editor: { type: "number" }, cellClass: function (c) {
         return "wk-carry-cell" + (c.row.CARRY_QTY > c.row.BACKLOG_QTY ? " wk-over-cell" : "");
       } }, num, { width: 90 }),
-      { label: "다음 주 " + info.nextWeekNo, columns: [
-        ext({ key: "NEXT_ORDER", label: "예정 주문" }, num),
-        ext({ key: "NEXT_TOTAL", label: "조정 후", cellClass: "wk-total-cell" }, num)
+      { label: T("Next week ", "다음 주 ") + info.nextWeekNo, columns: [
+        ext({ key: "NEXT_ORDER", label: T("Planned", "예정 주문") }, num),
+        ext({ key: "NEXT_TOTAL", label: T("Adjusted", "조정 후"), cellClass: "wk-total-cell" }, num)
       ] },
-      { key: "STATUS", label: "상태", width: 80, align: "center" }
+      { key: "STATUS", label: T("Status", "상태"), width: 80, align: "center" }
     ];
   }
 
   var grid = new PyoGrid($("gridWrap"), {
-    locale: "ko",
+    locale: L,
     rowSelector: true,
     multipleSelect: true,
     frozenColumns: 3,
     sortable: true,
     filter: true,
     stateKey: "weekly-grid",
-    sheetName: "주간 출고",
+    sheetName: T("Weekly shipments", "주간 출고"),
     headerAlign: "center",
     footSum: [[
-      { label: "합계", colspan: 8, align: "center" },
+      { label: T("Total", "합계"), colspan: 8, align: "center" },
       { key: "ORDER_QTY", collector: "sum", formatter: "money", align: "right" },
       { key: "SHIP_QTY", collector: "sum", formatter: "money", align: "right" },
       { key: "BACKLOG_QTY", collector: "sum", formatter: "money", align: "right" },
@@ -225,7 +241,7 @@
   $("btnSearch").addEventListener("click", load);
   $("btnExcelDownload").addEventListener("click", function () {
     var info = D.getWeekInfo($("baseDate").value);
-    grid.exportExcel("주간출고_" + info.curWeekNo + "_" + info.curStart + ".xlsx");
+    grid.exportExcel(T("weekly-shipments_", "주간출고_") + info.curWeekNo + "_" + info.curStart + ".xlsx");
   });
   $("btnResetState").addEventListener("click", function () { grid.resetState(); load(); });
   $("rowCount").addEventListener("change", load);

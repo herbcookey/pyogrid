@@ -7,12 +7,14 @@ import fs from "node:fs";
 import { chromium } from "@playwright/test";
 
 const base = "http://127.0.0.1:5179";
+// README 그림은 영어 데모로 찍는다. --lang=ko로 한국어 데모
+const LANG = (process.argv.find((a) => a.startsWith("--lang=")) || "--lang=en").slice(7);
 const browser = await chromium.launch({ channel: "chrome" });
 
 async function open(url, w = 1280, h = 720) {
-  const page = await browser.newPage({ viewport: { width: w, height: h }, locale: "ko-KR" });
+  const page = await browser.newPage({ viewport: { width: w, height: h }, locale: LANG === "ko" ? "ko-KR" : "en-US" });
   page.on("pageerror", (e) => console.log("[pageerror]", url, e.message));
-  await page.goto(base + url, { waitUntil: "networkidle" });
+  await page.goto(base + url + (url.includes("?") ? "&" : "?") + "lang=" + LANG, { waitUntil: "networkidle" });
   await page.waitForTimeout(300);
   return page;
 }
@@ -51,7 +53,7 @@ if (process.argv.includes("--pages")) {
     await shot(page, "weekly.png", await around(page, [".d-head", ".d-toolbar", "#gridWrap"], 16));
     // 헤더 값 필터 팝업
     await page.locator('#gridWrap .pyo-hcell[data-key="OWNER"] .pyo-filter-btn').click();
-    await page.locator(".pyo-filter .pyo-f-list label", { hasText: "김철수" }).locator("input").uncheck();
+    await page.locator(".pyo-filter .pyo-f-list label", { hasText: LANG === "ko" ? "김철수" : "Brian" }).locator("input").uncheck();
     const g = await page.locator("#gridWrap").boundingBox();
     await shot(page, "filter.png", { x: g.x - 8, y: g.y - 8, width: 760, height: 420 });
     await page.close();

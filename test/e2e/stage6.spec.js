@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => expect(page.__errors).toEqual([]));
 
 test("엑셀 다운: 파일 이름·시트·병합 헤더·숫자 셀·합계 행", async ({ page }) => {
-  await page.goto("/demo/weekly.html?date=2026-11-12&rows=6");
+  await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=6");
   const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#btnExcelDownload").click()]);
   expect(download.suggestedFilename()).toBe("주간출고_W46_2026-11-09.xlsx");
   const file = await download.path();
@@ -36,7 +36,7 @@ test("엑셀 다운: 파일 이름·시트·병합 헤더·숫자 셀·합계 �
 });
 
 test("필터·정렬한 화면 그대로 내보낸다", async ({ page }) => {
-  await page.goto("/demo/weekly.html?date=2026-11-12&rows=300");
+  await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300");
   await page.evaluate(() => {
     window.grid.setFilter("OWNER", ["이영희"]);
     window.grid.setSort([{ key: "ORDER_QTY", dir: "desc" }]);
@@ -52,7 +52,7 @@ test("필터·정렬한 화면 그대로 내보낸다", async ({ page }) => {
 });
 
 test("너비·정렬 기억: 새로 고쳐도 남고, 초기화하면 사라진다", async ({ page }) => {
-  await page.goto("/demo/weekly.html?date=2026-11-12&rows=300");
+  await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   const head = page.locator('#gridWrap .pyo-hcell[data-key="CHANNEL"]');

@@ -13,7 +13,7 @@ test.describe("weekly 데모", () => {
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     page.__errors = errors;
-    await page.goto("/demo/weekly.html?date=2026-11-12&rows=300");
+    await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300");
   });
   test.afterEach(async ({ page }) => {
     expect(page.__errors).toEqual([]);
@@ -109,7 +109,7 @@ test.describe("weekly 데모", () => {
 });
 
 test("끌다가 아래로 벗어나면 자동 스크롤하며 범위가 늘어난다", async ({ page }) => {
-  await page.goto("/demo/big.html");
+  await page.goto("/demo/big.html?lang=ko");
   const start = await box(page.locator('.pyo-row[data-row="2"] .pyo-cell[data-c="3"]'));
   const scroll = await box(page.locator(".pyo-scroll"));
   await page.mouse.move(start.cx, start.cy);
@@ -128,7 +128,7 @@ test("끌다가 아래로 벗어나면 자동 스크롤하며 범위가 늘어�
 });
 
 test("서버 페이징·서버 정렬", async ({ page }) => {
-  await page.goto("/demo/paging.html");
+  await page.goto("/demo/paging.html?lang=ko");
   const status = page.locator(".pyo-page-status");
   await expect(status).toHaveText(/^1 - \d+ of 50\u00a0 Total 1,234$/);
   await expect(page.locator(".pyo-page-nums button")).toHaveText(["1", "2", "3", "4", "5"]);

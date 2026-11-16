@@ -14,7 +14,7 @@ const box = (loc) => loc.evaluate((el) => {
 const num = (s) => Number(String(s).replace(/,/g, ""));
 
 test.describe("weekly 데모", () => {
-  test.beforeEach(async ({ page }) => page.goto("/demo/weekly.html?date=2026-11-12&rows=300"));
+  test.beforeEach(async ({ page }) => page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300"));
 
   test("합계 행은 본문 아래 붙어 있고 가로 스크롤을 따라간다, 값은 전체 합계", async ({ page }) => {
     const foot = page.locator("#gridWrap .pyo-foot");
@@ -84,7 +84,7 @@ test.describe("weekly 데모", () => {
 });
 
 test.describe("summary 데모", () => {
-  test.beforeEach(async ({ page }) => page.goto("/demo/summary.html"));
+  test.beforeEach(async ({ page }) => page.goto("/demo/summary.html?lang=ko"));
 
   test("그룹 소계·합계 행, 편집하면 소계가 바뀐다", async ({ page }) => {
     const groups = await page.evaluate(() =>
@@ -133,7 +133,7 @@ test.describe("summary 데모", () => {
 
 test("값이 50,000개인 바코드 필터: 확인만 누르면 그대로, 마지막 바코드도 검색된다", async ({ page }) => {
   page.__errors = page.__errors || [];
-  await page.goto("/demo/weekly.html?date=2026-11-12&rows=50000");
+  await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=50000");
   const btn = page.locator('#gridWrap .pyo-hcell[data-key="BARCODE"] .pyo-filter-btn');
   await btn.click();
   const pop = page.locator(".pyo-filter");
@@ -175,7 +175,7 @@ test("200행 병합 덩어리: 화면 안에 글자가 하나 보이고 스크�
 });
 
 test("병합 셀도 범위 선택 색·포커스 셀 색이 보인다", async ({ page }) => {
-  await page.goto("/demo/summary.html");
+  await page.goto("/demo/summary.html?lang=ko");
   const cell = (r, c) => page.locator(`#merge .pyo-row[data-row="${r}"] .pyo-cell[data-c="${c}"]`);
   await expect(cell(0, 0)).toHaveClass(/pyo-merged/);
   await expect(cell(0, 0)).toHaveCSS("background-color", "rgb(255, 255, 255)");

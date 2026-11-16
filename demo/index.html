@@ -5,32 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PyoGrid demos</title>
   <meta name="description" content="Live demos of PyoGrid, a dependency-free JavaScript data grid with virtual scrolling, Excel-style editing, and IME-friendly input.">
+  <script src="shared/i18n.js"></script>
   <link rel="stylesheet" href="shared/demo.css">
 </head>
 <body>
 <header class="d-top">
   <a class="d-brand" href="index.html"><span class="d-logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>PyoGrid</a>
   <nav class="d-nav" aria-label="Demos">
-    <a href="index.html" aria-current="page">Demos</a>
-    <a href="weekly.html">Weekly</a>
-    <a href="editors.html">Editors</a>
-    <a href="summary.html">Totals &amp; tree</a>
-    <a href="paging.html">Paging</a>
-    <a href="big.html">50,000 rows</a>
+    <a href="index.html" aria-current="page"><span class="en">Demos</span><span class="ko">데모 목록</span></a>
+    <a href="weekly.html"><span class="en">Weekly</span><span class="ko">주간 현황</span></a>
+    <a href="editors.html"><span class="en">Editors</span><span class="ko">편집기</span></a>
+    <a href="summary.html"><span class="en">Totals &amp; tree</span><span class="ko">합계·트리</span></a>
+    <a href="paging.html"><span class="en">Paging</span><span class="ko">페이징</span></a>
+    <a href="big.html"><span class="en">50,000 rows</span><span class="ko">5만 행</span></a>
   </nav>
   <div class="d-links">
     <a href="https://herbcookey.github.io/pyogrid/">Docs</a>
     <a href="https://www.npmjs.com/package/pyogrid">npm</a>
     <a href="https://github.com/herbcookey/pyogrid">GitHub</a>
   </div>
+  <div class="d-lang" aria-label="Language"><a data-lang-switch="en" href="?lang=en">EN</a><a data-lang-switch="ko" href="?lang=ko">한국어</a></div>
 </header>
 
 <section class="d-hero">
-  <h1>A data grid that types like a spreadsheet</h1>
-  <p>PyoGrid is a dependency-free JavaScript grid. It scrolls through tens of thousands of rows, lets you type straight into a cell (IME input such as Korean included), and pastes from Excel. Every demo below runs the published build in your browser.</p>
+  <h1><span class="en">A data grid that types like a spreadsheet</span><span class="ko">스프레드시트처럼 입력하는 데이터 그리드</span></h1>
+  <p class="en">PyoGrid is a dependency-free JavaScript grid. It scrolls through tens of thousands of rows, lets you type straight into a cell (IME input such as Korean included), and pastes from Excel. Every demo below runs the published build in your browser.</p>
+  <p class="ko">PyoGrid는 외부 라이브러리 없이 동작하는 JavaScript 그리드입니다. 수만 행을 부드럽게 스크롤하고, 셀을 고르고 바로 입력할 수 있으며(한글도 첫 글자부터), 엑셀에서 복사한 내용을 그대로 붙여 넣습니다. 아래 데모는 모두 브라우저에서 실제 빌드로 돌아갑니다.</p>
   <div class="d-hero-actions">
-    <a class="d-btn d-btn-primary" href="weekly.html">Open the main demo</a>
-    <a class="d-btn" href="https://herbcookey.github.io/pyogrid/">Read the docs</a>
+    <a class="d-btn d-btn-primary" href="weekly.html"><span class="en">Open the main demo</span><span class="ko">메인 데모 열기</span></a>
+    <a class="d-btn" href="https://herbcookey.github.io/pyogrid/"><span class="en">Read the docs</span><span class="ko">문서 보기</span></a>
     <span class="d-install"><b>$</b>npm install pyogrid</span>
   </div>
 </section>
@@ -39,48 +42,54 @@
   <a class="d-card d-card-wide" href="weekly.html">
     <div class="d-card-shot"><img src="../docs/images/weekly.png" alt="Weekly orders grid with grouped headers, frozen columns, and a totals row" loading="lazy"></div>
     <div class="d-card-body">
-      <h2>Weekly orders</h2>
-      <p>A full working screen: edit, paste from Excel, filter, undo, and export to xlsx. Switch between 6, 300, and 50,000 rows.</p>
+      <h2><span class="en">Weekly orders</span><span class="ko">주간 주문·출고 현황</span></h2>
+      <p class="en">A full working screen: edit, paste from Excel, filter, undo, and export to xlsx. Switch between 6, 300, and 50,000 rows.</p>
+      <p class="ko">실제 업무 화면처럼 편집, 엑셀 붙여넣기, 필터, 실행 취소, xlsx 내보내기를 해 볼 수 있습니다. 행 수를 6·300·50,000으로 바꿀 수 있습니다.</p>
       <div class="d-tags"><span>multi-level headers</span><span>frozen columns</span><span>header filters</span><span>footer totals</span><span>xlsx</span></div>
     </div>
   </a>
   <a class="d-card" href="editors.html">
     <div class="d-card-shot"><img src="../docs/images/editors.png" alt="Date cell being edited with a calendar popup" loading="lazy"></div>
     <div class="d-card-body">
-      <h2>Cell editors</h2>
-      <p>Six editors and the full keyboard model. Select a cell and type; the first keystroke is never lost.</p>
+      <h2><span class="en">Cell editors</span><span class="ko">셀 편집기</span></h2>
+      <p class="en">Six editors and the full keyboard model. Select a cell and type; the first keystroke is never lost.</p>
+      <p class="ko">편집기 6종과 키보드 조작. 셀을 고르고 바로 치면 첫 글자부터 들어갑니다.</p>
       <div class="d-tags"><span>text</span><span>number</span><span>money</span><span>date</span><span>select</span><span>checkbox</span></div>
     </div>
   </a>
   <a class="d-card" href="summary.html">
     <div class="d-card-shot"><img src="../docs/images/summary.png" alt="Group subtotals, a tree, and merged cells" loading="lazy"></div>
     <div class="d-card-body">
-      <h2>Totals, tree, and merged cells</h2>
-      <p>Group subtotals with a footer, a parent-key tree, and vertically merged cells that keep their label visible while scrolling.</p>
+      <h2><span class="en">Totals, tree, and merged cells</span><span class="ko">합계·트리·셀 병합</span></h2>
+      <p class="en">Group subtotals with a footer, a parent-key tree, and vertically merged cells that keep their label visible while scrolling.</p>
+      <p class="ko">그룹 소계와 합계 행, 부모 키로 만든 트리, 스크롤해도 글자가 보이는 셀 병합.</p>
       <div class="d-tags"><span>grouping</span><span>footSum</span><span>tree</span><span>mergeCells</span></div>
     </div>
   </a>
   <a class="d-card" href="paging.html">
     <div class="d-card-shot d-shot-bottom"><img src="../docs/images/paging.png" alt="Grid with page buttons in the bottom bar" loading="lazy"></div>
     <div class="d-card-body">
-      <h2>Server-side paging</h2>
-      <p>Page buttons and sorting handed off to a (simulated) server through <code>pagechange</code> and <code>sortchange</code>.</p>
+      <h2><span class="en">Server-side paging</span><span class="ko">서버 페이징·정렬</span></h2>
+      <p class="en">Page buttons and sorting handed off to a (simulated) server through <code>pagechange</code> and <code>sortchange</code>.</p>
+      <p class="ko">페이지 이동과 정렬을 <code>pagechange</code>·<code>sortchange</code>로 (가짜) 서버에 맡깁니다.</p>
       <div class="d-tags"><span>remoteSort</span><span>page info</span></div>
     </div>
   </a>
   <a class="d-card" href="big.html">
     <div class="d-card-shot"><img src="../docs/images/big.png" alt="50,000 rows by 30 columns scrolled to the middle" loading="lazy"></div>
     <div class="d-card-body">
-      <h2>50,000 rows × 30 columns</h2>
-      <p>Virtual scrolling in both directions. Creating the grid and loading the data takes a few dozen milliseconds.</p>
+      <h2><span class="en">50,000 rows × 30 columns</span><span class="ko">50,000행 × 30열</span></h2>
+      <p class="en">Virtual scrolling in both directions. Creating the grid and loading the data takes a few dozen milliseconds.</p>
+      <p class="ko">가로·세로 가상 스크롤. 그리드를 만들고 데이터를 넣는 데 수십 ms면 됩니다.</p>
       <div class="d-tags"><span>virtual scrolling</span><span>performance</span></div>
     </div>
   </a>
 </main>
 
 <footer class="d-foot">
-  All demo data is made up. The demos use Korean sample data and <code>locale: "ko"</code>; the grid's default UI language is English.
-  Running locally: <code>npm run build</code>, then <code>npm run demo</code>. MIT © Donghyeon Shin.
+  <span class="en">All demo data is made up. Switch the demos to Korean with the language toggle at the top right; the grid's built-in text follows (<code>locale: "ko"</code>). Running locally: <code>npm run build</code>, then <code>npm run demo</code>.</span>
+  <span class="ko">모든 데모 데이터는 가상 데이터입니다. 오른쪽 위에서 언어를 바꾸면 그리드 기본 문구도 함께 바뀝니다 (<code>locale: "ko"</code>). 로컬에서 실행: <code>npm run build</code> 후 <code>npm run demo</code>.</span>
+  MIT © Donghyeon Shin.
 </footer>
 </body>
 </html>

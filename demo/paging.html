@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PyoGrid 서버 페이징·서버 정렬</title>
+  <title>Server-side paging · PyoGrid demo</title>
+  <script src="shared/i18n.js"></script>
   <link rel="stylesheet" href="shared/demo.css">
   <link rel="stylesheet" href="../dist/pyogrid.css">
 </head>
@@ -11,32 +12,35 @@
 <header class="d-top">
   <a class="d-brand" href="index.html"><span class="d-logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>PyoGrid</a>
   <nav class="d-nav" aria-label="Demos">
-    <a href="index.html">Demos</a>
-    <a href="weekly.html">Weekly</a>
-    <a href="editors.html">Editors</a>
-    <a href="summary.html">Totals &amp; tree</a>
-    <a href="paging.html" aria-current="page">Paging</a>
-    <a href="big.html">50,000 rows</a>
+    <a href="index.html"><span class="en">Demos</span><span class="ko">데모 목록</span></a>
+    <a href="weekly.html"><span class="en">Weekly</span><span class="ko">주간 현황</span></a>
+    <a href="editors.html"><span class="en">Editors</span><span class="ko">편집기</span></a>
+    <a href="summary.html"><span class="en">Totals &amp; tree</span><span class="ko">합계·트리</span></a>
+    <a href="paging.html" aria-current="page"><span class="en">Paging</span><span class="ko">페이징</span></a>
+    <a href="big.html"><span class="en">50,000 rows</span><span class="ko">5만 행</span></a>
   </nav>
   <div class="d-links">
     <a href="https://herbcookey.github.io/pyogrid/">Docs</a>
     <a href="https://github.com/herbcookey/pyogrid">GitHub</a>
   </div>
+  <div class="d-lang" aria-label="Language"><a data-lang-switch="en" href="?lang=en">EN</a><a data-lang-switch="ko" href="?lang=ko">한국어</a></div>
 </header>
-
 <main class="d-main">
 <div class="d-head">
-  <h1>서버 페이징·서버 정렬</h1>
-  <p>서버 페이징(<code>setData(rows, page)</code> + <code>pagechange</code>)과 서버 정렬(<code>remoteSort</code> + <code>sortchange</code>)을 흉내 낸 페이지입니다.</p>
+  <h1><span class="en">Server-side paging and sorting</span><span class="ko">서버 페이징·서버 정렬</span></h1>
+  <p class="en">A simulated server with 1,234 rows. Paging uses <code>setData(rows, page)</code> and <code>pagechange</code>; sorting uses <code>remoteSort</code> and <code>sortchange</code>.</p>
+  <p class="ko">1,234건을 가진 가짜 서버입니다. 페이징은 <code>setData(rows, page)</code> + <code>pagechange</code>, 정렬은 <code>remoteSort</code> + <code>sortchange</code>로 합니다.</p>
 </div>
 <div id="grid" style="height:420px; max-width: 760px;"></div>
 <div id="log" class="d-meta" style="margin-top:8px"></div>
 </main>
 <script src="../dist/pyogrid.js"></script>
 <script>
+  var L = DemoI18n.lang, T = DemoI18n.t;
+  document.title = T("Server-side paging · PyoGrid demo", "서버 페이징·서버 정렬 · PyoGrid 데모");
   // 가짜 서버: 1,234건
   var ALL = [];
-  for (var i = 0; i < 1234; i++) ALL.push({ id: i + 1, name: "품목 " + (i + 1), qty: (i * 7919) % 5000, date: "2026-11-" + String(1 + (i % 28)).padStart(2, "0") });
+  for (var i = 0; i < 1234; i++) ALL.push({ id: i + 1, name: T("Item ", "품목 ") + (i + 1), qty: (i * 7919) % 5000, date: "2026-11-" + String(1 + (i % 28)).padStart(2, "0") });
   var PAGE_SIZE = 50, sort = [];
 
   function fetchPage(pageNo) {
@@ -46,21 +50,21 @@
   }
 
   var grid = new PyoGrid(document.getElementById("grid"), {
-    locale: "ko",
+    locale: L,
     lineNumber: true, rowSelector: true, sortable: true, remoteSort: true, headerAlign: "center",
     pageIcons: { first: "|«", prev: "«", next: "»", last: "»|" },
     columns: [
-      { key: "id", label: "번호", width: 70, align: "right" },
-      { key: "name", label: "이름", width: "*" },
-      { key: "qty", label: "수량", width: 100, align: "right", formatter: "money" },
-      { key: "date", label: "일자", width: 110, align: "center" }
+      { key: "id", label: T("No.", "번호"), width: 70, align: "right" },
+      { key: "name", label: T("Name", "이름"), width: "*" },
+      { key: "qty", label: T("Qty", "수량"), width: 100, align: "right", formatter: "money" },
+      { key: "date", label: T("Date", "일자"), width: 110, align: "center" }
     ]
   });
   window.grid = grid;
   function load(pageNo) {
     var res = fetchPage(pageNo);
     grid.setData(res.rows, res.page);
-    document.getElementById("log").textContent = "불러온 페이지: " + (pageNo + 1) + " / 정렬: " + JSON.stringify(sort);
+    document.getElementById("log").textContent = T("Loaded page ", "불러온 페이지: ") + (pageNo + 1) + T(" · sort: ", " / 정렬: ") + JSON.stringify(sort);
   }
   grid.on("pagechange", function (e) { load(e.page); });
   grid.on("sortchange", function (e) { sort = e.sort; load(0); });

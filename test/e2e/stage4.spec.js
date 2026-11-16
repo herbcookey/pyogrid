@@ -33,7 +33,7 @@ async function dragSelect(page, r0, c0, r1, c1) {
 test.beforeEach(async ({ page }) => {
   page.__errors = [];
   page.on("pageerror", (e) => page.__errors.push(e.message));
-  await page.goto("/demo/editors.html");
+  await page.goto("/demo/editors.html?lang=ko");
   await page.evaluate(() => {
     const keep = (e) => (window.__clip = e.clipboardData.getData("text/plain"));
     window.addEventListener("copy", keep);
@@ -107,7 +107,7 @@ test("편집 중 Ctrl+V는 셀 입력칸에 글자로 들어간다", async ({ pa
 });
 
 test("weekly 데모: 이월 수량 여러 셀 붙여넣기 → 다음 주 조정 재계산, Ctrl+Z", async ({ page }) => {
-  await page.goto("/demo/weekly.html?date=2026-11-12&rows=6");
+  await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=6");
   const c = (r) => page.locator(`#gridWrap .pyo-row[data-row="${r}"] .pyo-cell[data-c="11"]`);
   const before = await page.evaluate(() => window.grid.getRows().map((r) => ({ ...r })));
   await writeClip(page, "100\n200\n300");

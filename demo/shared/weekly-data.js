@@ -37,23 +37,41 @@
     { OWNER: "이영희", STORE: "BUSAN", SKU: "SKU-C3001", BARCODE: "8800000030015", VENDOR_CODE: "V-3001", CHANNEL: "도매", REGION: "대구", CATEGORY: "가방", CATEGORY_GROUP: "생활", ORDER_QTY: 2000, SHIP_QTY: 0, NEXT_ORDER: 2000 },
     { OWNER: "이영희", STORE: "BUSAN", SKU: "SKU-C3002", BARCODE: "8800000030022", VENDOR_CODE: "V-3002", CHANNEL: "도매", REGION: "대구", CATEGORY: "가방", CATEGORY_GROUP: "생활", ORDER_QTY: 4500, SHIP_QTY: 4100, NEXT_ORDER: 0 }
   ];
+  var OWNERS = ["홍길동", "김철수", "이영희", "박민수", "최지은"];
+
+  // 영어 데모용 글자 (값은 한국어 데이터와 1:1)
+  var EN = {
+    "홍길동": "Alice", "김철수": "Brian", "이영희": "Chloe", "박민수": "Daniel", "최지은": "Emma",
+    "온라인": "Online", "매장": "Store", "도매": "Wholesale",
+    "서울": "Seoul", "부산": "Busan", "대구": "Daegu",
+    "필기구": "Pens", "노트": "Notebooks", "가방": "Bags",
+    "문구": "Stationery", "지류": "Paper", "생활": "Living",
+    "미처리": "Pending"
+  };
+  var LANG = "ko";
+  function tr(v) { return LANG === "en" && EN[v] ? EN[v] : v; }
+  function translate(r) {
+    if (LANG !== "en") return r;
+    ["OWNER", "CHANNEL", "REGION", "CATEGORY", "CATEGORY_GROUP", "STATUS"].forEach(function (k) { if (r[k] != null) r[k] = tr(r[k]); });
+    return r;
+  }
 
   // count를 주면 기본 6행을 바탕으로 행을 늘린다 (스크롤 확인용)
   function buildSampleRows(count) {
-    if (!count || count <= BASE.length) return BASE.map(function (r) { return Object.assign({}, r); });
+    if (!count || count <= BASE.length) return BASE.map(function (r) { return translate(Object.assign({}, r)); });
     var out = [];
-    var owners = ["홍길동", "김철수", "이영희", "박민수", "최지은"];
+    var owners = OWNERS;
     for (var i = 0; i < count; i++) {
       var b = BASE[i % BASE.length];
       var order = 1000 + ((i * 7919) % 15000);
       var ship = Math.max(0, order - ((i * 104729) % 4000));
-      out.push(Object.assign({}, b, {
+      out.push(translate(Object.assign({}, b, {
         OWNER: owners[i % owners.length],
         SKU: "SKU-" + String.fromCharCode(65 + (i % 26)) + String(10000 + i),
         BARCODE: "880" + String(1000000000 + i * 37),
         VENDOR_CODE: "V-" + (1000 + i),
         ORDER_QTY: order, SHIP_QTY: ship, NEXT_ORDER: 1000 + ((i * 31) % 9000)
-      }));
+      })));
     }
     return out;
   }
@@ -67,13 +85,15 @@
     return Object.assign({}, r, {
       ORDER_QTY: order, SHIP_QTY: ship, BACKLOG_QTY: backlog,
       CARRY_QTY: carry, NEXT_ORDER: nextOrder, NEXT_TOTAL: nextOrder + carry,
-      STATUS: r.STATUS || (backlog > 0 ? "미처리" : "-"),
+      STATUS: r.STATUS || (backlog > 0 ? tr("미처리") : "-"),
       __selected__: backlog > 0
     });
   }
 
   global.WeeklyData = {
     pad2: pad2, formatDate: formatDate, parseDate: parseDate, addDays: addDays,
-    getWeekInfo: getWeekInfo, buildSampleRows: buildSampleRows, normalizeRow: normalizeRow
+    getWeekInfo: getWeekInfo, buildSampleRows: buildSampleRows, normalizeRow: normalizeRow,
+    /** "en"이면 담당자·판매처·지역·분류·상태를 영어로 만든다 */
+    setLang: function (l) { LANG = l === "en" ? "en" : "ko"; }
   };
 })(window);

@@ -9,7 +9,7 @@ const input = (page) => page.locator("#grid .pyo-input");
 test.beforeEach(async ({ page }) => {
   page.__errors = [];
   page.on("pageerror", (e) => page.__errors.push(e.message));
-  await page.goto("/demo/editors.html");
+  await page.goto("/demo/editors.html?lang=ko");
 });
 test.afterEach(async ({ page }) => {
   expect(page.__errors).toEqual([]);
@@ -197,7 +197,7 @@ test("방향키로 화면 밖 셀까지 이동하면 따라 스크롤된다", as
 });
 
 test("weekly 데모: 이월 수량 편집 → 다음 주 조정 수요·요약 재계산", async ({ page }) => {
-  await page.goto("/demo/weekly.html?date=2026-11-12&rows=6");
+  await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=6");
   const c = page.locator('#gridWrap .pyo-row[data-row="0"] .pyo-cell[data-c="11"]');
   await c.click();
   await page.keyboard.type("777.9");

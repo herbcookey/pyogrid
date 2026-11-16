@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PyoGrid 셀 편집기</title>
+  <title>Cell editors · PyoGrid demo</title>
+  <script src="shared/i18n.js"></script>
   <link rel="stylesheet" href="shared/demo.css">
   <link rel="stylesheet" href="../dist/pyogrid.css">
 </head>
@@ -11,65 +12,76 @@
 <header class="d-top">
   <a class="d-brand" href="index.html"><span class="d-logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>PyoGrid</a>
   <nav class="d-nav" aria-label="Demos">
-    <a href="index.html">Demos</a>
-    <a href="weekly.html">Weekly</a>
-    <a href="editors.html" aria-current="page">Editors</a>
-    <a href="summary.html">Totals &amp; tree</a>
-    <a href="paging.html">Paging</a>
-    <a href="big.html">50,000 rows</a>
+    <a href="index.html"><span class="en">Demos</span><span class="ko">데모 목록</span></a>
+    <a href="weekly.html"><span class="en">Weekly</span><span class="ko">주간 현황</span></a>
+    <a href="editors.html" aria-current="page"><span class="en">Editors</span><span class="ko">편집기</span></a>
+    <a href="summary.html"><span class="en">Totals &amp; tree</span><span class="ko">합계·트리</span></a>
+    <a href="paging.html"><span class="en">Paging</span><span class="ko">페이징</span></a>
+    <a href="big.html"><span class="en">50,000 rows</span><span class="ko">5만 행</span></a>
   </nav>
   <div class="d-links">
     <a href="https://herbcookey.github.io/pyogrid/">Docs</a>
     <a href="https://github.com/herbcookey/pyogrid">GitHub</a>
   </div>
+  <div class="d-lang" aria-label="Language"><a data-lang-switch="en" href="?lang=en">EN</a><a data-lang-switch="ko" href="?lang=ko">한국어</a></div>
 </header>
-
 <main class="d-main">
 <div class="d-head">
-  <h1>셀 편집기</h1>
-  <p>편집기 6종, 키보드, 한글 바로 입력. 아래 기록 칸에 change·batchchange 이벤트가 쌓입니다.</p>
+  <h1><span class="en">Cell editors</span><span class="ko">셀 편집기</span></h1>
+  <p class="en">Six editors, the keyboard, and type-to-edit with IME input. change and batchchange events are logged below the grid.</p>
+  <p class="ko">편집기 6종, 키보드, 한글 바로 입력. 아래 기록 칸에 change·batchchange 이벤트가 쌓입니다.</p>
 </div>
-<ul class="d-tips">
+<ul class="d-tips en">
+  <li>Select a cell and just start typing (IME input included, from the first character). F2, Enter, or a double-click edits the current value.</li>
+  <li>Enter saves and moves down, Shift+Enter up, Tab right, Esc cancels, Delete clears the selected range, Backspace clears and starts typing.</li>
+  <li>Qty and Amount take digits only. Date accepts plain digits and formats them as yyyy-MM-dd (a calendar opens too). Type is picked from a list or found by typing. Active toggles with a click or Space.</li>
+  <li>Notes on "Locked" rows can't be edited (<code>editor.disabled</code>).</li>
+</ul>
+<ul class="d-tips ko">
   <li>셀을 누르고 그냥 치면 편집이 시작됩니다 (한글도 첫 글자부터). F2·Enter·더블클릭은 지금 값으로 편집.</li>
   <li>Enter 저장 후 아래, Shift+Enter 위, Tab 오른쪽, Esc 취소, Delete 선택 범위 지우기, Backspace 지우고 입력.</li>
   <li>수량·금액은 숫자만, 일자는 숫자만 쳐도 yyyy-MM-dd (달력도 열림), 구분은 목록에서 고르거나 글자로 찾기, 사용은 클릭·Space.</li>
-  <li>"잠김" 행의 비고는 편집할 수 없습니다 (editor.disabled).</li>
+  <li>"잠김" 행의 비고는 편집할 수 없습니다 (<code>editor.disabled</code>).</li>
 </ul>
 <div id="grid" style="height:360px; max-width: 980px;"></div>
 <div id="log" class="d-log"></div>
 </main>
 <script src="../dist/pyogrid.js"></script>
 <script>
-  var kinds = [{ CD: "A", NM: "가공" }, { CD: "B", NM: "부품" }, { CD: "C", NM: "조립" }, { CD: "D", NM: "도장" }, { CD: "E", NM: "검사" }];
+  var L = DemoI18n.lang, T = DemoI18n.t;
+  document.title = T("Cell editors · PyoGrid demo", "셀 편집기 · PyoGrid 데모");
+  var kinds = L === "ko"
+    ? [{ CD: "A", NM: "가공" }, { CD: "B", NM: "부품" }, { CD: "C", NM: "조립" }, { CD: "D", NM: "도장" }, { CD: "E", NM: "검사" }]
+    : [{ CD: "A", NM: "Machining" }, { CD: "B", NM: "Parts" }, { CD: "C", NM: "Assembly" }, { CD: "D", NM: "Painting" }, { CD: "E", NM: "Inspection" }];
   var rows = [];
   for (var i = 0; i < 200; i++) {
     rows.push({
-      no: i + 1, name: "품목 " + (i + 1), qty: (i * 7) % 50, amt: ((i * 7919) % 90000) + 1000,
+      no: i + 1, name: T("Item ", "품목 ") + (i + 1), qty: (i * 7) % 50, amt: ((i * 7919) % 90000) + 1000,
       dt: i % 3 ? "" : "2026-11-" + String(1 + (i % 28)).padStart(2, "0"),
-      cd: kinds[i % kinds.length].CD, use: i % 4 ? "Y" : "N", memo: i % 5 === 0 ? "잠김" : "", locked: i % 5 === 0
+      cd: kinds[i % kinds.length].CD, use: i % 4 ? "Y" : "N", memo: i % 5 === 0 ? T("Locked", "잠김") : "", locked: i % 5 === 0
     });
   }
   var grid = new PyoGrid(document.getElementById("grid"), {
-    locale: "ko",
+    locale: L,
     lineNumber: true, rowSelector: true, frozenColumns: 2, sortable: true, headerAlign: "center",
     columns: [
-      { key: "no", label: "번호", width: 60, align: "right" },
-      { key: "name", label: "품명", width: 160, editor: { type: "text", attributes: { maxlength: 30 } } },
-      { key: "qty", label: "수량", width: 80, align: "right", editor: { type: "number", config: { min: 0 } } },
-      { key: "amt", label: "금액", width: 110, align: "right", formatter: "money", editor: { type: "money" } },
-      { key: "dt", label: "일자", width: 110, align: "center", editor: { type: "date" } },
-      { key: "cd", label: "구분", width: 90, align: "center",
+      { key: "no", label: T("No.", "번호"), width: 60, align: "right" },
+      { key: "name", label: T("Item", "품명"), width: 160, editor: { type: "text", attributes: { maxlength: 30 } } },
+      { key: "qty", label: T("Qty", "수량"), width: 80, align: "right", editor: { type: "number", config: { min: 0 } } },
+      { key: "amt", label: T("Amount", "금액"), width: 110, align: "right", formatter: "money", editor: { type: "money" } },
+      { key: "dt", label: T("Date", "일자"), width: 110, align: "center", editor: { type: "date" } },
+      { key: "cd", label: T("Type", "구분"), width: 100, align: "center",
         editor: { type: "select", config: { columnKeys: { optionValue: "CD", optionText: "NM" }, options: kinds } } },
-      { key: "use", label: "사용", width: 60, align: "center", editor: { type: "checkbox", config: { trueValue: "Y", falseValue: "N" } } },
-      { key: "memo", label: "비고", width: "*", editor: { type: "text", disabled: function (c) { return c.row.locked; } } }
+      { key: "use", label: T("Active", "사용"), width: 60, align: "center", editor: { type: "checkbox", config: { trueValue: "Y", falseValue: "N" } } },
+      { key: "memo", label: T("Notes", "비고"), width: "*", editor: { type: "text", disabled: function (c) { return c.row.locked; } } }
     ]
   });
   grid.setData(rows);
   window.grid = grid;
   var log = document.getElementById("log");
   function write(s) { log.insertAdjacentText("afterbegin", s + "\n"); }
-  grid.on("change", function (e) { if (!e.batch) write(e.rowIndex + "행 " + e.key + ": " + JSON.stringify(e.oldValue) + " → " + JSON.stringify(e.value)); });
-  grid.on("batchchange", function (e) { write(e.source + " " + e.changes.length + "셀"); });
+  grid.on("change", function (e) { if (!e.batch) write(T("row ", "") + e.rowIndex + T(" ", "행 ") + e.key + ": " + JSON.stringify(e.oldValue) + " → " + JSON.stringify(e.value)); });
+  grid.on("batchchange", function (e) { write(e.source + " " + e.changes.length + T(" cells", "셀")); });
 </script>
 </body>
 </html>

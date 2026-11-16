@@ -19,7 +19,7 @@ const box = (loc) => loc.evaluate((el) => {
 test.describe("weekly 데모", () => {
   test("다단 헤더·틀 고정·money 표시", async ({ page }) => {
     const errors = watchErrors(page);
-    await page.goto("/demo/weekly.html?date=2026-11-12&rows=300");
+    await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300");
     const grid = page.locator("#gridWrap .pyo");
     await expect(grid).toBeVisible();
 
@@ -49,7 +49,7 @@ test.describe("weekly 데모", () => {
 
   test("가로 스크롤해도 틀 고정 컬럼은 제자리, 헤더와 본문 컬럼은 같이 움직인다", async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 700 });
-    await page.goto("/demo/weekly.html?date=2026-11-12&rows=300");
+    await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300");
     const grid = page.locator("#gridWrap .pyo");
     const scroll = grid.locator(".pyo-scroll");
     const frozenHead = grid.locator('.pyo-hcell[data-key="BARCODE"]');
@@ -77,7 +77,7 @@ test.describe("weekly 데모", () => {
   });
 
   test("세로 스크롤해도 헤더는 위에 붙어 있다", async ({ page }) => {
-    await page.goto("/demo/weekly.html?date=2026-11-12&rows=300");
+    await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300");
     const grid = page.locator("#gridWrap .pyo");
     const head = grid.locator(".pyo-head");
     const y0 = (await box(head)).y;
@@ -91,7 +91,7 @@ test.describe("weekly 데모", () => {
   });
 
   test("헤더 경계를 끌어 너비를 바꾸면 헤더와 본문이 같이 바뀐다", async ({ page }) => {
-    await page.goto("/demo/weekly.html?date=2026-11-12&rows=300");
+    await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300");
     const grid = page.locator("#gridWrap .pyo");
     const head = grid.locator('.pyo-hcell[data-key="CHANNEL"]');
     const h0 = await box(head);
@@ -114,7 +114,7 @@ test.describe("weekly 데모", () => {
   });
 
   test("데이터가 없으면 안내 문구", async ({ page }) => {
-    await page.goto("/demo/weekly.html?date=2026-11-12&rows=6");
+    await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=6");
     await page.evaluate(() => window.grid.setData([]));
     const empty = page.locator("#gridWrap .pyo-empty");
     await expect(empty).toBeVisible();
@@ -125,7 +125,7 @@ test.describe("weekly 데모", () => {
 test.describe("대량 데이터 (50,000행 × 30열)", () => {
   test("생성 속도·DOM 크기·스크롤 위치", async ({ page }) => {
     const errors = watchErrors(page);
-    await page.goto("/demo/big.html");
+    await page.goto("/demo/big.html?lang=ko");
     const timing = await page.evaluate(() => window.timing);
     console.log(`  그리드 생성+setData: ${timing.initAndSetData.toFixed(1)}ms`);
     expect(timing.initAndSetData).toBeLessThan(500);
@@ -162,7 +162,7 @@ test.describe("대량 데이터 (50,000행 × 30열)", () => {
   });
 
   test("연속 스크롤 프레임 시간", async ({ page, browserName }) => {
-    await page.goto("/demo/big.html");
+    await page.goto("/demo/big.html?lang=ko");
     const result = await page.evaluate(async () => {
       const s = document.querySelector(".pyo-scroll");
       const frames = [];
