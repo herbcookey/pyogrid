@@ -1,5 +1,5 @@
 // @ts-check
-import { getValue, isFn } from "../util.js";
+import { getValue, isFn, escapeHtml } from "../util.js";
 import { sumCellValue } from "./summary.js";
 
 /**
@@ -65,7 +65,8 @@ export function buildExportData(g) {
   // 헤더
   for (let r = 0; r < g.headerDepth; r++) rows.push(new Array(n).fill(null));
   for (const cell of g.headerCells) {
-    rows[cell.row][cell.colStart] = toXlsxCell(cell.label, undefined, null, "header");
+    // 화면과 같게: html: true가 아닌 제목은 글자 그대로 (태그 모양 글자도 지우지 않는다)
+    rows[cell.row][cell.colStart] = toXlsxCell(cell.def && cell.def.html ? cell.label : escapeHtml(cell.label), undefined, null, "header");
     if (cell.colSpan > 1 || cell.rowSpan > 1) {
       merges.push({ s: { r: cell.row, c: cell.colStart }, e: { r: cell.row + cell.rowSpan - 1, c: cell.colStart + cell.colSpan - 1 } });
     }

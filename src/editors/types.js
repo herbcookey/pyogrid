@@ -126,6 +126,38 @@ export function toDate(v) {
   return new Date(y, m - 1, d);
 }
 
+/**
+ * Date를 저장 형식으로. 형식은 yyyy·MM·dd를 바꾸는 글자("yyyy-MM-dd", "yyyyMMdd", "yyyy.MM.dd" 등)
+ * 또는 (date) => 값 함수. 없으면 "yyyy-MM-dd".
+ * @param {Date} d
+ * @param {string|((d: Date) => any)|undefined|null} fmt
+ */
+export function formatDateAs(d, fmt) {
+  if (typeof fmt === "function") return fmt(d);
+  const f = typeof fmt === "string" && fmt ? fmt : "yyyy-MM-dd";
+  return f.replace(/yyyy|MM|dd/g, (t) => (t === "yyyy" ? String(d.getFullYear()) : t === "MM" ? pad(d.getMonth() + 1) : pad(d.getDate())));
+}
+
+/**
+ * date 편집기의 저장 값. config.valueFormat으로 저장 형식을 정한다 (기본 "yyyy-MM-dd").
+ * 입력칸에서는 항상 yyyy-MM-dd로 보이고, 저장할 때만 이 형식으로 바꾼다.
+ * @param {string} s
+ * @param {{valueFormat?: string|((d: Date) => any)}} [cfg]
+ */
+export function parseDateValue(s, cfg) {
+  const p = parseDate(s);
+  if (!p.ok || p.value === "" || !cfg || !cfg.valueFormat) return p;
+  const [y, m, d] = p.value.split("-").map(Number);
+  return { ok: true, value: formatDateAs(new Date(y, m - 1, d), cfg.valueFormat) };
+}
+
+/** 저장된 날짜 값(20261113, Date 등) → 입력칸 글자 yyyy-MM-dd. 날짜로 읽지 못하면 그대로 */
+function dateText(v) {
+  if (isEmpty(v)) return "";
+  const d = toDate(v instanceof Date ? v : String(v));
+  return d ? formatDate(d) : String(v);
+}
+
 /* ---------------- 선택 목록 ---------------- */
 
 /**
@@ -229,8 +261,8 @@ export const editorTypes = {
     clearable: true,
     popup: "calendar",
     sig: /[0-9]/,
-    format: (v) => (isEmpty(v) ? "" : String(v)),
-    parse: parseDate,
+    format: dateText,
+    parse: parseDateValue,
     sanitize: sanitizeDate,
   },
   select: { kind: "list", typeToEdit: true, clearable: true },

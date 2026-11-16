@@ -137,13 +137,25 @@ export class FilterPopup {
     this.close();
   }
 
-  /** 버튼 아래, 화면 밖으로 나가지 않게 @param {DOMRect} anchor */
-  place(anchor) {
+  /**
+   * 버튼 아래, 화면 밖으로 나가지 않게. 아래 공간이 모자라면 위로 뒤집는다.
+   * @param {DOMRect|{left:number, right:number, top:number, bottom:number}} anchor
+   * @param {boolean} [focus=true] 검색칸에 포커스 (처음 열 때만)
+   */
+  place(anchor, focus = true) {
     const w = this.el.offsetWidth;
+    const h = this.el.offsetHeight;
+    const vh = window.innerHeight;
     const left = Math.max(4, Math.min(anchor.right - w, window.innerWidth - w - 4));
+    let top = anchor.bottom + 2;
+    if (top + h > vh - 4) {
+      const above = anchor.top - h - 2;
+      // 위에 자리가 있으면 위로, 양쪽 다 모자라면 화면 안에 들어오게 붙인다
+      top = above >= 4 ? above : Math.max(4, vh - h - 4);
+    }
     this.el.style.left = left + "px";
-    this.el.style.top = anchor.bottom + 2 + "px";
-    this.search.focus();
+    this.el.style.top = top + "px";
+    if (focus) this.search.focus();
   }
 
   close() {

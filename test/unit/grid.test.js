@@ -74,15 +74,22 @@ describe("PyoGrid 렌더링", () => {
     expect(grid.el.body.querySelector('[data-row="5000"]').style.top).toBe(5000 * 26 + "px");
   });
 
-  it("formatter 없는 값은 이스케이프하고, formatter 결과는 HTML로 넣는다", () => {
+  it("값과 formatter 결과는 이스케이프하고, html: true 컬럼만 HTML로 넣는다", () => {
     const grid = new PyoGrid(host, {
-      columns: [{ key: "a" }, { key: "b", formatter: (c) => "<b>" + c.value + "</b>" }, { key: "c", formatter: "money" }],
+      columns: [
+        { key: "a" },
+        { key: "b", html: true, formatter: (c) => "<b>" + c.value + "</b>" },
+        { key: "c", formatter: "money" },
+        { key: "d", formatter: (c) => c.value },
+      ],
     });
-    grid.setData([{ a: "<script>x</script>", b: "굵게", c: 1234567 }]);
+    grid.setData([{ a: "<script>x</script>", b: "굵게", c: 1234567, d: '<img src=x onerror="alert(1)">' }]);
     const cells = cellsOf(grid, 0);
     expect(cells[0].innerHTML).toBe("&lt;script&gt;x&lt;/script&gt;");
     expect(cells[1].querySelector("b").textContent).toBe("굵게");
     expect(cells[2].textContent).toBe("1,234,567");
+    expect(cells[3].querySelector("img")).toBeNull();
+    expect(cells[3].textContent).toBe('<img src=x onerror="alert(1)">');
   });
 
   it("formatter·cellClass의 this와 인자에 value, row, item, key, rowIndex, dindex가 있다", () => {

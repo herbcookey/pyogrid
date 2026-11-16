@@ -19,6 +19,7 @@
  * @property {{type: string, config?: any, disabled?: boolean|Function, attributes?: Record<string, any>}} [editor]
  *   type: text, number, money, date, select, checkbox
  * @property {string|Function} [formatter]
+ * @property {boolean} [html]  true면 label과 formatter 결과를 HTML로 넣는다 (기본은 글자로 이스케이프)
  * @property {string|Function} [cellClass]
  * @property {string|Function} [headerClass]
  *

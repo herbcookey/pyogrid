@@ -253,7 +253,7 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 
 - **Let the grid own the data.** Editing a cell writes straight into the row object you passed in ([Core concepts](#core-concepts)). Don't mirror the same rows in React state or Vue reactive data; when saving, read the changes with `getModifiedRows()` and `getDeletedRows()`.
 - **In Vue, pass plain objects with `toRaw`.** A reactive proxy makes every edit go through Vue's reactivity and slows the grid down. Don't put the grid instance in `ref()` either.
-- **Cells are HTML strings.** Cell content is whatever HTML your `formatter` returns. Rendering React or Vue components inside cells is not supported.
+- **Cells are strings.** Cell content is the text your `formatter` returns, or HTML with `html: true`. Rendering React or Vue components inside cells is not supported.
 - **`setData` resets selection and undo history.** If the parent hands down a new `rows` array after every edit, the editing state is lost. Change `rows` only when you load new data.
 
 ## Core concepts
@@ -370,11 +370,12 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 ```js
 {
   key: "QTY",            // row property; paths like "a.b", "a['key with spaces']", "list[0].name" work too
-  label: "Qty",          // header text (inserted as HTML)
+  label: "Qty",          // header text (inserted as text; set html: true for HTML)
   width: 80,             // number, "120", "50px", "*", or "30%"
   align: "right",        // body alignment
   headerAlign: "center", // header alignment for this column
   formatter: "money",    // name or function
+  html: false,           // true: insert label and formatter output as HTML
   cellClass: function (c) { return c.value < 0 ? "minus" : ""; },
   headerClass: "my-head",
   editor: { type: "number" },
@@ -391,10 +392,11 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 | Property | Description |
 |---|---|
 | `key` | Row property to read and write. Without it the cell is empty (useful for formatter-only cells) |
-| `label` | Header text. It is inserted as HTML, so don't put raw user input here |
+| `label` | Header text, inserted as text. With `html: true` it is inserted as HTML |
 | `width` | Numbers, `"120"`, and `"50px"` are pixels; `"*"` shares the remaining width; `"30%"` is relative to the grid width. Defaults to `defaultColumnWidth` |
 | `align`, `headerAlign` | `"left"`, `"center"`, or `"right"` |
 | `formatter` | See [Formatters](#formatters) |
+| `html` | If true, `label` and the formatter's output are inserted as HTML. Off by default, so a formatter that returns server text can't inject markup or scripts |
 | `cellClass` | Cell class: a string or a function (same argument as a formatter) |
 | `headerClass` | Header cell class: a string or `function (column)` |
 | `editor` | See [Cell editors](#cell-editors) |
@@ -406,11 +408,12 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 
 ## Formatters
 
-Whatever a formatter returns is inserted into the cell **as HTML**. Without a formatter, the value is escaped. Wrap user-entered values with `PyoGrid.escapeHtml` when you use them in a formatter.
+A formatter's return value is inserted **as text**, so a barcode or a server string that happens to contain `<` is shown as typed and can't inject markup. To return HTML, set `html: true` on the column, and wrap values that come from users or servers with `PyoGrid.escapeHtml`.
 
 ```js
 {
   key: "STATUS",
+  html: true,              // this formatter returns HTML
   formatter: function (c) {
     // c and this are the same object:
     // c.value, c.row (= c.item), c.key, c.rowIndex (= c.dindex), c.column, c.grid
@@ -444,7 +447,7 @@ editor: {
 | `text` | The text as typed | |
 | `number` | A number (`""` when empty) | `decimal` digits after the point (0 for integers only), `min`, `max` |
 | `money` | A number (`""` when empty). Thousands separators appear while typing | `decimal`, `min`, `max` |
-| `date` | A `"yyyy-MM-dd"` string. Typing digits inserts the hyphens, and a calendar opens below the cell | |
+| `date` | A `"yyyy-MM-dd"` string, or the format in `valueFormat`. Typing digits inserts the hyphens, and a calendar opens below the cell. The input always shows yyyy-MM-dd | `valueFormat`: stored format such as `"yyyyMMdd"` or `"yyyy.MM.dd"` (tokens `yyyy`, `MM`, `dd`), or a function `(date) => value` |
 | `select` | The chosen option's value. Pick with arrow keys, Enter, or a click, or type to search (Korean included) | `options` array, `columnKeys: { optionValue: "value", optionText: "text" }` |
 | `checkbox` | `trueValue` / `falseValue` (`true` / `false` if not set). Toggles on click or Space | `trueValue`, `falseValue` |
 
@@ -477,7 +480,7 @@ Clicking a cell gives the grid keyboard focus (or call `grid.focus()`).
 | Home / End | Start / end of the row |
 | Ctrl+Home / Ctrl+End | First / last cell |
 | PageUp / PageDown | One page |
-| Tab / Shift+Tab | Right / left (wraps to the next row) |
+| Tab / Shift+Tab | Right / left (wraps to the next row). On the last cell Tab, and on the first cell Shift+Tab, move focus out of the grid |
 | Character keys | Start editing with an empty value (the character is entered) |
 | F2, Enter, Space | Start editing with the current value (toggles checkboxes, opens selects). Without an editor, Enter moves down |
 | Backspace | Clear and start editing |
@@ -491,7 +494,7 @@ Clicking a cell gives the grid keyboard focus (or call `grid.focus()`).
 | Key | Action |
 |---|---|
 | Enter / Shift+Enter | Commit and move down / up |
-| Tab / Shift+Tab | Commit and move right / left |
+| Tab / Shift+Tab | Commit and move right / left. On the last (first) cell, commit and move focus out of the grid |
 | ↑ / ↓ | Commit and move up / down (moves through options in a select) |
 | ← / → | Move the caret in the text |
 | Esc | Cancel |
@@ -523,8 +526,8 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | `clearDeleted()` | Clear the deleted-row list |
 | `acceptChanges()` | After saving: clear modified and added flags, the deleted-row list, and undo history |
 | `replaceRow(rowIndex, row)` | Replace the row at that position with another object |
-| `setValue(rowIndex, key, value)` | Set a cell value. Returns true if it changed, marks the row `__modified__`, and fires `change`. `null`, `undefined`, and `""` count as the same value |
-| `setValues([{rowIndex, key, value}], {source?})` | Set many cells and redraw once. Returns the list of cells that actually changed |
+| `setValue(rowIndex \| row, key, value)` | Set a cell value. Pass a view index or a row object; a row object also reaches rows hidden by filters and collapsed tree children (their `change` has `rowIndex: -1`). Returns true if it changed, marks the row `__modified__`, and fires `change`. `null`, `undefined`, and `""` count as the same value |
+| `setValues([{rowIndex \| row, key, value}], {source?})` | Set many cells and redraw once. Each entry gives `rowIndex` or `row`. Returns the list of cells that actually changed (`rowIndex: -1` for rows not on screen) |
 
 ### Row selection
 
@@ -627,7 +630,7 @@ grid.off("change", handler);               // omit handler to remove all listene
 | `sortchange` | Sort changes | `{sort}` |
 | `filterchange` | Filters change | `{filters, count}` |
 | `pagechange` | A page button is clicked | `{page, current, info}` (`page` is zero-based) |
-| `change` | A cell value changes | `{row, item, rowIndex, dindex, key, value, oldValue, source, batch}`. `source`: `"edit"`, `"clear"`, `"paste"`, `"cut"`, `"undo"`, `"redo"`, `"api"` |
+| `change` | A cell value changes | `{row, item, rowIndex, dindex, key, value, oldValue, source, batch}`. `rowIndex` is -1 when the row isn't on screen (hidden by a filter, or a collapsed tree child). `source`: `"edit"`, `"clear"`, `"paste"`, `"cut"`, `"undo"`, `"redo"`, `"api"` |
 | `batchchange` | Many cells change at once (Delete, paste, and so on) | `{source, changes: [{rowIndex, row, key, value, oldValue}]}` |
 | `beforeedit` | Before editing starts | Cell info plus `mode`. **Return false to prevent editing** |
 | `editstart` / `editend` | Editing starts / ends | Cell info plus `mode` / `committed` |
@@ -673,11 +676,12 @@ footSum: [[
 
 | Cell property | Description |
 |---|---|
-| `label` | Text when there is no `key` (HTML), or a function (`this = {key, list, groupBy}`) |
+| `label` | Text when there is no `key`, or a function (`this = {key, list, groupBy}`) |
 | `key` + `collector` | A calculated value. A name (`"sum"`, `"avg"`, `"count"`, `"min"`, `"max"`) or a function (`this = {key, list}`) |
 | `formatter` | Applied to the calculated value (`this.value`) |
 | `colspan` | Number of leaf columns to span, starting from the left (line-number and row-selector columns don't count) |
 | `align`, `className` | |
+| `html` | If true, the label and formatter output are inserted as HTML. By default they are text, which matters for group subtotal labels built from data |
 
 Totals are calculated from the filtered rows (`getRows()`) and update when values change. `sum`, `avg`, `min`, and `max` skip empty cells and text without digits, the same rule as the selection summary, so an empty cell doesn't pull `min` to 0 or lower the average. Sums are rounded to the longest decimal place among the values (`0.1 + 0.2` is `0.3`). `avg` is rounded to two decimal places and is empty when there are no numbers.
 
@@ -738,6 +742,7 @@ With `filter: true`, each header gets a ▾ button that opens a value list, like
 - Filters survive `setData`. When no rows match, the grid shows "No rows match the filter". Both texts can be changed; see [Localization](#localization).
 - Rows added with `addRow` stay visible even when they don't match, so a new empty row doesn't vanish the moment it is added. After saving (`acceptChanges()` or `clearModified()`) they follow the filters like any other row.
 - In the popup, Enter applies the filter from the search box or the list, and presses the button when a button has focus. Enter and Esc pressed while an IME is composing are left to the IME.
+- Popups (this one, the calendar, and the select list) stay attached to their cell when the page, a modal, or any other container scrolls, and when the window is resized. A popup that doesn't fit below opens above.
 - Not available in tree mode or with server paging (`setData(rows, page)`).
 - From code: `grid.setFilter("MANAGER", ["Alice", "Bob"])`, `grid.clearFilters()`
 
@@ -1010,13 +1015,16 @@ npm run build        # dist/ (js, min.js, esm.js, css, min.css, types)
 npm run typecheck    # type-check the JSDoc types (// @ts-check)
 npm test             # unit tests (vitest + jsdom)
 npm run test:e2e     # build, then run headless browser tests in Chrome, Firefox, and WebKit (Playwright)
+npm run test:e2e:chrome  # build, then e2e in Chrome only
 npm run test:all     # typecheck, unit, and e2e
 npm run demo         # demo server at http://127.0.0.1:5179/demo/
 ```
 
 After changing the demos, refresh the README screenshots with `npm run build` and `node tools/screenshots.mjs` (they are saved to `docs/images/`).
 
-To release, bump the version with `npm version patch` (or `minor`, `major`). It also updates the version in `src/index.js` and this README, then commits and tags. `npm publish` refuses to run if those versions don't match `package.json`. The CDN URLs above (`@0.8`) are changed by hand, only for releases that change the API.
+To release, bump the version with `npm version patch` (or `minor`, `major`). It also updates the version in `src/index.js` and this README, then commits and tags. `npm publish` refuses to run if those versions don't match `package.json`, and runs the typecheck, unit tests, and the Chrome e2e tests first.
+
+GitHub Actions runs the typecheck, unit tests, and e2e tests in Chrome, Firefox, and WebKit on every push and pull request (`.github/workflows/test.yml`). The CDN URLs above (`@0.8`) are changed by hand, only for releases that change the API.
 
 The e2e tests use your installed Chrome. Download Firefox and WebKit for Playwright once with `npx playwright install firefox webkit`. To run one browser: `npx playwright test --project=firefox` (`chrome`, `firefox`, or `webkit`).
 

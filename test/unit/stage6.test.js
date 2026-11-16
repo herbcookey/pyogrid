@@ -45,7 +45,7 @@ const columns = () => [
     { key: "amt", label: "금액", width: 90, align: "right", formatter: "money" },
   ] },
   { key: "use", label: "사용", editor: { type: "checkbox", config: { trueValue: "Y", falseValue: "N" } } },
-  { key: "memo", label: "비고", formatter: (c) => "<i>" + c.value + "</i>" },
+  { key: "memo", label: "비고", html: true, formatter: (c) => "<i>" + c.value + "</i>" },
 ];
 const rows = () => [
   { code: "0012", qty: 1200, amt: 3500000, use: "Y", memo: "가" },

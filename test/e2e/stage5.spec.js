@@ -186,3 +186,58 @@ test("병합 셀도 범위 선택 색·포커스 셀 색이 보인다", async ({
   await expect(cell(1, 0)).toHaveCSS("background-color", "rgb(234, 242, 254)");
   await expect(cell(0, 0)).toHaveCSS("background-color", "rgb(255, 255, 255)");
 });
+
+test("달력·필터 팝업은 바깥 페이지·모달 스크롤을 따라가고, 아래 자리가 없으면 위로 열린다", async ({ page }) => {
+  await page.goto("/demo/index.html");
+  await page.setContent(`<!DOCTYPE html><html><head><link rel="stylesheet" href="/dist/pyogrid.css"></head><body style="margin:0">
+    <div id="modal" style="height:500px;overflow:auto;border:1px solid #ccc">
+      <div style="height:200px"></div>
+      <div id="g" style="width:500px;height:200px"></div>
+      <div style="height:1500px"></div>
+    </div>
+    <div style="height:2000px"></div>
+    <script src="/dist/pyogrid.js"></script>
+    <script>window.grid = new PyoGrid(document.getElementById("g"), { filter: true,
+      columns: [{ key: "d", label: "D", editor: { type: "date" } }, { key: "t", label: "T" }] });
+    grid.setData([{ d: "2026-11-13", t: "a" }, { d: "", t: "b" }]);</script></body></html>`);
+  await page.waitForFunction(() => window.grid);
+  const cell = page.locator('.pyo-row[data-row="0"] .pyo-cell[data-c="0"]');
+  const gap = async (popup) => {
+    const c = await cell.boundingBox();
+    const p = await page.locator(popup).boundingBox();
+    return Math.round(p.y - (c.y + c.height));
+  };
+
+  // 달력: 모달 안 스크롤, 페이지 스크롤 뒤에도 셀 바로 아래
+  await cell.click();
+  await page.keyboard.press("F2");
+  await expect(page.locator(".pyo-calendar")).toBeVisible();
+  const g0 = await gap(".pyo-calendar");
+  await page.locator("#modal").evaluate((el) => (el.scrollTop = 60));
+  await page.waitForTimeout(50);
+  expect(await gap(".pyo-calendar")).toBe(g0);
+  await page.evaluate(() => window.scrollTo(0, 40));
+  await page.waitForTimeout(50);
+  expect(await gap(".pyo-calendar")).toBe(g0);
+  await page.keyboard.press("Escape");
+
+  // 필터 팝업: 단추 아래에 붙어 따라오고, 화면 아래쪽이면 위로 열린다
+  const btn = page.locator('.pyo-hcell[data-key="t"] .pyo-filter-btn');
+  await btn.click();
+  const pop = page.locator(".pyo-filter");
+  await expect(pop).toBeVisible();
+  const below = async () => Math.round((await pop.boundingBox()).y - ((await btn.boundingBox()).y + (await btn.boundingBox()).height));
+  const b0 = await below();
+  await page.locator("#modal").evaluate((el) => (el.scrollTop = 0));
+  await page.waitForTimeout(50);
+  expect(await below()).toBe(b0);
+  await page.keyboard.press("Escape");
+  // 헤더가 창 아래쪽에 오게 줄이고 다시 연다
+  await page.setViewportSize({ width: 1000, height: 330 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator("#modal").evaluate((el) => (el.scrollTop = 0));
+  await btn.click();
+  const pb = await pop.boundingBox();
+  const bb = await btn.boundingBox();
+  expect(pb.y + pb.height).toBeLessThanOrEqual(bb.y);
+});

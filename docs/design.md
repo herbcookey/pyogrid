@@ -67,7 +67,7 @@ div.pyo                         (테두리, position:relative)
 - 스크롤바: Chrome·Edge·Safari는 `::-webkit-scrollbar`로 15px. Firefox는 이 선택자가 없어서 브라우저 기본 너비(Windows 17px, 겹쳐 그리는 스크롤바면 0)에 색만 `scrollbar-color`로 맞춘다. Chrome 121+는 `scrollbar-color`가 있으면 `::-webkit-scrollbar`를 무시하므로 `@supports not selector(::-webkit-scrollbar)` 안에만 둔다. 세로 막대는 헤더 아래부터(`::-webkit-scrollbar` 브라우저만).
 - 너비: 그리드 너비에서 보조 컬럼과 스크롤바 너비를 빼고 `"*"`·`%`를 계산한다 (행 수에 따라 너비가 바뀌지 않게). 스크롤바 너비는 상수가 아니라, 스크롤 영역과 같은 class의 숨은 상자를 `overflow:scroll`로 만들어 잰다. 잴 수 없으면(화면에 없음, jsdom) 15px. 컨테이너 크기가 바뀌면 ResizeObserver로 다시 계산하고, 사용자가 조절한 너비는 유지한다.
 - 행 객체는 복사하지 않는다 (화면 코드가 행을 직접 고치고 다시 그리게 하는 방식에 맞춤).
-- formatter 결과와 헤더 label은 HTML로 넣는다. formatter가 없는 값은 이스케이프한다.
+- 값, formatter 결과, 헤더 label, 합계 칸 label·formatter 결과는 글자로 이스케이프해서 넣는다. 컬럼(또는 합계 칸)에 `html: true`가 있을 때만 HTML로 넣는다. 바코드·서버 글자를 그대로 돌려주는 formatter 하나로 스크립트가 들어오지 않게 기본을 안전한 쪽에 둔다. cellClass·headerClass·className도 속성 값으로 이스케이프한다. 엑셀 내보내기도 화면과 같은 글자를 쓴다.
 - **성능:** 스크롤 중에는 스크롤 영역 크기(clientWidth/Height)를 다시 읽지 않는다. 행을 DOM에 넣은 직후 크기를 읽으면 브라우저가 레이아웃을 강제로 계산해서, 화면 밖 행으로 스크롤할 때 15초가 걸린 일이 있었다 (`refresh`에서만 읽도록 고침). 50,000행 × 30열에서 생성+setData 20~50ms, 화면 DOM은 행 26개·셀 약 470개.
 
 ## 선택·정렬·페이지
@@ -88,9 +88,12 @@ div.pyo                         (테두리, position:relative)
 - **조합 중 Enter·Tab·방향키:** Windows Chrome은 조합 중 키를 keyCode 229로 보낸다. `e.code`로 어떤 키였는지 기억했다가 compositionend 뒤에 저장·이동한다 (Enter 한 번으로 저장). macOS처럼 조합 뒤 같은 키가 한 번 더 오면 80ms 안의 같은 키는 무시한다.
 - **키 없이 들어온 글자:** 받아쓰기·이모지 창 같은 입력은 keydown 없이 input만 온다. 편집할 수 있는 셀이면 그때 편집을 시작한다.
 - **값 확인:** 숫자·날짜는 입력 중 허용하지 않는 글자를 지우고(조합 중에는 건드리지 않음), 쉼표·하이픈 같은 서식 글자를 빼고 센 자리로 커서를 되돌린다. 저장할 때 잘못된 값이면 빨간 테두리로 편집을 계속한다. 포커스가 그리드 밖으로 나갈 때 잘못된 값이면 취소한다.
-- **팝업:** 달력·선택 목록은 document.body에 position:fixed로 붙이고 mousedown을 막아 포커스가 입력칸에 남는다. 선택 목록은 입력칸으로 받은 글자로 찾으므로 한글로도 찾을 수 있다.
+- **팝업:** 달력·선택 목록은 document.body에 position:fixed로 붙이고 mousedown을 막아 포커스가 입력칸에 남는다. document에 캡처 단계 scroll 리스너와 window resize 리스너를 달아, 바깥 페이지·모달 등 어느 요소가 스크롤되어도 팝업(필터 포함)을 셀에 다시 맞춘다 (팝업 안 목록의 스크롤은 무시). 필터 팝업은 단추를 그때마다 다시 찾고, 아래 공간이 모자라면 위로 뒤집는다. 선택 목록은 입력칸으로 받은 글자로 찾으므로 한글로도 찾을 수 있다.
 - **수정 추적:** `setValue`가 값이 바뀔 때만 행에 `__modified__`를 붙이고 `change`를 알린다. null·undefined·""는 같은 값으로 본다. 셀마다 처음 값을 기억해 두고, 모든 셀이 처음 값으로 돌아오면(실행 취소, 직접 되돌리기) 표시를 푼다. 바꾸기 전에 이미 표시가 있던 행(addRow, 데이터의 `__modified__`)은 그대로 둔다. 저장 뒤에는 `acceptChanges()`(또는 `clearModified`·`clearDeleted`)로 지금 값을 새 기준으로 삼는다. 여러 셀을 바꾸는 `setValues`는 한 번만 다시 그리고 `batchchange`를 알린다 (셀별 change에는 `batch:true`).
 - **추가한 행:** `addRow`는 `__added__`(addedKey)를 붙인다. 저장(`acceptChanges`·`clearModified`) 전까지 이 행은 헤더 필터를 통과하고(`buildView`의 `pass`), `deleteRows`로 지워도 `deleted`에 넣지 않는다 (서버에 없는 행의 삭제 요청이 나가지 않게). 수정한 행과는 `getAddedRows()`로 나눈다.
+- **행 객체로 값 바꾸기:** `setValue(row, …)`·`setValues([{row, …}])`는 화면 순번 대신 행 객체도 받는다. 필터로 숨은 행·접힌 트리 자식도 바꾸고 change를 알린다 (rowIndex -1). 실행 취소도 이 길로 가서 숨은 행의 change·batchchange·합계 행 갱신이 빠지지 않는다. 그 뒤에 지운 행만 값만 되돌린다.
+- **Tab:** 마지막 셀의 Tab, 첫 셀의 Shift+Tab은 기본 동작을 막지 않아 포커스가 다음(앞) 입력 요소로 나간다. 편집 중이면 저장한 뒤 나가고, 잘못된 값이면 막고 편집을 계속한다.
+- **날짜 저장 형식:** date 편집기 `config.valueFormat`("yyyyMMdd" 같은 형식 글자 또는 함수)으로 저장 형식을 정한다. 입력칸에는 늘 yyyy-MM-dd로 보이고, 저장·붙여넣기 때만 이 형식으로 바꾼다. 서버가 20261113으로 주는 컬럼에서 고친 셀만 하이픈 형식이 되지 않게.
 - **이벤트 핸들러 예외:** `emit`·`emitCancelable`은 핸들러마다 try/catch로 감싸 `reportError`(없으면 console.error)로 넘기고 계속한다. 붙여넣기 중 change 핸들러 하나가 실패해도 나머지 값·다시 그리기·실행 취소 기록·batchchange가 빠지지 않게.
 - **선택 합계:** 값이 number이거나 숫자 컬럼(money formatter, number·money 편집기, `numeric: true`)의 숫자 글자만 더한다. 바코드·품번·"20261113" 같은 코드 글자가 합계에 섞이지 않게.
 

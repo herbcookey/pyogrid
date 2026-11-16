@@ -176,6 +176,8 @@ export class PyoGrid {
     this._footHeight = 0;
     /** @type {FilterPopup|null} */
     this._filterPopup = null;
+    /** 필터 팝업을 연 잎 컬럼 순번 */
+    this._filterLeaf = -1;
     /** @type {SortItem[]} */
     this.sort = [];
     /** @type {PageInfo|null} */
@@ -530,9 +532,9 @@ export class PyoGrid {
 
   /**
    * @param {number} leafIndex
-   * @param {HTMLElement} [anchor]
+   * @param {HTMLElement} [_anchor] (쓰지 않음: 헤더가 다시 그려져도 따라가도록 단추를 그때마다 찾는다)
    */
-  openFilter(leafIndex, anchor) {
+  openFilter(leafIndex, _anchor) {
     const leaf = this.leaves[leafIndex];
     if (!leaf || !this.isFilterable(leaf)) return;
     if (this._filterPopup) this._filterPopup.close();
@@ -551,7 +553,7 @@ export class PyoGrid {
       if (def.formatter === "money" && toNumber(v) !== null) return formatNumber(toNumber(v));
       return v;
     };
-    const title = String(def.label || key).replace(/<[^>]*>/g, "");
+    const title = def.label === undefined || def.label === null ? String(key) : def.html ? String(def.label).replace(/<[^>]*>/g, "") : String(def.label);
     this._filterPopup = new FilterPopup({
       title,
       values: [...seen],
@@ -561,11 +563,39 @@ export class PyoGrid {
       onApply: (allowed) => this.setFilter(key, allowed ? [...allowed] : null),
       onClose: () => {
         this._filterPopup = null;
+        this._filterLeaf = -1;
         this.focus();
       },
     });
-    const a = anchor || this.el.head.querySelector(`[data-leaf="${leafIndex}"]`);
-    this._filterPopup.place(a ? a.getBoundingClientRect() : this.el.root.getBoundingClientRect());
+    this._filterLeaf = leafIndex;
+    this._placeFilterPopup(true);
+  }
+
+  /**
+   * 필터 팝업을 헤더의 필터 단추에 맞춘다. 헤더는 다시 그려지므로 단추를 그때마다 찾는다.
+   * @param {boolean} [focus]
+   */
+  _placeFilterPopup(focus = false) {
+    if (!this._filterPopup) return;
+    const i = this._filterLeaf;
+    const a =
+      this.el.head.querySelector(`.pyo-filter-btn[data-filter="${i}"]`) || this.el.head.querySelector(`[data-leaf="${i}"]`) || this.el.root;
+    this._filterPopup.place(a.getBoundingClientRect(), focus);
+  }
+
+  /**
+   * 바깥 페이지·모달·그리드 어디가 스크롤되거나 창 크기가 바뀌면, 열린 팝업(달력·선택 목록·필터)을 셀에 다시 맞춘다.
+   * 팝업 안 목록의 스크롤은 무시한다.
+   * @param {Event} e
+   */
+  _onPageMove(e) {
+    if (!this.editing.edit || !this.editing.edit.popup) {
+      if (!this._filterPopup) return;
+    }
+    const t = /** @type {any} */ (e && e.target);
+    if (t && t.nodeType === 1 && t.closest && t.closest(".pyo-popup")) return;
+    if (this.editing.edit && this.editing.edit.popup) this.editing.placePopup();
+    this._placeFilterPopup(false);
   }
 
   /* ==================================================================
@@ -839,15 +869,47 @@ export class PyoGrid {
   /**
    * 셀 값을 바꾼다. 값이 바뀌면 행에 modifiedKey(__modified__)를 true로 기록하고 change를 알린다.
    * null·undefined·""는 서로 같은 값으로 본다.
-   * @param {number} rowIndex 화면 순번
+   * 행은 화면 순번 또는 행 객체로 준다. 행 객체면 필터로 숨은 행이나 접힌 트리 자식도 바꿀 수 있고,
+   * 이때 change의 rowIndex는 -1이다.
+   * @param {number|any} target 화면 순번 또는 행 객체
    * @param {string} key
    * @param {any} value
    * @param {{source?: string, refresh?: boolean, batch?: boolean}} [opts]
    * @returns {boolean} 바뀌었으면 true
    */
-  setValue(rowIndex, key, value, opts = {}) {
-    const row = this.rows[rowIndex];
-    if (!row) return false;
+  setValue(target, key, value, opts = {}) {
+    const hit = this._resolveRow(target);
+    return hit ? this._setRowValue(hit.row, hit.index, key, value, opts) : false;
+  }
+
+  /**
+   * 화면 순번 또는 행 객체 → {row, index}. 행 객체는 이 그리드의 데이터(getAllRows)에 있어야 한다.
+   * index는 화면 순번 (화면에 없으면 -1).
+   * @param {number|any} target
+   * @param {Map<any, number>} [viewIndex] 여러 번 찾을 때 미리 만든 화면 순번 표
+   * @param {Set<any>} [sourceSet]
+   * @returns {{row:any, index:number}|null}
+   */
+  _resolveRow(target, viewIndex, sourceSet) {
+    if (typeof target === "number") {
+      const row = this.rows[target];
+      return row && !row.__isGrouping ? { row, index: target } : null;
+    }
+    if (!target || typeof target !== "object" || target.__isGrouping) return null;
+    const vi = viewIndex ? viewIndex.get(target) : this.rows.indexOf(target);
+    const index = vi === undefined ? -1 : vi;
+    if (index < 0 && !(sourceSet ? sourceSet.has(target) : this.source.includes(target))) return null;
+    return { row: target, index };
+  }
+
+  /**
+   * @param {any} row
+   * @param {number} rowIndex 화면 순번 (화면에 없으면 -1)
+   * @param {string} key
+   * @param {any} value
+   * @param {{source?: string, refresh?: boolean, batch?: boolean}} opts
+   */
+  _setRowValue(row, rowIndex, key, value, opts) {
     const old = getValue(row, key);
     const empty = (v) => v === null || v === undefined || v === "";
     if (old === value || (empty(old) && empty(value))) return false;
@@ -861,7 +923,7 @@ export class PyoGrid {
       // 그룹 합계·셀 병합은 다른 행에도 걸리므로 전체를, 아니면 그 행과 합계 행만 다시 그린다
       if (this.options.grouping || this.options.mergeCells) this.refresh();
       else {
-        this.refreshRow(rowIndex);
+        if (rowIndex >= 0) this.refreshRow(rowIndex);
         this._renderFoot();
       }
       this._scheduleSummary();
@@ -874,19 +936,36 @@ export class PyoGrid {
 
   /**
    * 여러 셀을 한 번에 바꾼다. 다 바꾼 뒤 한 번만 다시 그리고 batchchange를 알린다.
-   * 셀마다 change도 알리며, 이때 batch:true가 붙는다.
-   * @param {{rowIndex:number, key:string, value:any}[]} changes
+   * 셀마다 change도 알리며, 이때 batch:true가 붙는다. 행은 rowIndex(화면 순번) 또는 row(행 객체)로 준다.
+   * @param {{rowIndex?:number, row?:any, key:string, value:any}[]} changes
    * @param {{source?: string}} [opts]
-   * @returns {{rowIndex:number, row:any, key:string, value:any, oldValue:any}[]} 실제로 바뀐 것
+   * @returns {{rowIndex:number, row:any, key:string, value:any, oldValue:any}[]} 실제로 바뀐 것 (화면에 없는 행은 rowIndex -1)
    */
   setValues(changes, opts = {}) {
     const source = opts.source || "api";
     const applied = [];
+    /** @type {Map<any, number>|undefined} */
+    let viewIndex;
+    /** @type {Set<any>|undefined} */
+    let sourceSet;
     for (const ch of changes) {
-      const row = this.rows[ch.rowIndex];
-      const old = row ? getValue(row, ch.key) : undefined;
-      if (this.setValue(ch.rowIndex, ch.key, ch.value, { source, refresh: false, batch: true })) {
-        applied.push({ rowIndex: ch.rowIndex, row, key: ch.key, value: ch.value, oldValue: old });
+      let hit;
+      if (ch.row && typeof ch.row === "object") {
+        if (typeof ch.rowIndex === "number" && this.rows[ch.rowIndex] === ch.row) hit = { row: ch.row, index: ch.rowIndex };
+        else {
+          // 행 객체로 여러 개를 찾을 때 indexOf를 반복하지 않게 표를 한 번만 만든다
+          if (!viewIndex) {
+            viewIndex = new Map();
+            this.rows.forEach((r, i) => viewIndex.set(r, i));
+            sourceSet = new Set(this.source);
+          }
+          hit = this._resolveRow(ch.row, viewIndex, sourceSet);
+        }
+      } else hit = this._resolveRow(ch.rowIndex);
+      if (!hit) continue;
+      const old = getValue(hit.row, ch.key);
+      if (this._setRowValue(hit.row, hit.index, ch.key, ch.value, { source, refresh: false, batch: true })) {
+        applied.push({ rowIndex: hit.index, row: hit.row, key: ch.key, value: ch.value, oldValue: old });
       }
     }
     if (applied.length) {
@@ -1018,29 +1097,33 @@ export class PyoGrid {
   _applyHistory(entry, source) {
     const index = new Map();
     this.rows.forEach((r, i) => index.set(r, i));
+    const inSource = new Set(this.source);
     const list = source === "undo" ? entry.changes.slice().reverse() : entry.changes;
-    const visible = [];
-    let hidden = 0;
+    const changes = [];
+    let gone = 0;
     for (const ch of list) {
       const v = source === "undo" ? ch.oldValue : ch.value;
-      const i = index.get(ch.row);
-      if (i === undefined) {
-        // 화면에 없는 행(필터로 숨겨짐 등): 값만 되돌린다
+      if (!inSource.has(ch.row)) {
+        // 그 뒤에 지운 행: 값만 되돌린다 (화면·합계에 없으므로 알릴 곳이 없다)
         const old = getValue(ch.row, ch.key);
         setPathValue(ch.row, ch.key, v);
         this._trackModified(ch.row, ch.key, old, v);
-        hidden++;
-      } else visible.push({ rowIndex: i, key: ch.key, value: v });
+        gone++;
+        continue;
+      }
+      // 필터로 숨은 행·접힌 트리 자식도 행 객체로 바꿔서 change·batchchange·합계 행이 빠지지 않게 한다
+      const i = index.get(ch.row);
+      changes.push({ row: ch.row, rowIndex: i === undefined ? -1 : i, key: ch.key, value: v });
     }
     // 같은 셀이 여러 번 나오면 마지막에 적용한 값이 남도록 그대로 순서대로 적용한다
-    const applied = this.setValues(visible, { source });
+    const applied = this.setValues(changes, { source });
     if (applied.length) {
-      // 바뀐 셀을 감싸는 범위 (Math.min(...)은 셀이 수십만이면 스택 초과라 반복문으로)
+      // 바뀐 셀을 감싸는 범위 (Math.min(...)은 셀이 수십만이면 스택 초과라 반복문으로). 화면에 있는 행만
       let r0 = Infinity, r1 = -Infinity, c0 = Infinity, c1 = -Infinity;
       const colOf = new Map(this.leaves.map((l, i) => [l.def.key, i]));
       for (const a of applied) {
         const c = colOf.get(a.key);
-        if (c === undefined) continue;
+        if (c === undefined || a.rowIndex < 0) continue;
         if (a.rowIndex < r0) r0 = a.rowIndex;
         if (a.rowIndex > r1) r1 = a.rowIndex;
         if (c < c0) c0 = c;
@@ -1051,7 +1134,7 @@ export class PyoGrid {
         this.scrollToCell(r0, c0);
       }
     }
-    return applied.length + hidden;
+    return applied.length + gone;
   }
 
   /**
@@ -1542,6 +1625,8 @@ export class PyoGrid {
     if (this._ro) this._ro.disconnect();
     window.removeEventListener("resize", this._onWindowResize);
     this.el.scroll.removeEventListener("scroll", this._onScroll);
+    document.removeEventListener("scroll", this._onAnyMove, { capture: true });
+    window.removeEventListener("resize", this._onAnyMove);
     this.target.innerHTML = "";
     this.target.classList.remove("pyo-host");
     this._rowEls.clear();
@@ -1593,6 +1678,11 @@ export class PyoGrid {
       });
     };
     this.el.scroll.addEventListener("scroll", this._onScroll, { passive: true });
+
+    // 페이지·모달 스크롤(캡처 단계라 어느 요소의 스크롤이든 받는다)과 창 크기 변화에 팝업을 따라가게 한다
+    this._onAnyMove = (e) => this._onPageMove(e);
+    document.addEventListener("scroll", this._onAnyMove, { capture: true, passive: true });
+    window.addEventListener("resize", this._onAnyMove);
 
     this._lastSize = "";
     this._onWindowResize = () => this._checkSize();
@@ -1810,7 +1900,7 @@ export class PyoGrid {
   }
 
   /**
-   * 제목(label)은 HTML로 넣는다 (화면 코드가 정한 값).
+   * 제목(label)은 글자로 넣는다. 컬럼에 html: true가 있으면 HTML로 넣는다.
    * @param {HeaderCell} cell
    * @param {number} from
    * @param {number} to  미포함
@@ -1825,7 +1915,7 @@ export class PyoGrid {
     const isLeaf = cell.leafIndex !== undefined;
     const align = def.headerAlign || o.headerAlign || (isLeaf ? null : "center");
     let cls = "pyo-hcell" + (align ? " pyo-al-" + align : "") + (isLeaf ? "" : " pyo-hgroup");
-    if (def.headerClass) cls += " " + (isFn(def.headerClass) ? def.headerClass.call(def, def) || "" : def.headerClass);
+    if (def.headerClass) cls += " " + escapeHtml((isFn(def.headerClass) ? def.headerClass.call(def, def) : def.headerClass) || "");
     let attrs = "";
     let sortMark = "";
     if (isLeaf) {
@@ -1848,7 +1938,7 @@ export class PyoGrid {
       isLeaf && o.resizable && def.resizable !== false ? `<span class="pyo-resizer" data-resize="${cell.leafIndex}"></span>` : "";
     return (
       `<div class="${cls}"${attrs} role="columnheader" style="left:${left}px;top:${cell.row * rh}px;width:${width}px;height:${cell.rowSpan * rh}px">` +
-      `<span class="pyo-hlabel">${cell.label}</span>${sortMark}${resizer}</div>`
+      `<span class="pyo-hlabel">${def.html ? cell.label : escapeHtml(cell.label)}</span>${sortMark}${resizer}</div>`
     );
   }
 
@@ -2082,8 +2172,10 @@ export class PyoGrid {
       return `<span class="pyo-check pyo-cb${on ? " pyo-checked" : ""}" role="checkbox" aria-checked="${on}"></span>`;
     }
     if (fn) {
+      // formatter 결과는 글자로 넣는다. 컬럼에 html: true를 준 경우에만 HTML로 넣는다 (서버 글자로 스크립트가 들어오지 않게)
       const out = fn.call(ctx, ctx);
-      return out === undefined || out === null ? "" : String(out);
+      const s = out === undefined || out === null ? "" : String(out);
+      return def.html ? s : escapeHtml(s);
     }
     if (edType && edType.kind === "list") {
       // formatter가 없는 선택 목록은 값 대신 항목 글자를 보여 준다
@@ -2107,7 +2199,7 @@ export class PyoGrid {
   }
 
   /**
-   * formatter 결과는 HTML로 넣고, formatter가 없으면 값을 이스케이프한다.
+   * formatter 결과와 값은 이스케이프해서 넣는다. 컬럼에 html: true가 있으면 formatter 결과를 HTML로 넣는다.
    * @param {number} c
    * @param {any} row
    * @param {number} index
@@ -2139,7 +2231,7 @@ export class PyoGrid {
     }
     if (def.cellClass) {
       const extra = isFn(def.cellClass) ? def.cellClass.call(ctx, ctx) : def.cellClass;
-      if (extra) cls += " " + extra;
+      if (extra) cls += " " + escapeHtml(extra);
     }
     return `<div class="${cls}" role="gridcell" data-c="${c}" style="width:${this.widths[c]}px">${content}</div>`;
   }

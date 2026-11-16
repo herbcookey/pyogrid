@@ -535,6 +535,12 @@ export class Editing {
       return;
     }
     if (key === "Tab") {
+      const t = this._tabTarget(ed.r, ed.c, e.shiftKey);
+      if (t.r === ed.r && t.c === ed.c) {
+        // 끝 셀: 저장하고 막지 않아 포커스가 그리드 밖으로 나간다. 잘못된 값이면 편집을 계속한다.
+        if (!this.commit()) e.preventDefault();
+        return;
+      }
       e.preventDefault();
       this._editKey("Tab", e.shiftKey);
       return;
@@ -586,6 +592,8 @@ export class Editing {
     const page = Math.max(1, Math.floor((g._vh - g._headerHeight) / g.options.rowHeight) - 1);
     const NAV = { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, Home: 1, End: 1, PageUp: 1, PageDown: 1, Tab: 1 };
     if (!rng && NAV[key]) {
+      // Shift+Tab으로 들어온 그리드에서 다시 Shift+Tab: 막지 않아 앞 입력 요소로 나간다
+      if (key === "Tab" && e.shiftKey) return;
       // 처음 키보드로 들어오면 첫 셀부터
       e.preventDefault();
       g.setRange(0, 0);
@@ -624,6 +632,8 @@ export class Editing {
         return go(a.r + page, a.c);
       case "Tab": {
         const t = this._tabTarget(a.r, a.c, e.shiftKey);
+        // 마지막 셀의 Tab, 첫 셀의 Shift+Tab: 막지 않아 다음(앞) 입력 요소로 포커스가 나간다
+        if (t.r === a.r && t.c === a.c) return;
         return go(t.r, t.c, false);
       }
     }
