@@ -181,9 +181,12 @@ test.describe("대량 데이터 (50,000행 × 30열)", () => {
     console.log(`  프레임 간격 중간값 ${result.median.toFixed(1)}ms, 95% ${result.p95.toFixed(1)}ms, 최대 ${result.max.toFixed(1)}ms`);
     // 프레임 간격은 PC 부하에 따라 크게 흔들린다 (같은 PC에서 95%가 20~250ms).
     // 중간값으로 평소 속도를, 95% 100ms로 큰 회귀만 잡는다. 정밀 비교는 tools/probe-frames.mjs로 A/B 측정.
-    // Windows의 Playwright WebKit·Firefox는 빈 화면에서도 프레임 간격이 Chrome보다 들쭉날쭉해서 중간값 기준을 넓힌다.
-    expect(result.median).toBeLessThan(browserName === "chromium" ? 25 : 40);
-    expect(result.p95).toBeLessThan(100);
+    // Windows의 Playwright WebKit·Firefox는 빈 화면에서도 프레임 간격이 Chrome보다 들쭉날쭉하고,
+    // WebKit(Desktop Safari, 2배 해상도)은 같은 페이지에서 중간값 50~60ms가 나온다. 엄격한 기준은 Chrome에 두고,
+    // 다른 브라우저는 크게 느려진 경우만 잡는다.
+    const strict = browserName === "chromium";
+    expect(result.median).toBeLessThan(strict ? 25 : 90);
+    expect(result.p95).toBeLessThan(strict ? 100 : 160);
   });
 });
 

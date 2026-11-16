@@ -2,23 +2,42 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PyoGrid 셀 편집기</title>
+  <link rel="stylesheet" href="shared/demo.css">
   <link rel="stylesheet" href="../dist/pyogrid.css">
-  <style>
-    body { margin: 8px; font-family: sans-serif; font-size: 13px; }
-    ul { margin: 4px 0 8px; padding-left: 18px; color: #475467; font-size: 12px; }
-    #log { margin-top: 6px; height: 120px; overflow: auto; padding: 4px 8px; border: 1px solid #ddd; font: 12px/1.5 monospace; color: #344054; }
-  </style>
 </head>
 <body>
-<ul>
+<header class="d-top">
+  <a class="d-brand" href="index.html"><span class="d-logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>PyoGrid</a>
+  <nav class="d-nav" aria-label="Demos">
+    <a href="index.html">Demos</a>
+    <a href="weekly.html">Weekly</a>
+    <a href="editors.html" aria-current="page">Editors</a>
+    <a href="summary.html">Totals &amp; tree</a>
+    <a href="paging.html">Paging</a>
+    <a href="big.html">50,000 rows</a>
+  </nav>
+  <div class="d-links">
+    <a href="https://herbcookey.github.io/pyogrid/">Docs</a>
+    <a href="https://github.com/herbcookey/pyogrid">GitHub</a>
+  </div>
+</header>
+
+<main class="d-main">
+<div class="d-head">
+  <h1>셀 편집기</h1>
+  <p>편집기 6종, 키보드, 한글 바로 입력. 아래 기록 칸에 change·batchchange 이벤트가 쌓입니다.</p>
+</div>
+<ul class="d-tips">
   <li>셀을 누르고 그냥 치면 편집이 시작됩니다 (한글도 첫 글자부터). F2·Enter·더블클릭은 지금 값으로 편집.</li>
   <li>Enter 저장 후 아래, Shift+Enter 위, Tab 오른쪽, Esc 취소, Delete 선택 범위 지우기, Backspace 지우고 입력.</li>
   <li>수량·금액은 숫자만, 일자는 숫자만 쳐도 yyyy-MM-dd (달력도 열림), 구분은 목록에서 고르거나 글자로 찾기, 사용은 클릭·Space.</li>
   <li>"잠김" 행의 비고는 편집할 수 없습니다 (editor.disabled).</li>
 </ul>
-<div id="grid" style="height:360px; width: 980px;"></div>
-<div id="log"></div>
+<div id="grid" style="height:360px; max-width: 980px;"></div>
+<div id="log" class="d-log"></div>
+</main>
 <script src="../dist/pyogrid.js"></script>
 <script>
   var kinds = [{ CD: "A", NM: "가공" }, { CD: "B", NM: "부품" }, { CD: "C", NM: "조립" }, { CD: "D", NM: "도장" }, { CD: "E", NM: "검사" }];

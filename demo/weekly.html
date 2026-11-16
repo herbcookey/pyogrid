@@ -2,24 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>주간 주문·출고 현황 (PyoGrid 데모)</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="shared/demo.css">
   <link rel="stylesheet" href="../dist/pyogrid.css">
   <style>
-    body { background: #fff; }
-    .wk-wrap { padding: 0 2px; }
-    .wk-search label { font-weight: normal; margin-right: 10px; }
-    .wk-search select, .wk-search input[type=date] { height: 28px; padding: 2px 6px; }
-    .wk-week-nav { display: inline-flex; align-items: center; gap: 4px; }
-    .wk-week-range { margin-left: 6px; color: #555; font-size: 12px; }
-    .wk-week-range strong { color: #222; }
-    .wk-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-    .wk-card { min-width: 130px; padding: 6px 12px; border: 1px solid #ddd; border-radius: 3px; background: #fafafa; }
-    .wk-card .wk-label { font-size: 11px; color: #777; }
-    .wk-card .wk-value { font-size: 18px; font-weight: 700; color: #222; }
-    .wk-card.wk-accent { border-color: #f0ad4e; background: #fff8ec; }
-    .wk-card.wk-accent .wk-value { color: #c77700; }
-    .wk-note { margin-left: 10px; font-size: 11px; color: #667085; }
+    .wk-week { display: inline-flex; align-items: center; gap: 4px; }
+    .wk-range { color: var(--d-muted); font-size: 12.5px; }
+    .wk-range strong { color: var(--d-text); font-weight: 600; }
 
     #gridWrap .wk-backlog-cell { color: #c9302c !important; font-weight: 700; }
     #gridWrap .wk-carry-cell { background: #fff6d9 !important; font-weight: 700; }
@@ -28,52 +18,72 @@
   </style>
 </head>
 <body>
-<div class="container-fluid wk-wrap">
-  <div class="wk-search">
-    <label>
-      기준 주차
-      <span class="wk-week-nav">
-        <button type="button" id="btnPrevWeek" class="btn btn-default btn-xs" title="이전 주">&#9664;</button>
-        <input type="date" id="baseDate">
-        <button type="button" id="btnNextWeek" class="btn btn-default btn-xs" title="다음 주">&#9654;</button>
+<header class="d-top">
+  <a class="d-brand" href="index.html"><span class="d-logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>PyoGrid</a>
+  <nav class="d-nav" aria-label="Demos">
+    <a href="index.html">Demos</a>
+    <a href="weekly.html" aria-current="page">Weekly</a>
+    <a href="editors.html">Editors</a>
+    <a href="summary.html">Totals &amp; tree</a>
+    <a href="paging.html">Paging</a>
+    <a href="big.html">50,000 rows</a>
+  </nav>
+  <div class="d-links">
+    <a href="https://herbcookey.github.io/pyogrid/">Docs</a>
+    <a href="https://github.com/herbcookey/pyogrid">GitHub</a>
+  </div>
+</header>
+
+<main class="d-main">
+  <div class="d-head">
+    <h1>주간 주문·출고 현황</h1>
+    <p>가상 데이터입니다. 헤더 ▾로 필터, 이월 수량 칸은 편집·Excel 붙여넣기·Ctrl+Z, 컬럼 너비와 정렬은 새로 고쳐도 기억합니다.</p>
+  </div>
+
+  <div class="d-toolbar">
+    <span class="d-field">기준 주차
+      <span class="wk-week">
+        <button type="button" id="btnPrevWeek" class="d-btn d-btn-icon" title="이전 주" aria-label="이전 주">&#8249;</button>
+        <input type="date" id="baseDate" aria-label="기준 날짜">
+        <button type="button" id="btnNextWeek" class="d-btn d-btn-icon" title="다음 주" aria-label="다음 주">&#8250;</button>
       </span>
-      <span class="wk-week-range">이번 주 <strong id="curWeekLabel"></strong> &rarr; 다음 주 <strong id="nextWeekLabel"></strong></span>
-    </label>
-    <label>
-      매장
-      <select id="storeFilter" style="width:120px;">
+      <span class="wk-range">이번 주 <strong id="curWeekLabel"></strong> &rarr; 다음 주 <strong id="nextWeekLabel"></strong></span>
+    </span>
+    <label class="d-field">매장
+      <select id="storeFilter">
         <option value="">전체</option>
         <option value="SEOUL">서울점</option>
         <option value="BUSAN">부산점</option>
       </select>
     </label>
-    <label>분류 <select id="categoryFilter" style="width:110px;"><option value="">전체</option></select></label>
-    <label>분류 그룹 <select id="groupFilter" style="width:110px;"><option value="">전체</option></select></label>
-    <label>담당자 <select id="ownerFilter" style="width:110px;"><option value="">전체</option></select></label>
-    <label><input type="checkbox" id="chkBacklogOnly"> 미출고만</label>
-    <label>행 수
+    <label class="d-field">분류 <select id="categoryFilter"><option value="">전체</option></select></label>
+    <label class="d-field">분류 그룹 <select id="groupFilter"><option value="">전체</option></select></label>
+    <label class="d-field">담당자 <select id="ownerFilter"><option value="">전체</option></select></label>
+    <label class="d-field"><input type="checkbox" id="chkBacklogOnly"> 미출고만</label>
+    <label class="d-field">행 수
       <select id="rowCount">
         <option value="6">6</option>
         <option value="300" selected>300</option>
         <option value="50000">50,000</option>
       </select>
     </label>
-    <button id="btnSearch" class="btn btn-info btn-sm">조회</button>
-    <button id="btnExcelDownload" class="btn btn-success btn-sm" style="margin-left:6px;">엑셀 다운</button>
-    <button id="btnResetState" class="btn btn-default btn-sm" style="margin-left:6px;" title="기억한 컬럼 너비·정렬 지우기">화면 설정 초기화</button>
-    <span class="wk-note">가상 데이터 · 헤더 ▾ 필터, 이월 수량 편집·붙여넣기·Ctrl+Z, 합계 행, 엑셀, 너비·정렬 기억</span>
+    <span class="d-actions">
+      <button id="btnSearch" class="d-btn d-btn-primary">조회</button>
+      <button id="btnExcelDownload" class="d-btn">엑셀 다운</button>
+      <button id="btnResetState" class="d-btn" title="기억한 컬럼 너비·정렬 지우기">화면 설정 초기화</button>
+    </span>
   </div>
 
-  <div class="wk-summary">
-    <div class="wk-card"><div class="wk-label">상품 수</div><div class="wk-value" id="sumItemCount">0</div></div>
-    <div class="wk-card"><div class="wk-label">이번 주 주문</div><div class="wk-value" id="sumOrder">0</div></div>
-    <div class="wk-card"><div class="wk-label">이번 주 출고</div><div class="wk-value" id="sumShip">0</div></div>
-    <div class="wk-card"><div class="wk-label">출고율</div><div class="wk-value" id="sumShipRate">-</div></div>
-    <div class="wk-card wk-accent"><div class="wk-label">이월 수량 (선택 기준)</div><div class="wk-value" id="sumCarry">0</div></div>
+  <div class="d-stats">
+    <div class="d-stat"><div class="d-stat-label">상품 수</div><div class="d-stat-value" id="sumItemCount">0</div></div>
+    <div class="d-stat"><div class="d-stat-label">이번 주 주문</div><div class="d-stat-value" id="sumOrder">0</div></div>
+    <div class="d-stat"><div class="d-stat-label">이번 주 출고</div><div class="d-stat-value" id="sumShip">0</div></div>
+    <div class="d-stat"><div class="d-stat-label">출고율</div><div class="d-stat-value" id="sumShipRate">-</div></div>
+    <div class="d-stat d-stat-accent"><div class="d-stat-label">이월 수량 (선택한 행)</div><div class="d-stat-value" id="sumCarry">0</div></div>
   </div>
 
   <div id="gridWrap" style="height:400px;"></div>
-</div>
+</main>
 
 <script src="shared/weekly-data.js"></script>
 <!-- 엑셀 내보내기용 SheetJS (npm install로 받은 사본. CDN을 써도 된다) -->
@@ -208,7 +218,7 @@
 
   function resizeGrid() {
     var el = $("gridWrap");
-    var h = Math.max(240, window.innerHeight - el.getBoundingClientRect().top - 10);
+    var h = Math.max(240, window.innerHeight - el.getBoundingClientRect().top - 24);
     el.style.height = h + "px"; // PyoGrid는 크기 변화를 스스로 감지한다
   }
 

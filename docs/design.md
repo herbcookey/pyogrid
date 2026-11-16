@@ -37,7 +37,7 @@ src/
   features/state.js         너비·정렬 기억
   features/pagebar.js       아래 바 (선택 합계, 페이지 이동, 상태 문구)
   css/pyogrid.css           테마
-tools/  build.mjs(esbuild + tsc) · vitest.mjs(테스트 실행기) · serve.mjs(데모 서버) · shot.mjs(스크린샷) · probe-*.mjs(성능 측정)
+tools/  build.mjs(esbuild + tsc) · vitest.mjs(테스트 실행기) · serve.mjs(데모 서버) · shot.mjs(스크린샷) · screenshots.mjs(README 그림) · probe-*.mjs(성능 측정)
 test/unit (vitest + jsdom) · test/e2e (Playwright + 설치된 Chrome)
 ```
 

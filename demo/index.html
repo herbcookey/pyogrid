@@ -1,19 +1,86 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PyoGrid 데모</title>
-  <style>body { font: 14px/1.6 sans-serif; padding: 16px; } li { margin: 4px 0; }</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PyoGrid demos</title>
+  <meta name="description" content="Live demos of PyoGrid, a dependency-free JavaScript data grid with virtual scrolling, Excel-style editing, and IME-friendly input.">
+  <link rel="stylesheet" href="shared/demo.css">
 </head>
 <body>
-<h3>PyoGrid 데모</h3>
-<p>먼저 <code>npm run build</code>를 실행하세요. 서버: <code>npm run demo</code>. 모든 데이터는 가상 데이터입니다.</p>
-<ul>
-  <li><a href="weekly.html">weekly.html</a> — 주간 주문·출고 현황: 다단 헤더, 틀 고정, 편집, 붙여넣기, 필터, 합계 행, 엑셀, 상태 기억 (행 수 6 / 300 / 50,000)</li>
-  <li><a href="editors.html">editors.html</a> — 셀 편집기 6종·키보드·한글 바로 입력</li>
-  <li><a href="summary.html">summary.html</a> — 그룹 합계·합계 행·트리·셀 병합</li>
-  <li><a href="paging.html">paging.html</a> — 서버 페이징·서버 정렬 흉내</li>
-  <li><a href="big.html">big.html</a> — 성능 확인: 50,000행 × 30열, 틀 고정 2열</li>
-</ul>
+<header class="d-top">
+  <a class="d-brand" href="index.html"><span class="d-logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>PyoGrid</a>
+  <nav class="d-nav" aria-label="Demos">
+    <a href="index.html" aria-current="page">Demos</a>
+    <a href="weekly.html">Weekly</a>
+    <a href="editors.html">Editors</a>
+    <a href="summary.html">Totals &amp; tree</a>
+    <a href="paging.html">Paging</a>
+    <a href="big.html">50,000 rows</a>
+  </nav>
+  <div class="d-links">
+    <a href="https://herbcookey.github.io/pyogrid/">Docs</a>
+    <a href="https://www.npmjs.com/package/pyogrid">npm</a>
+    <a href="https://github.com/herbcookey/pyogrid">GitHub</a>
+  </div>
+</header>
+
+<section class="d-hero">
+  <h1>A data grid that types like a spreadsheet</h1>
+  <p>PyoGrid is a dependency-free JavaScript grid. It scrolls through tens of thousands of rows, lets you type straight into a cell (IME input such as Korean included), and pastes from Excel. Every demo below runs the published build in your browser.</p>
+  <div class="d-hero-actions">
+    <a class="d-btn d-btn-primary" href="weekly.html">Open the main demo</a>
+    <a class="d-btn" href="https://herbcookey.github.io/pyogrid/">Read the docs</a>
+    <span class="d-install"><b>$</b>npm install pyogrid</span>
+  </div>
+</section>
+
+<main class="d-grid">
+  <a class="d-card d-card-wide" href="weekly.html">
+    <div class="d-card-shot"><img src="../docs/images/weekly.png" alt="Weekly orders grid with grouped headers, frozen columns, and a totals row" loading="lazy"></div>
+    <div class="d-card-body">
+      <h2>Weekly orders</h2>
+      <p>A full working screen: edit, paste from Excel, filter, undo, and export to xlsx. Switch between 6, 300, and 50,000 rows.</p>
+      <div class="d-tags"><span>multi-level headers</span><span>frozen columns</span><span>header filters</span><span>footer totals</span><span>xlsx</span></div>
+    </div>
+  </a>
+  <a class="d-card" href="editors.html">
+    <div class="d-card-shot"><img src="../docs/images/editors.png" alt="Date cell being edited with a calendar popup" loading="lazy"></div>
+    <div class="d-card-body">
+      <h2>Cell editors</h2>
+      <p>Six editors and the full keyboard model. Select a cell and type; the first keystroke is never lost.</p>
+      <div class="d-tags"><span>text</span><span>number</span><span>money</span><span>date</span><span>select</span><span>checkbox</span></div>
+    </div>
+  </a>
+  <a class="d-card" href="summary.html">
+    <div class="d-card-shot"><img src="../docs/images/summary.png" alt="Group subtotals, a tree, and merged cells" loading="lazy"></div>
+    <div class="d-card-body">
+      <h2>Totals, tree, and merged cells</h2>
+      <p>Group subtotals with a footer, a parent-key tree, and vertically merged cells that keep their label visible while scrolling.</p>
+      <div class="d-tags"><span>grouping</span><span>footSum</span><span>tree</span><span>mergeCells</span></div>
+    </div>
+  </a>
+  <a class="d-card" href="paging.html">
+    <div class="d-card-shot d-shot-bottom"><img src="../docs/images/paging.png" alt="Grid with page buttons in the bottom bar" loading="lazy"></div>
+    <div class="d-card-body">
+      <h2>Server-side paging</h2>
+      <p>Page buttons and sorting handed off to a (simulated) server through <code>pagechange</code> and <code>sortchange</code>.</p>
+      <div class="d-tags"><span>remoteSort</span><span>page info</span></div>
+    </div>
+  </a>
+  <a class="d-card" href="big.html">
+    <div class="d-card-shot"><img src="../docs/images/big.png" alt="50,000 rows by 30 columns scrolled to the middle" loading="lazy"></div>
+    <div class="d-card-body">
+      <h2>50,000 rows × 30 columns</h2>
+      <p>Virtual scrolling in both directions. Creating the grid and loading the data takes a few dozen milliseconds.</p>
+      <div class="d-tags"><span>virtual scrolling</span><span>performance</span></div>
+    </div>
+  </a>
+</main>
+
+<footer class="d-foot">
+  All demo data is made up. The demos use Korean sample data and <code>locale: "ko"</code>; the grid's default UI language is English.
+  Running locally: <code>npm run build</code>, then <code>npm run demo</code>. MIT © Donghyeon Shin.
+</footer>
 </body>
 </html>
