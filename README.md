@@ -264,6 +264,7 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 |---|---|
 | `__selected__` (`selectedKey`) | Row is selected. Set it in your data to start with the row selected |
 | `__modified__` (`modifiedKey`) | A value changed, or the row was added with `addRow` |
+| `__added__` (`addedKey`) | Row was added with `addRow` and not saved yet. It stays visible under header filters and isn't recorded when deleted. Cleared by `acceptChanges()` / `clearModified()` |
 | `__deleted__` (`deletedKey`) | Row was removed with `deleteRows` |
 | `__disable_selection__` (`disableSelectionKey`) | If true, the row can't be selected |
 | `collapse` (`tree.collapseKey`) | Tree node is collapsed |
@@ -334,6 +335,7 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 | `selectedKey` | `"__selected__"` | |
 | `disableSelectionKey` | `"__disable_selection__"` | |
 | `markAddedModified` | `true` | Mark rows added with `addRow` with `modifiedKey` |
+| `addedKey` | `"__added__"` | Property that marks rows added with `addRow` until they are saved |
 
 ### Totals, groups, tree, filters, merging
 
@@ -418,7 +420,7 @@ Whatever a formatter returns is inserted into the cell **as HTML**. Without a fo
 }
 ```
 
-The only built-in formatter is `"money"`: it strips non-numeric characters, adds thousands separators, and truncates to two decimal places. To register your own, see [Global extensions](#global-extensions).
+The only built-in formatter is `"money"`: it strips non-numeric characters, adds thousands separators, and truncates to two decimal places. Floating-point noise in numbers is removed first, so `0.1 + 0.7` shows as `0.8`, not `0.79`. To register your own, see [Global extensions](#global-extensions).
 
 ## Cell editors
 
@@ -513,12 +515,13 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | `rowCount` | Number of rows on screen (read-only property) |
 | `addRow(rows, at?, opts?)` | Add a row or an array of rows. `at`: `"last"` (default), `"first"`, or a view index (inserts before that row). `opts.focus: true` moves to the new row |
 | `removeRows(targets)` | Take rows out of the list without recording them as deleted. Accepts row objects, view indexes, or an array of either |
-| `deleteRows(targets)` | Delete rows: they leave the list and are kept in `getDeletedRows()`. In a tree, descendants are deleted too |
-| `getDeletedRows()` | Deleted rows |
+| `deleteRows(targets)` | Delete rows: they leave the list and are kept in `getDeletedRows()`. Rows added with `addRow` and not saved yet aren't kept, since the server never had them. In a tree, descendants are deleted too |
+| `getDeletedRows()` | Deleted rows that existed before (send these as deletes) |
+| `getAddedRows()` | Rows added with `addRow` since the last save (send these as inserts). They are also in `getModifiedRows()` |
 | `getModifiedRows()` | Rows that changed or were added. A row drops out once every cell is back to its original value (for example, after undo) |
-| `clearModified(rows?)` | Clear the modified flag (all rows if `rows` is omitted). Call after saving |
+| `clearModified(rows?)` | Clear the modified and added flags (all rows if `rows` is omitted). Call after saving. Rows that lose the added flag follow header filters again |
 | `clearDeleted()` | Clear the deleted-row list |
-| `acceptChanges()` | After saving: clear modified flags, the deleted-row list, and undo history |
+| `acceptChanges()` | After saving: clear modified and added flags, the deleted-row list, and undo history |
 | `replaceRow(rowIndex, row)` | Replace the row at that position with another object |
 | `setValue(rowIndex, key, value)` | Set a cell value. Returns true if it changed, marks the row `__modified__`, and fires `change`. `null`, `undefined`, and `""` count as the same value |
 | `setValues([{rowIndex, key, value}], {source?})` | Set many cells and redraw once. Returns the list of cells that actually changed |
@@ -648,6 +651,8 @@ grid.on("change", function (e) {
 grid.on("batchchange", function () { grid.refresh(); });
 ```
 
+**Errors in handlers:** if a handler throws, the error is reported (`reportError`, so it shows in the console and reaches `window.onerror`), and the grid carries on. The other handlers still run, and the grid still redraws, records undo, and fires `batchchange`. A handler that throws in `beforeedit` or `keydown` doesn't count as returning false.
+
 ## Footer totals and group subtotals
 
 **Footer totals (`footSum`)** sit below the body and scroll horizontally with the columns. Each array is one row.
@@ -674,7 +679,7 @@ footSum: [[
 | `colspan` | Number of leaf columns to span, starting from the left (line-number and row-selector columns don't count) |
 | `align`, `className` | |
 
-Totals are calculated from the filtered rows (`getRows()`) and update when values change. `avg` is rounded to two decimal places.
+Totals are calculated from the filtered rows (`getRows()`) and update when values change. `sum`, `avg`, `min`, and `max` skip empty cells and text without digits, the same rule as the selection summary, so an empty cell doesn't pull `min` to 0 or lower the average. Sums are rounded to the longest decimal place among the values (`0.1 + 0.2` is `0.3`). `avg` is rounded to two decimal places and is empty when there are no numbers.
 
 **Group subtotals (`grouping`)** sort by the group keys (ascending) and insert a subtotal row after each group. With several keys, inner subtotals come first. Cells are defined the same way as in `footSum`.
 
@@ -731,6 +736,8 @@ With `filter: true`, each header gets a ▾ button that opens a value list, like
 - The list shows only values from rows that pass the other columns' filters. With many values only the first 2,000 are drawn, but search, select all, and OK apply to every value (pressing OK without changes adds no condition).
 - Select-editor columns list option names, and money columns list formatted numbers. Empty values appear as "(Blank)".
 - Filters survive `setData`. When no rows match, the grid shows "No rows match the filter". Both texts can be changed; see [Localization](#localization).
+- Rows added with `addRow` stay visible even when they don't match, so a new empty row doesn't vanish the moment it is added. After saving (`acceptChanges()` or `clearModified()`) they follow the filters like any other row.
+- In the popup, Enter applies the filter from the search box or the list, and presses the button when a button has focus. Enter and Esc pressed while an IME is composing are left to the IME.
 - Not available in tree mode or with server paging (`setData(rows, page)`).
 - From code: `grid.setFilter("MANAGER", ["Alice", "Bob"])`, `grid.clearFilters()`
 
@@ -815,12 +822,13 @@ A typical save button:
 ```js
 function save() {
   if (!grid.commitEdit()) return;               // stop if the cell being edited is invalid
-  var changed = grid.getModifiedRows();         // modified rows plus rows added with addRow
-  var deleted = grid.getDeletedRows();          // rows removed with deleteRows
+  var added = grid.getAddedRows();              // rows added with addRow (inserts)
+  var changed = grid.getModifiedRows().filter(function (r) { return !r.__added__; }); // updates
+  var deleted = grid.getDeletedRows();          // rows that existed and were removed (deletes)
   return fetch("/api/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ changed: changed, deleted: deleted })
+    body: JSON.stringify({ added: added, changed: changed, deleted: deleted })
   }).then(function (res) {
     if (res.ok) grid.acceptChanges();           // saved values become the new baseline
   });

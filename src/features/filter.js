@@ -91,10 +91,14 @@ export class FilterPopup {
     });
     el.querySelector(".pyo-f-ok").addEventListener("click", () => this.apply());
     el.addEventListener("keydown", (e) => {
+      // 한글 등 조합 중의 Enter·Esc는 조합을 확정·취소하는 키다 (macOS는 isComposing, Windows Chrome은 keyCode 229)
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === "Escape") {
         e.preventDefault();
         this.close();
       } else if (e.key === "Enter") {
+        // 단추(초기화·확인·취소)에서는 브라우저 기본 동작으로 그 단추를 누른다
+        if (/** @type {HTMLElement} */ (e.target).tagName === "BUTTON") return;
         e.preventDefault();
         this.apply();
       }

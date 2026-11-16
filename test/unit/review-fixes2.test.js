@@ -83,6 +83,7 @@ describe("행이 아주 많아도 스택 초과가 나지 않는다", () => {
     expect(() => grid.addRow(many, 0)).not.toThrow();
     expect(grid.getAllRows()).toHaveLength(N + 1);
     expect(grid.getAllRows()[N].v).toBe("first");
+    grid.acceptChanges(); // 저장한 뒤라야 지운 행이 기록에 남는다 (저장 전에 넣은 행은 기록하지 않음)
     expect(() => grid.deleteRows(many)).not.toThrow();
     expect(grid.getDeletedRows()).toHaveLength(N);
   });

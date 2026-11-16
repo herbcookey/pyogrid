@@ -56,7 +56,7 @@ describe("view 도우미", () => {
   it("collectors·numberOf·sumCellValue", () => {
     const list = [{ v: 1000 }, { v: "1,500" }, { v: "" }, { __isGrouping: true, v: 99 }];
     expect(collectors.sum.call({ key: "v", list })).toBe(2500);
-    expect(collectors.avg.call({ key: "v", list })).toBe(833.33);
+    expect(collectors.avg.call({ key: "v", list })).toBe(1250); // 빈 값은 평균에 넣지 않는다
     expect(collectors.count.call({ key: "v", list })).toBe(3);
     expect(numberOf("abc12")).toBe(12);
     expect(sumCellValue({ label: "합계" }, list)).toBe("합계");

@@ -17,11 +17,13 @@ export const filterKey = (v) => (v === null || v === undefined ? "" : String(v))
  * @param {any[]} list
  * @param {Map<string, Set<string>>} conds  key → 허용 값 (filterKey 기준)
  * @param {string} [exceptKey] 이 키 조건은 빼고 (필터 목록 만들 때)
+ * @param {(row: any) => boolean} [pass] true면 조건과 관계없이 통과 (저장 전에 addRow로 넣은 행)
  */
-export function filterRows(list, conds, exceptKey) {
+export function filterRows(list, conds, exceptKey, pass) {
   const keys = [...conds.keys()].filter((k) => k !== exceptKey);
   if (!keys.length) return list;
   return list.filter((row) => {
+    if (pass && pass(row)) return true;
     for (const k of keys) if (!conds.get(k).has(filterKey(getValue(row, k)))) return false;
     return true;
   });
@@ -29,30 +31,65 @@ export function filterRows(list, conds, exceptKey) {
 
 /** 숫자로 (숫자가 아닌 글자는 지우고, 못 읽으면 0) */
 export function numberOf(v) {
-  if (typeof v === "number") return isFinite(v) ? v : 0;
-  const n = toNumber(v);
-  if (n !== null) return n;
-  const s = String(v === null || v === undefined ? "" : v).replace(/[^0-9.\-]/g, "");
-  const m = Number(s);
-  return isFinite(m) ? m : 0;
+  const n = numericValue(v);
+  return n === null ? 0 : n;
 }
 
-/** 합계 행 계산기. this와 첫 인자는 {key, list}. */
+/**
+ * 합계용 숫자. 빈 값(null, undefined, 공백 글자)과 숫자가 없는 글자는 null (세지 않음).
+ * "1,200", "1,200원"처럼 숫자가 든 글자는 숫자로 읽는다.
+ * @param {any} v
+ * @returns {number|null}
+ */
+export function numericValue(v) {
+  if (typeof v === "number") return isFinite(v) ? v : null;
+  if (v === null || v === undefined || typeof v === "boolean") return null;
+  const str = String(v).trim();
+  if (!str) return null;
+  const n = toNumber(str);
+  if (n !== null) return n;
+  const s = str.replace(/[^0-9.\-]/g, "");
+  if (!/[0-9]/.test(s)) return null;
+  const m = Number(s);
+  return isFinite(m) ? m : null;
+}
+
+/** 소수 자리 수 (지수 표기 포함). 부동소수 합의 끝자리 오차를 지우는 데 쓴다 */
+function decimalsOf(n) {
+  const s = String(n);
+  const e = s.indexOf("e-");
+  if (e >= 0) return Math.min(20, Number(s.slice(e + 2)) + ((s.split("e")[0].split(".")[1] || "").length));
+  const d = s.indexOf(".");
+  return d < 0 ? 0 : Math.min(20, s.length - d - 1);
+}
+
+/** 값들을 더하고, 넣은 값의 가장 긴 소수 자리에서 반올림한다 (0.1 + 0.2 → 0.3) */
+function sumOf(list, key) {
+  let s = 0;
+  let n = 0;
+  let dec = 0;
+  for (const r of list) {
+    if (r.__isGrouping) continue;
+    const v = numericValue(getValue(r, key));
+    if (v === null) continue;
+    s += v;
+    n++;
+    if (dec < 20 && !Number.isInteger(v)) dec = Math.max(dec, decimalsOf(v));
+  }
+  return { sum: dec ? Number(s.toFixed(dec)) : s, count: n };
+}
+
+/**
+ * 합계 행 계산기. this와 첫 인자는 {key, list}.
+ * sum·avg·min·max는 빈 값과 숫자가 아닌 글자를 세지 않는다 (아래 바의 선택 합계와 같은 기준).
+ */
 export const collectors = {
   sum() {
-    let s = 0;
-    for (const r of this.list) if (!r.__isGrouping) s += numberOf(getValue(r, this.key));
-    return s;
+    return sumOf(this.list, this.key).sum;
   },
   avg() {
-    let s = 0;
-    let n = 0;
-    for (const r of this.list) {
-      if (r.__isGrouping) continue;
-      s += numberOf(getValue(r, this.key));
-      n++;
-    }
-    return Math.round((s / (n || 1)) * 100) / 100;
+    const { sum, count } = sumOf(this.list, this.key);
+    return count ? Math.round((sum / count) * 100) / 100 : "";
   },
   count() {
     return this.list.filter((r) => !r.__isGrouping).length;
@@ -62,8 +99,8 @@ export const collectors = {
     let m = Infinity;
     for (const r of this.list) {
       if (r.__isGrouping) continue;
-      const v = numberOf(getValue(r, this.key));
-      if (v < m) m = v;
+      const v = numericValue(getValue(r, this.key));
+      if (v !== null && v < m) m = v;
     }
     return m === Infinity ? "" : m;
   },
@@ -71,8 +108,8 @@ export const collectors = {
     let m = -Infinity;
     for (const r of this.list) {
       if (r.__isGrouping) continue;
-      const v = numberOf(getValue(r, this.key));
-      if (v > m) m = v;
+      const v = numericValue(getValue(r, this.key));
+      if (v !== null && v > m) m = v;
     }
     return m === -Infinity ? "" : m;
   },
@@ -190,10 +227,11 @@ function isUnderCollapsed(row, meta, cfg) {
  * @param {boolean} o.remoteSort
  * @param {{by: string[]}|null} o.grouping
  * @param {{parentKey:string, selfKey:string, collapseKey:string}|null} o.tree
+ * @param {(row: any) => boolean} [o.pass]  필터와 관계없이 통과시킬 행 (저장 전에 넣은 행)
  * @returns {{rows: any[], dataRows: any[], treeMeta: Map<any, any>|null}}
  */
 export function buildView(o) {
-  const filtered = o.filters.size ? filterRows(o.source, o.filters) : o.source.slice();
+  const filtered = o.filters.size ? filterRows(o.source, o.filters, undefined, o.pass) : o.source.slice();
   if (o.tree) {
     const sort = o.remoteSort ? [] : o.sort;
     const t = buildTree(filtered, o.tree, (sib) => (sort.length ? sortRows(sib, sort, o.compare) : sib));

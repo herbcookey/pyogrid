@@ -56,6 +56,8 @@ import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMer
  *   트리 (부모 키로 이어진 평평한 목록). 컬럼 treeControl:true에 펼침 단추가 그려진다.
  * @property {boolean|string[]} [mergeCells=false]  위아래 같은 값 합치기
  * @property {string} [deletedKey="__deleted__"]  deleteRows로 지운 행에 true를 기록하는 속성
+ * @property {string} [addedKey="__added__"]  addRow로 넣은 행에 true를 기록하는 속성. 저장(acceptChanges·clearModified) 전까지
+ *   헤더 필터를 통과하고, deleteRows로 지워도 getDeletedRows()에 남지 않는다
  * @property {boolean} [markAddedModified=true]  addRow로 넣은 행에 modifiedKey를 붙인다
  * @property {string|null} [stateKey]  지정하면 컬럼 너비·정렬을 브라우저에 기억한다 (화면 경로 + stateKey)
  * @property {string|null} [sheetName]  엑셀 시트 이름
@@ -110,6 +112,7 @@ const DEFAULTS = {
   tree: null,
   mergeCells: false,
   deletedKey: "__deleted__",
+  addedKey: "__added__",
   markAddedModified: true,
   stateKey: null,
   sheetName: null,
@@ -350,7 +353,8 @@ export class PyoGrid {
    * ================================================================ */
 
   /**
-   * 행을 넣는다.
+   * 행을 넣는다. 넣은 행에는 addedKey(__added__)가 붙고, 저장(acceptChanges·clearModified) 전까지는
+   * 헤더 필터 조건에 맞지 않아도 보인다.
    * @param {any|any[]} rows
    * @param {"first"|"last"|number} [at="last"]  숫자면 그 화면 순번의 행 앞
    * @param {{focus?: boolean}} [opts] focus: 넣은 첫 행의 첫 셀로 이동
@@ -359,6 +363,7 @@ export class PyoGrid {
     const list = Array.isArray(rows) ? rows : [rows];
     if (!list.length) return this;
     this.editing.cancel();
+    for (const r of list) r[this.options.addedKey] = true;
     if (this.options.markAddedModified) for (const r of list) r[this.options.modifiedKey] = true;
     let pos = this.source.length;
     if (at === "first") pos = 0;
@@ -399,6 +404,7 @@ export class PyoGrid {
 
   /**
    * 행을 지운다. 목록에서 빠지고 getDeletedRows()에 남는다 (서버에 삭제를 보낼 때).
+   * 저장 전에 addRow로 넣은 행(addedKey)은 서버에 없으므로 기록에 남기지 않는다.
    * 트리면 자손도 같이 지운다.
    * @param {any|any[]|number|number[]} targets 행 객체 또는 화면 순번
    */
@@ -414,18 +420,27 @@ export class PyoGrid {
     if (!set.size) return this;
     this.editing.cancel();
     const k = this.options.deletedKey;
+    const ak = this.options.addedKey;
     const removed = this.source.filter((r) => set.has(r));
-    for (const r of removed) r[k] = true;
-    for (const r of removed) this.deleted.push(r);
+    for (const r of removed) {
+      r[k] = true;
+      if (!r[ak]) this.deleted.push(r);
+    }
     this.source = this.source.filter((r) => !set.has(r));
     this._afterRowsChanged();
     this.emit("rowsdelete", { rows: removed });
     return this;
   }
 
-  /** @returns {any[]} deleteRows로 지운 행 */
+  /** @returns {any[]} deleteRows로 지운 행 (저장 전에 넣었다 지운 행은 빠진다) */
   getDeletedRows() {
     return this.deleted.slice();
+  }
+
+  /** @returns {any[]} 저장 전에 addRow로 넣은 행 (setData 순서). getModifiedRows()에도 들어 있다 */
+  getAddedRows() {
+    const k = this.options.addedKey;
+    return this.source.filter((r) => r && r[k]);
   }
 
   /**
@@ -787,6 +802,7 @@ export class PyoGrid {
     let count = 0;
     let numCount = 0;
     let sum = 0;
+    let dec = 0;
     if (g) {
       count = g.size;
       for (let c = g.c0; c <= g.c1; c++) {
@@ -802,10 +818,17 @@ export class PyoGrid {
           if (n !== null) {
             sum += n;
             numCount++;
+            if (dec < 15 && !Number.isInteger(n)) {
+              const s = String(n);
+              const d = s.indexOf(".");
+              dec = Math.max(dec, d < 0 || /e/i.test(s) ? 15 : Math.min(15, s.length - d - 1));
+            }
           }
         }
       }
     }
+    // 0.1 + 0.2 = 0.30000000000000004 같은 끝자리 오차를 넣은 값의 가장 긴 소수 자리에서 지운다
+    if (dec) sum = Number(sum.toFixed(dec));
     return { count, numCount, sum, avg: numCount ? sum / numCount : 0 };
   }
 
@@ -951,18 +974,26 @@ export class PyoGrid {
   }
 
   /**
-   * 수정 표시(__modified__)를 지운다. 저장한 뒤 부른다.
+   * 수정 표시(__modified__)와 추가 표시(__added__)를 지운다. 저장한 뒤 부른다.
+   * 추가 표시가 빠진 행은 다시 헤더 필터 조건을 따른다.
    * @param {any[]} [rows] 없으면 모든 행 (지운 행 포함)
    */
   clearModified(rows) {
     const mk = this.options.modifiedKey;
+    const ak = this.options.addedKey;
     const list = rows || this.source.concat(this.deleted);
+    let wasAdded = false;
     for (const r of list) {
       if (!r) continue;
       delete r[mk];
+      if (r[ak]) {
+        delete r[ak];
+        wasAdded = true;
+      }
       this._orig.delete(r);
     }
-    this.refresh();
+    if (wasAdded && this.isFilterActive()) this._afterRowsChanged();
+    else this.refresh();
     return this;
   }
 
@@ -1460,22 +1491,42 @@ export class PyoGrid {
   }
 
   /**
+   * 핸들러를 차례로 부른다. 핸들러가 예외를 던져도 나머지 핸들러와 그리드의 처리(다시 그리기,
+   * 실행 취소 기록, batchchange 등)는 계속한다. 예외는 브라우저의 오류 보고(reportError, 없으면 console.error)로 넘긴다.
    * @param {string} name
    * @param {any} [detail]
    */
   emit(name, detail) {
-    for (const fn of this._handlers[name] || []) fn.call(this, detail);
+    const list = this._handlers[name];
+    if (!list) return;
+    for (const fn of list.slice()) this._call(fn, name, detail);
   }
 
   /**
-   * 핸들러 중 하나라도 false를 돌려주면 false.
+   * 핸들러 중 하나라도 false를 돌려주면 false. 예외를 던진 핸들러는 false로 보지 않는다.
    * @param {string} name
    * @param {any} [detail]
    */
   emitCancelable(name, detail) {
     let ok = true;
-    for (const fn of this._handlers[name] || []) if (fn.call(this, detail) === false) ok = false;
+    for (const fn of (this._handlers[name] || []).slice()) if (this._call(fn, name, detail) === false) ok = false;
     return ok;
+  }
+
+  /**
+   * @param {Function} fn
+   * @param {string} name
+   * @param {any} detail
+   */
+  _call(fn, name, detail) {
+    try {
+      return fn.call(this, detail);
+    } catch (err) {
+      const g = /** @type {any} */ (globalThis);
+      if (typeof g.reportError === "function") g.reportError(err);
+      else console.error(`[pyogrid] "${name}" handler threw`, err);
+      return undefined;
+    }
   }
 
   destroy() {
@@ -1683,6 +1734,7 @@ export class PyoGrid {
       remoteSort: o.remoteSort,
       grouping: o.grouping && Array.isArray(o.grouping.by) ? o.grouping : null,
       tree: this._treeCfg(),
+      pass: (r) => !!r[o.addedKey],
     });
     this.rows = v.rows;
     this.dataRows = v.dataRows;
