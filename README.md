@@ -44,6 +44,7 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - [Localization](#localization)
 - [Demos](#demos)
 - [Browser support](#browser-support)
+- [Stability](#stability)
 - [Development](#development)
 - [License](#license)
 
@@ -882,7 +883,7 @@ PyoGrid.editors.upper = {
 | `PyoGrid.util.getValue(row, key)` / `setValue(row, key, v)` | Read and write path keys |
 | `PyoGrid.util.toNumber(v)` | "1,200" → 1200; null if not a number |
 
-The ES module exports the same things by name: `formatters`, `editorTypes`, `userCollectors`, `escapeHtml`, `sortRows`, `parseTSV`, `buildTSV`, `locales`, and more (see `src/index.js`).
+The ES module exports the same things by name: `formatters`, `editorTypes`, `userCollectors`, `escapeHtml`, `sortRows`, `parseTSV`, `buildTSV`, `locales`, and more (see `src/index.js`). Exports not named in this README are not covered by [Stability](#stability).
 
 ## Theming
 
@@ -911,7 +912,7 @@ The default theme has a light gray header and a blue accent. Override the CSS cu
 | `--pyo-accent` | `#2f6fd6` | Accent color |
 | `--pyo-frozen-line` | `#b9c3cf` | Frozen-column edge and the line above the footer |
 
-Main classes: `.pyo-row` (`.pyo-selected`, `.pyo-group-row`), `.pyo-cell` (`.pyo-in-range`, `.pyo-active`, `.pyo-merged`), `.pyo-hcell`, `.pyo-foot`, `.pyo-page`, `.pyo-popup` (editor and filter popups).
+Main classes: `.pyo-row` (`.pyo-selected`, `.pyo-group-row`), `.pyo-cell` (`.pyo-in-range`, `.pyo-active`, `.pyo-merged`), `.pyo-hcell`, `.pyo-foot`, `.pyo-page`, `.pyo-popup` (editor and filter popups). Class names and DOM structure can change between releases; see [Stability](#stability).
 
 ## Localization
 
@@ -1006,6 +1007,33 @@ All demo data is made up.
 - The end-to-end tests run in Chrome, Firefox, and WebKit (Playwright's build of Safari's engine) on Windows. Real Safari on macOS and iOS is not tested yet.
 - The grid relies on `position: sticky` and `ResizeObserver`. Scrollbars are styled with `::-webkit-scrollbar` in Chrome, Edge, and Safari; Firefox keeps its own scrollbar width (the grid measures it) and only takes the colors.
 - Typing during IME composition (Korean and similar) is tested automatically only in Chrome, because only Chromium can simulate IME input. In Firefox and Safari, try it by hand with a real IME.
+
+## Stability
+
+pyogrid has not reached 1.0 yet. This section says what stays the same from one release to the next.
+
+**Covered.** What this README documents:
+
+- Grid options, column options, and the settings for editors, footer cells, grouping, and trees
+- Methods and properties in [Methods](#methods), with their arguments and return values
+- Events in [Events](#events) and their payloads
+- `messages` keys in [Localization](#localization)
+- CSS custom properties in the [Theming](#theming) table
+- Row marker keys in [Core concepts](#core-concepts): `__selected__`, `__modified__`, `__added__`, `__deleted__`, `__disable_selection__`, and the tree's `collapse`
+- Exports and `PyoGrid.*` names listed in [Global extensions](#global-extensions)
+
+**Not covered.** These can change in any release, without notice:
+
+- Members whose names start with `_`
+- The DOM structure and `pyo-*` class names, including the ones listed under Theming. Where you can, style with the CSS custom properties and your own classes (`cellClass`, `headerClass`, `rowClass`)
+- Exports from `src/index.js` that this README doesn't name, and grid instance properties it doesn't list (such as `grid.options` or `grid.el`)
+- The shape of the data saved in `localStorage` under `stateKey`. If it changes, widths and sort saved by an older version may be dropped
+
+**Version rules**
+
+- Before 1.0, only a minor release (`0.x.0`) can break covered behavior. A patch release (`0.x.y`) doesn't.
+- Before something covered is removed or changed, at least one earlier release deprecates it. The CHANGELOG says so, and where possible the grid logs a `console.warn` once when you use it.
+- Breaking changes are listed first in the [CHANGELOG](https://github.com/herbcookey/pyogrid/blob/main/CHANGELOG.md), under "Breaking changes".
 
 ## Development
 

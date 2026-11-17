@@ -23,6 +23,7 @@
 - [빠른 시작](#빠른-시작)
 - [한글 입력](#한글-입력)
 - [한국어 화면 문구](#한국어-화면-문구)
+- [API 안정성](#api-안정성)
 - [자세한 문서](#자세한-문서)
 - [라이선스](#라이선스)
 
@@ -157,6 +158,16 @@ new PyoGrid("#grid", {
 
 > 0.7.x에서 올라올 때: 0.8.0부터 기본 문구가 한국어에서 영어로 바뀌었습니다. 한국어 화면을 그대로 두려면 그리드마다 `locale: "ko"`를 넣으세요.
 
+## API 안정성
+
+pyogrid는 아직 1.0 전입니다. 버전이 올라가도 그대로 유지하기로 약속하는 것과 그렇지 않은 것은 다음과 같습니다.
+
+- **약속하는 것:** README.md에 적힌 옵션, 메서드, 이벤트, `messages` 키, CSS 변수, 행 표시 키(`__selected__`, `__modified__` 같은 것), 그리고 Global extensions 절에 적힌 내보내기.
+- **약속하지 않는 것:** `_`로 시작하는 멤버, DOM 구조와 `pyo-*` 클래스, README에 없는 내보내기와 인스턴스 속성, `localStorage`에 저장하는 값의 모양.
+- **버전 규칙:** 1.0 전에는 0.x.0 버전에서만 호환성을 깹니다. 깨기 전에 적어도 한 번의 릴리스에서 폐기 예고를 합니다. 깨지는 변경은 [변경 기록](CHANGELOG.md)의 Breaking changes에 맨 먼저 적습니다.
+
+자세한 내용은 [Stability](README.md#stability)에 있습니다.
+
 ## 자세한 문서
 
 상세 레퍼런스는 영어 문서에 있습니다.
@@ -184,6 +195,7 @@ new PyoGrid("#grid", {
 | 테마 (CSS 변수) | [Theming](README.md#theming) |
 | 화면 문구 바꾸기, 새 언어 등록 | [Localization](README.md#localization) |
 | 지원 브라우저 | [Browser support](README.md#browser-support) |
+| API 안정성 | [Stability](README.md#stability) |
 | 데모 실행 | [Demos](README.md#demos) |
 | 개발 (빌드·테스트) | [Development](README.md#development) |
 
