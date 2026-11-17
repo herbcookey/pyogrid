@@ -40,6 +40,7 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - [Server-side paging and sorting](#server-side-paging-and-sorting)
 - [Excel export](#excel-export)
 - [Remembering column widths and sort](#remembering-column-widths-and-sort)
+- [Reordering columns](#reordering-columns)
 - [Collecting changes for saving](#collecting-changes-for-saving)
 - [Global extensions](#global-extensions)
 - [Theming](#theming)
@@ -66,7 +67,8 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - **Selection summary** (count, sum, average) for the selected cells.
 - **Server-side paging and sorting.**
 - **xlsx export** of what is on screen, with merged headers and real number cells.
-- **Remembers column widths and sort** per page in `localStorage`.
+- **Remembers column widths, order, and sort** per page in `localStorage`.
+- **Reorder columns** by dragging headers or with Alt+Shift+←/→ (optional). Column definitions and footer totals stay as you passed them.
 - **Themeable** with CSS custom properties. TypeScript declarations included, with typed rows and events ([TypeScript](#typescript)).
 - **Localizable.** English by default, Korean built in, and every built-in string can be replaced.
 
@@ -344,6 +346,7 @@ const changed: Order[] = grid.getModifiedRows();
 | `defaultColumnWidth` | `100` | Width of columns without `width` |
 | `minColumnWidth` | `10` | Minimum width when resizing |
 | `resizable` | `true` | Drag header edges to resize columns |
+| `columnReorder` | `false` | Drag headers, or press Alt+Shift+←/→, to reorder columns. See [Reordering columns](#reordering-columns). `moveColumn` and `setColumnOrder` work either way |
 | `emptyText` | `undefined` | Message when there are no rows. Leave it out to use the locale's message, or pass `null` to show nothing |
 | `locale` | `"en"` | Language of built-in text: `"en"`, `"ko"`, or a name registered on `PyoGrid.locales`. See [Localization](#localization) |
 | `messages` | `null` | Replace individual built-in strings. See [Localization](#localization) |
@@ -402,7 +405,7 @@ const changed: Order[] = grid.getModifiedRows();
 
 | Option | Default | Description |
 |---|---|---|
-| `stateKey` | `null` | If set, column widths and sort are remembered in the browser |
+| `stateKey` | `null` | If set, column widths, order, and sort are remembered in the browser |
 | `sheetName` | `null` | Worksheet name for Excel export |
 
 ## Column options
@@ -441,6 +444,7 @@ const changed: Order[] = grid.getModifiedRows();
 | `headerClass` | Header cell class: a string or `function (column)` |
 | `editor` | See [Cell editors](#cell-editors) |
 | `sortable`, `filter`, `resizable` | See above |
+| `reorderable` | `false`: the column (or the whole group) can't be dragged or moved and keeps its place. See [Reordering columns](#reordering-columns) |
 | `multiLine` | Allow line breaks in the cell (Alt+Enter while editing) |
 | `numeric` | Treat the column as numeric for the selection summary. By default, columns with the money formatter or a number or money editor are numeric |
 | `filterType` | `"text"`, `"number"`, or `"date"`: which conditions the filter popup offers. By default a date editor means `"date"`, a numeric column (see `numeric`) means `"number"`, and anything else `"text"` |
@@ -530,6 +534,7 @@ Clicking a cell gives the grid keyboard focus (or call `grid.focus()`).
 | Ctrl+A | Select all cells |
 | Ctrl+C / Ctrl+X / Ctrl+V | Copy / cut / paste |
 | Ctrl+Z / Ctrl+Y (Ctrl+Shift+Z) | Undo / redo |
+| Alt+Shift+← / → | Move the current cell's column one place left / right (`columnReorder` only). The cell moves with it |
 
 **Editing**
 
@@ -647,12 +652,15 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | Method | Description |
 |---|---|
 | `setColumns(columns)` | Replace all columns (resets user-resized widths and restores widths saved under `stateKey`). Filters and sorts on keys that no longer exist, or are no longer filterable or sortable, are removed and `filterchange` / `sortchange` fire. The same applies to `addColumn`, `removeColumn`, and `updateColumn` |
-| `getColumns()` | The column definitions array the grid is using, not a copy. Changing it doesn't redraw the grid; to apply changes, pass the columns to `setColumns` |
+| `getColumns()` | The column definitions array the grid is using, not a copy, in definition order. Moving columns doesn't change it or the definitions in it; the screen order is `getColumnOrder()`. Changing the array doesn't redraw the grid; to apply changes, pass the columns to `setColumns` (which also resets the column order) |
 | `addColumn(column, index?)` | Add a top-level column, at the end if `index` is omitted |
 | `removeColumn(index?)` | Remove a column, the last one if `index` is omitted |
 | `updateColumn(column, index)` | |
 | `setColumnWidth(colIndex, px)` | |
 | `getColumnWidths()` | Widths of the leaf columns |
+| `moveColumn(column, toIndex)` | Move a column within its parent. `column` is a leaf index, a `key`, or a definition object from `getColumns()` (a group moves as a whole); `toIndex` is the leaf index the column (a group's first leaf) ends up at. Returns false and changes nothing when the column can't go there or is already there. See [Reordering columns](#reordering-columns) |
+| `getColumnOrder()` | Keys of the leaf columns in screen order (columns without a `key` are left out) |
+| `setColumnOrder(keys \| null)` | Set the order at once. Columns not in the list keep their definition place; `null` restores the definition order. Returns false for an order that crosses the frozen edge |
 | `layout()` | Recalculate size and columns, then redraw |
 | `refresh()` | Redraw the visible rows (after changing row objects directly) |
 | `refreshRow(rowIndex)` | Redraw one row |
@@ -668,7 +676,7 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 |---|---|
 | `exportExcel(fileName, {sheetName?, XLSX?})` | Save as xlsx. Returns false without SheetJS |
 | `getExportData()` | The table to export (`{rows, merges, widths, headerRows}`) |
-| `resetState()` | Forget saved widths and sort |
+| `resetState()` | Forget saved widths, order, and sort |
 | `on(name, fn)` / `off(name, fn?)` | Events |
 | `destroy()` | Remove the grid and its listeners |
 
@@ -697,6 +705,7 @@ grid.off("change", handler);               // omit handler to remove all listene
 | `rowsadd` / `rowsremove` / `rowsdelete` | Rows are added / removed / deleted | `{rows}` |
 | `treetoggle` | A tree node is collapsed or expanded | `{row, collapsed}` |
 | `columnresize` | A column is resized | `{index, column, width}` |
+| `columnmove` | The column order changes | `{column, from, to, order}`. `column` is the moved definition (a group's for a group), `from` and `to` its (first) leaf index, `order` the same as `getColumnOrder()`. After `setColumnOrder`, `column` is null and `from` and `to` are -1 |
 | `scroll` | Scroll | `{top, left}` |
 | `datachange` | `setData` | `{rows}` |
 
@@ -736,7 +745,7 @@ footSum: [[
 | `label` | Text when there is no `key`, or a function (`this = {key, list, groupBy}`) |
 | `key` + `collector` | A calculated value. A name (`"sum"`, `"avg"`, `"count"`, `"min"`, `"max"`) or a function (`this = {key, list}`) |
 | `formatter` | Applied to the calculated value (`this.value`) |
-| `colspan` | Number of leaf columns to span, starting from the left (line-number and row-selector columns don't count) |
+| `colspan` | Number of leaf columns to span, starting from the left (line-number and row-selector columns don't count). The columns are counted in definition order; after [reordering](#reordering-columns), a cell whose columns are no longer next to each other is split into pieces, and its text goes in the leftmost piece |
 | `align`, `className` | |
 | `html` | If true, the label and formatter output are inserted as HTML. By default they are text, which matters for group subtotal labels built from data |
 
@@ -887,7 +896,7 @@ grid.exportExcel("list", { sheetName: "List" });
 ```
 
 - Requires SheetJS (`window.XLSX`). As a module, pass it as `{ XLSX }`. Without it, the grid logs a warning and returns false.
-- Exports what is on screen: filters and sort, subtotal rows, footer totals, and column widths.
+- Exports what is on screen: filters and sort, column order, subtotal rows, footer totals, and column widths.
 - Multi-level headers and footer `colspan` become merged cells.
 - Cell text is the formatter output with HTML stripped. Numbers become number cells:
   - Numbers with thousands separators like "1,234" → a number with the `#,##0` format
@@ -901,7 +910,26 @@ grid.exportExcel("list", { sheetName: "List" });
 new PyoGrid("#grid", { stateKey: "weekly-grid", columns: [...] });
 ```
 
-When the user resizes a column or sorts by a header, the grid saves it to `localStorage` under `"pyogrid:" + page path + ":" + stateKey` and restores it when the grid is created and on `setColumns`. Columns are matched by `key`, so saved widths survive changes to the column set (for example, week-by-week headers). `grid.resetState()` clears it.
+When the user resizes a column, sorts by a header, or reorders columns, the grid saves it to `localStorage` under `"pyogrid:" + page path + ":" + stateKey` and restores it when the grid is created and on `setColumns`. Columns are matched by `key`, so saved widths survive changes to the column set (for example, week-by-week headers). A saved order that would cross the frozen edge is ignored. Values saved by older versions, without an order, still load. `grid.resetState()` clears it.
+
+## Reordering columns
+
+```js
+new PyoGrid("#grid", { columnReorder: true, columns: [...] });
+
+grid.moveColumn("QTY", 0);                 // by key, leaf index, or definition object
+grid.setColumnOrder(["QTY", "NAME"]);      // others keep their definition place
+grid.getColumnOrder();                     // ["QTY", "NAME", ...]
+grid.setColumnOrder(null);                 // back to the definition order
+```
+
+With `columnReorder: true`, drag a header (a group header moves the whole group). Dragging starts after the pointer moves more than 5 px, so a click still sorts. While dragging, a copy of the header follows the pointer and a line shows where it will go; near the left or right edge of the scrolling area the grid scrolls sideways. Esc cancels. Touch dragging isn't supported. Alt+Shift+← / → moves the current cell's column by one place; return `false` from a `keydown` handler to stop it.
+
+- **Definitions don't change.** The order is kept apart from the definitions, like widths and sort. `getColumns()`, group definitions, `footSum`, and `grouping.columns` stay as you passed them.
+- **Where a column can go.** A leaf moves only within its group, and a group within its parent. Columns can't cross the frozen edge, and a group that spans it can't move. Columns without a `key` and columns with `reorderable: false` keep their place; the others move around them.
+- **What follows the column.** Sort, filters, conditions, user-resized widths, and the current cell (a range shrinks to the current cell). Merged cells and footer and subtotal pieces are worked out again for the new order. Excel export uses the screen order.
+- **Column changes.** `setColumns` resets the order (and restores a saved one with `stateKey`). `addColumn`, `removeColumn`, and `updateColumn` keep it; a new column appears at its definition place. Hidden columns keep their place in the order and come back there when shown.
+- Moving columns isn't recorded for undo. Each move fires `columnmove`.
 
 ## Collecting changes for saving
 

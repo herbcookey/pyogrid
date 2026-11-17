@@ -31,6 +31,7 @@
 | `defaultColumnWidth` | `100` | `width`가 없는 컬럼의 너비 |
 | `minColumnWidth` | `10` | 너비를 조절할 때의 최소 너비 |
 | `resizable` | `true` | 헤더 경계를 끌어 컬럼 너비 조절 |
+| `columnReorder` | `false` | 헤더를 끌거나 Alt+Shift+←/→로 컬럼 순서를 바꿉니다. [Reordering columns](../README.md#reordering-columns) 참고. `moveColumn`, `setColumnOrder`는 꺼져 있어도 됩니다 |
 | `emptyText` | `undefined` | 행이 없을 때의 안내 문구. 주지 않으면 locale의 문구를 쓰고, `null`이면 아무것도 보이지 않습니다 |
 | `locale` | `"en"` | 기본 문구의 언어: `"en"`, `"ko"`, 또는 `PyoGrid.locales`에 등록한 이름. [Localization](../README.md#localization) 참고 |
 | `messages` | `null` | 기본 문구를 하나씩 바꿉니다. [Localization](../README.md#localization) 참고 |
@@ -94,7 +95,7 @@
 
 | 옵션 | 기본값 | 설명 |
 |---|---|---|
-| `stateKey` | `null` | 주면 컬럼 너비와 정렬을 브라우저에 기억합니다 |
+| `stateKey` | `null` | 주면 컬럼 너비·순서와 정렬을 브라우저에 기억합니다 |
 | `sheetName` | `null` | 엑셀 내보내기의 시트 이름 |
 
 ## 컬럼 옵션
@@ -134,6 +135,7 @@
 | `headerClass` | 헤더 칸 class: 글자 또는 `function (column)` |
 | `editor` | [Cell editors](../README.md#cell-editors) 참고 |
 | `sortable`, `filter`, `resizable` | 위 참고 |
+| `reorderable` | `false`면 그 컬럼(그룹이면 그룹 전체)을 끌거나 옮길 수 없고 제자리에 남습니다 |
 | `multiLine` | 셀 안 줄바꿈 허용 (편집 중 Alt+Enter) |
 | `numeric` | 선택 합계에서 숫자 컬럼으로 봅니다. 기본으로 money formatter, number·money 편집기가 있는 컬럼은 숫자 컬럼입니다 |
 | `filterType` | `"text"`, `"number"`, `"date"`: 필터 팝업이 보여 줄 조건의 종류. 기본은 date 편집기면 `"date"`, 숫자 컬럼(`numeric` 참고)이면 `"number"`, 나머지는 `"text"` |
@@ -240,12 +242,15 @@
 | 메서드 | 설명 |
 |---|---|
 | `setColumns(columns)` | 컬럼을 모두 바꿉니다 (사용자가 조절한 너비는 처음으로, `stateKey`에 저장한 너비는 되살림). 없어진 키, 또는 필터·정렬을 못 하게 된 키의 필터·정렬 조건은 지우고 `filterchange` / `sortchange`를 알립니다. `addColumn`, `removeColumn`, `updateColumn`도 같습니다 |
-| `getColumns()` | 그리드가 쓰는 컬럼 정의 배열을 복사하지 않고 그대로 돌려줍니다. 이 배열을 고쳐도 다시 그리지 않으므로, 고친 내용을 반영하려면 `setColumns`에 넘깁니다 |
+| `getColumns()` | 그리드가 쓰는 컬럼 정의 배열을 복사하지 않고 그대로, 정의 순서로 돌려줍니다. 컬럼을 옮겨도 이 배열과 안의 정의는 바뀌지 않고, 화면 순서는 `getColumnOrder()`로 읽습니다. 이 배열을 고쳐도 다시 그리지 않으므로, 고친 내용을 반영하려면 `setColumns`에 넘깁니다 (그러면 컬럼 순서도 처음으로 돌아갑니다) |
 | `addColumn(column, index?)` | 맨 위 단계에 컬럼을 넣습니다. `index`가 없으면 끝에 |
 | `removeColumn(index?)` | 컬럼을 뺍니다. `index`가 없으면 마지막 컬럼 |
 | `updateColumn(column, index)` | |
 | `setColumnWidth(colIndex, px)` | |
 | `getColumnWidths()` | 잎 컬럼의 너비 |
+| `moveColumn(column, toIndex)` | 컬럼을 같은 부모 안에서 옮깁니다. `column`은 잎 번호, `key`, 또는 `getColumns()`의 정의 객체(그룹이면 통째로), `toIndex`는 옮긴 뒤 그 컬럼(그룹이면 첫 잎)의 잎 번호입니다. 갈 수 없는 자리이거나 지금 자리면 false를 돌려주고 아무것도 바꾸지 않습니다. [Reordering columns](../README.md#reordering-columns) 참고 |
+| `getColumnOrder()` | 화면 순서의 잎 key 배열 (key가 없는 컬럼은 빠짐) |
+| `setColumnOrder(keys \| null)` | 순서를 한 번에 정합니다. 목록에 없는 컬럼은 정의 자리에 남고, `null`이면 정의 순서로 돌아갑니다. 고정 경계를 넘는 순서면 false |
 | `layout()` | 크기와 컬럼을 다시 계산하고 다시 그립니다 |
 | `refresh()` | 보이는 행을 다시 그립니다 (행 객체를 직접 고친 뒤) |
 | `refreshRow(rowIndex)` | 한 행 다시 그리기 |
@@ -262,7 +267,7 @@
 |---|---|
 | `exportExcel(fileName, {sheetName?, XLSX?})` | xlsx로 저장. SheetJS가 없으면 false |
 | `getExportData()` | 내보낼 표 (`{rows, merges, widths, headerRows}`) |
-| `resetState()` | 저장한 너비와 정렬을 잊습니다 |
+| `resetState()` | 저장한 너비·순서와 정렬을 잊습니다 |
 | `on(name, fn)` / `off(name, fn?)` | 이벤트 |
 | `destroy()` | 그리드와 리스너를 없앱니다 |
 
@@ -292,6 +297,7 @@ grid.off("change", handler);               // handler를 빼면 그 이벤트의
 | `rowsadd` / `rowsremove` / `rowsdelete` | 행을 넣었을 때 / 뺐을 때 / 지웠을 때 | `{rows}` |
 | `treetoggle` | 트리 노드를 접거나 펼쳤을 때 | `{row, collapsed}` |
 | `columnresize` | 컬럼 너비를 바꿨을 때 | `{index, column, width}` |
+| `columnmove` | 컬럼 순서가 바뀌었을 때 | `{column, from, to, order}`. `column`은 옮긴 정의(그룹이면 그룹 정의), `from`·`to`는 그 (첫) 잎 번호, `order`는 `getColumnOrder()`와 같습니다. `setColumnOrder`로 바꾸면 `column`은 null, `from`·`to`는 -1 |
 | `scroll` | 스크롤 | `{top, left}` |
 | `datachange` | `setData` | `{rows}` |
 

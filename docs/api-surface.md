@@ -66,7 +66,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 
 ## 4. 인스턴스 메서드 (PyoGrid.prototype)
 
-`_`로 시작하지 않는 것은 89개다 (메서드 85개, getter 4개). README의 Methods 절에 84개가 있고, 아래 5개가 없다. (0.9.0 뒤 `getChanges`, `cleanRow`, `setFilterCondition`, `getFilterConditions`를 더했다)
+`_`로 시작하지 않는 것은 92개다 (메서드 88개, getter 4개). README의 Methods 절에 87개가 있고, 아래 5개가 없다. (0.9.0 뒤 `getChanges`, `cleanRow`, `setFilterCondition`, `getFilterConditions`, `moveColumn`, `getColumnOrder`, `setColumnOrder`를 더했다)
 
 | 이름 | 하는 일 | 표시 |
 |---|---|---|
@@ -76,7 +76,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 | `emit(name, detail)` | 이벤트 핸들러를 부른다 | 정할 것 |
 | `emitCancelable(name, detail)` | 핸들러 중 하나가 false면 false | 정할 것 |
 
-문서에 있는 84개 (README 절 순서):
+문서에 있는 87개 (README 절 순서):
 
 | README 절 | 메서드 |
 |---|---|
@@ -85,7 +85,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 | Cell range | `setRange`, `clearRange`, `getRange`, `getActiveCell`, `getRangeCells`, `getSelectionSummary`, `getRangeText` |
 | Sorting, filtering, tree | `setSort`, `getSort`, `toggleSort`, `setFilter`, `setFilterCondition`, `getFilterConditions`, `clearFilters`, `getFilters`, `openFilter`, `isFilterActive`, `toggleNode`, `expandAll`, `collapseAll`, `getTreeInfo` |
 | Editing, clipboard, undo | `startEdit`, `commitEdit`, `cancelEdit`, `focus`, `copy`, `paste`, `cut`, `undo`, `redo`, `clearHistory` |
-| Columns and layout | `setColumns`, `getColumns`, `addColumn`, `removeColumn`, `updateColumn`, `setColumnWidth`, `getColumnWidths`, `layout`, `refresh`, `refreshRow`, `scrollToRow`, `scrollToCell`, `setHeight`, `setPage`, `cellContext`, `cellText` |
+| Columns and layout | `setColumns`, `getColumns`, `addColumn`, `removeColumn`, `updateColumn`, `setColumnWidth`, `getColumnWidths`, `moveColumn`, `getColumnOrder`, `setColumnOrder`, `layout`, `refresh`, `refreshRow`, `scrollToRow`, `scrollToCell`, `setHeight`, `setPage`, `cellContext`, `cellText` |
 | Export, persistence, misc | `exportExcel`, `getExportData`, `resetState`, `on`, `off`, `destroy` |
 | 읽기 전용 속성 (getter) | `rowCount`, `isEditing`, `canUndo`, `canRedo` |
 
@@ -112,15 +112,15 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 
 ## 6. 옵션 (DEFAULTS, src/grid.js)
 
-키 52개가 모두 README의 Grid options 절에 있다. (0.9.0 뒤 `filterConditions`를 더했다)
+키 53개가 모두 README의 Grid options 절에 있다. (0.9.0 뒤 `filterConditions`, `columnReorder`를 더했다)
 
-`columns`, `frozenColumns`, `rowHeight`, `headerRowHeight`, `lineNumber`, `lineNumberWidth`, `rowSelector`, `rowSelectorWidth`, `headerSelector`, `multipleSelect`, `selectedKey`, `disableSelectionKey`, `sortable`, `multiSort`, `sortCompare`, `remoteSort`, `cellSelect`, `editable`, `modifiedKey`, `undo`, `undoLimit`, `clipboard`, `filter`, `filterConditions`, `footSum`, `grouping`, `tree`, `mergeCells`, `deletedKey`, `addedKey`, `markAddedModified`, `stateKey`, `sheetName`, `pageBar`, `pageHeight`, `statusDisplay`, `pageNavigationCount`, `pageIcons`, `statusFormat`, `selectionSummary`, `defaultColumnWidth`, `minColumnWidth`, `resizable`, `emptyText`, `locale`, `messages`, `overscanRows`, `overscanColumns`, `headerAlign`, `align`, `rowClass`, `height`
+`columns`, `frozenColumns`, `rowHeight`, `headerRowHeight`, `lineNumber`, `lineNumberWidth`, `rowSelector`, `rowSelectorWidth`, `headerSelector`, `multipleSelect`, `selectedKey`, `disableSelectionKey`, `sortable`, `multiSort`, `sortCompare`, `remoteSort`, `cellSelect`, `editable`, `modifiedKey`, `undo`, `undoLimit`, `clipboard`, `filter`, `filterConditions`, `footSum`, `grouping`, `tree`, `mergeCells`, `deletedKey`, `addedKey`, `markAddedModified`, `stateKey`, `sheetName`, `pageBar`, `pageHeight`, `statusDisplay`, `pageNavigationCount`, `pageIcons`, `statusFormat`, `selectionSummary`, `defaultColumnWidth`, `minColumnWidth`, `resizable`, `columnReorder`, `emptyText`, `locale`, `messages`, `overscanRows`, `overscanColumns`, `headerAlign`, `align`, `rowClass`, `height`
 
 컬럼 옵션, 편집기 정의, 합계 칸, 트리 설정의 하위 키도 README의 각 절에 있다.
 
 ## 7. 이벤트
 
-소스에서 `emit`·`emitCancelable`로 부르는 이름은 24개이고 모두 README의 Events 절에 있다.
+소스에서 `emit`·`emitCancelable`로 부르는 이름은 25개이고 모두 README의 Events 절에 있다.
 `click`·`dblclick`은 `this.emit(type, ...)`으로 부르며, `type`은 `_bind`에서 넘기는 `"click"`·`"dblclick"`이다.
 
 | 이벤트 | 부르는 곳 | 인자 | README |
@@ -143,6 +143,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 | `rowsadd`, `rowsremove`, `rowsdelete` | grid.js `addRow`, `removeRows`, `deleteRows` | `{rows}` | 있음 |
 | `treetoggle` | grid.js `toggleNode` | `{row, collapsed}` | 있음 |
 | `columnresize` | grid.js `setColumnWidth` | `{index, column, width}` | 있음 |
+| `columnmove` | grid/layout.js `_applyColumnOrder` (moveColumn, setColumnOrder, 헤더 끌기, Alt+Shift+←/→) | `{column, from, to, order}` | 있음 |
 | `scroll` | grid.js `_bind` | `{top, left}` | 있음 |
 | `datachange` | grid.js `setData` | `{rows}` | 있음 |
 
