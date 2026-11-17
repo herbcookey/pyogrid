@@ -666,3 +666,38 @@ describe("헤더 끌기 (columnReorder)", () => {
     expect(keys(grid)).toEqual(["a", "b", "c", "d"]);
   });
 });
+
+describe("필터 팝업이 열린 채 순서가 바뀔 때", () => {
+  const popup = () => document.querySelector(".pyo-filter");
+  const setup = () => {
+    const grid = new PyoGrid(host, { columns: flat(), filter: true });
+    grid.setData([
+      { a: "a1", b: "b1", c: "c1", d: "d1" },
+      { a: "a2", b: "b2", c: "c2", d: "d2" },
+    ]);
+    return grid;
+  };
+
+  it("setColumnOrder로 화면 순서가 바뀌면 팝업을 닫는다. 순서가 그대로면 열어 둔다", () => {
+    const grid = setup();
+    grid.openFilter(1); // b
+    grid.setColumnOrder(["a", "b"]); // 그대로
+    expect(popup()).not.toBeNull();
+    grid.setColumnOrder(["c", "b", "a"]);
+    expect(popup()).toBeNull();
+  });
+
+  it("moveColumn 뒤에 다시 연 팝업은 같은 컬럼의 값을 보이고 그 컬럼에 적용한다", () => {
+    const grid = setup();
+    grid.openFilter(1); // b
+    grid.moveColumn("b", 3); // a c d b
+    expect(popup()).toBeNull();
+    grid.openFilter(3);
+    const labels = [...popup().querySelectorAll(".pyo-f-item")].map((l) => l.textContent.trim());
+    expect(labels).toEqual(["b1", "b2"]);
+    popup().querySelectorAll(".pyo-f-list input")[0].click(); // b1 해제
+    popup().querySelector(".pyo-f-ok").click();
+    expect(grid.getFilters()).toEqual({ b: ["b2"] });
+    expect(grid.el.head.querySelector('.pyo-hcell[data-key="b"] .pyo-filter-btn').classList.contains("pyo-filter-on")).toBe(true);
+  });
+});
