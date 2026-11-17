@@ -2,6 +2,20 @@
 
 All notable changes to pyogrid. Versions follow [semver](https://semver.org/); before 1.0, a minor release (0.x.0) may include breaking changes, which are listed first.
 
+## Unreleased
+
+No changes to behavior or the public API.
+
+### Documentation
+
+- README has a new [Stability](README.md#stability) section: what is covered between releases (documented options, methods, events, `messages` keys, CSS custom properties, and row marker keys), what is not (`_` members, DOM structure and `pyo-*` classes, undocumented exports, the shape of saved `localStorage` state), and the version rules before 1.0. README.ko.md has a summary.
+- `docs/api-surface.md` lists every export, method, property, option, and event, and whether the README documents it. `docs/roadmap-1.0.md` lists what has to happen before 1.0, including the undocumented exports planned for removal (none are removed yet).
+
+### Internal
+
+- `test/unit/api-surface.test.js` pins the names of the `src/index.js` exports, `PyoGrid` static properties, public `PyoGrid.prototype` methods, default option keys, and emitted events.
+- `deprecate(id, message)` in `src/util.js` logs a `console.warn` once per id. It is not exported and not used yet.
+
 ## 0.9.0
 
 ### Breaking changes
