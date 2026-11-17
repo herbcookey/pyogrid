@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { parseKeyPath, getValue, setValue, escapeHtml, toNumber, deepMerge } from "../../src/util.js";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { parseKeyPath, getValue, setValue, escapeHtml, toNumber, deepMerge, deprecate } from "../../src/util.js";
 import { money } from "../../src/core/formatters.js";
 
 describe("parseKeyPath / getValue / setValue", () => {
@@ -59,5 +59,31 @@ describe("money formatter", () => {
     ["", ""],
   ])("%s → %s", (v, expected) => {
     expect(f(v)).toBe(expected);
+  });
+});
+
+describe("deprecate", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("같은 id는 한 번만 console.warn으로 알린다", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    deprecate("test-once", "oldOption is deprecated. Use newOption instead.");
+    deprecate("test-once", "oldOption is deprecated. Use newOption instead.");
+    deprecate("test-once", "다른 문구여도 id가 같으면 다시 알리지 않는다");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith("[pyogrid] oldOption is deprecated. Use newOption instead.");
+  });
+
+  it("id가 다르면 따로 알린다", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    deprecate("test-a", "a is deprecated.");
+    deprecate("test-b", "b is deprecated.");
+    deprecate("test-a", "a is deprecated.");
+    expect(warn.mock.calls).toEqual([["[pyogrid] a is deprecated."], ["[pyogrid] b is deprecated."]]);
+  });
+
+  it("아무것도 돌려주지 않고 예외도 던지지 않는다", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(deprecate("test-return", "x")).toBeUndefined();
   });
 });

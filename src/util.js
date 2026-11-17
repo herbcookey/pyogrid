@@ -117,3 +117,18 @@ export function toNumber(v) {
   if (/^[-+]?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$/.test(s) || /^[-+]?\.\d+$/.test(s)) return Number(s.replace(/,/g, ""));
   return null;
 }
+
+/** deprecate로 이미 알린 id */
+const warned = new Set();
+
+/**
+ * 폐기 예정인 옵션·메서드를 쓸 때 console.warn으로 한 번 알린다. 같은 id는 페이지에서 한 번만 알린다.
+ * 내부용이며 index.js에서 내보내지 않는다. message는 영어로 쓰고, 무엇을 대신 쓰면 되는지 적는다.
+ * @param {string} id  폐기 항목을 가리키는 이름 (예: "option:oldName")
+ * @param {string} message
+ */
+export function deprecate(id, message) {
+  if (warned.has(id)) return;
+  warned.add(id);
+  console.warn("[pyogrid] " + message);
+}
