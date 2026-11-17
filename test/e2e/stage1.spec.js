@@ -82,10 +82,11 @@ test.describe("weekly 데모", () => {
     const head = grid.locator(".pyo-head");
     const y0 = (await box(head)).y;
     await grid.locator(".pyo-scroll").evaluate((el) => (el.scrollTop = 26 * 150));
-    await page.waitForTimeout(100);
+    // 행은 스크롤 다음 프레임에 다시 그린다. 느린 CI에서도 기다리도록 고정 시간 대신 그려질 때까지 본다
+    const firstRow = () => grid.locator(".pyo-body .pyo-row").evaluateAll((rows) => Math.min(...rows.map((r) => Number(r.dataset.row))));
+    await expect.poll(firstRow).toBeGreaterThanOrEqual(140);
     expect((await box(head)).y).toBe(y0);
-    const first = await grid.locator(".pyo-body .pyo-row").evaluateAll((rows) => Math.min(...rows.map((r) => Number(r.dataset.row))));
-    expect(first).toBeGreaterThanOrEqual(140);
+    await expect(grid.locator('.pyo-row[data-row="150"]')).toBeVisible();
     const visible150 = await box(grid.locator('.pyo-row[data-row="150"]'));
     expect(visible150.y).toBe(y0 + 26 * 2 + 1); // 헤더 2줄 + 헤더 아래 선 1px
   });

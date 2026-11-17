@@ -56,7 +56,12 @@ test("너비·정렬 기억: 새로 고쳐도 남고, 초기화하면 사라진�
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   const head = page.locator('#gridWrap .pyo-hcell[data-key="CHANNEL"]');
-  const w0 = (await head.boundingBox()).width;
+  // 새로 고친 뒤 헤더가 그려질 때까지 기다린다 (boundingBox는 기다리지 않고 null을 돌려준다)
+  const width = async () => {
+    await expect(head).toBeVisible();
+    return Math.round((await head.boundingBox()).width);
+  };
+  const w0 = await width();
   const h = await head.locator(".pyo-resizer").boundingBox();
   await page.mouse.move(h.x + 2, h.y + 5);
   await page.mouse.down();
@@ -66,13 +71,13 @@ test("너비·정렬 기억: 새로 고쳐도 남고, 초기화하면 사라진�
   await page.locator('#gridWrap .pyo-hcell[data-key="SHIP_QTY"] .pyo-hlabel').click();
   await page.reload();
   await expect(head).toHaveAttribute("data-key", "CHANNEL");
-  expect(Math.round((await head.boundingBox()).width)).toBe(Math.round(w0 + 40));
+  expect(await width()).toBe(w0 + 40);
   expect(await page.evaluate(() => window.grid.getSort())).toEqual([{ key: "SHIP_QTY", dir: "desc" }]);
   // 조회를 다시 눌러 컬럼을 새로 만들어도 남는다 (화면이 주차마다 setColumns를 부름)
   await page.locator("#btnNextWeek").click();
-  expect(Math.round((await head.boundingBox()).width)).toBe(Math.round(w0 + 40));
+  expect(await width()).toBe(w0 + 40);
   await page.locator("#btnResetState").click();
   await page.reload();
-  expect(Math.round((await head.boundingBox()).width)).toBe(Math.round(w0));
+  expect(await width()).toBe(w0);
   expect(await page.evaluate(() => window.grid.getSort())).toEqual([]);
 });
