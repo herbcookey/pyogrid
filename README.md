@@ -1037,6 +1037,7 @@ All demo data is made up.
 | `summary.html` | Group subtotals, tree, merged cells |
 | `paging.html` | Simulated server paging and sorting |
 | `big.html` | Performance check with 50,000 rows × 30 columns |
+| `input-log.html` | Logs the input box's keydown, composition, and input events in order, for checking IME input by hand (not linked from the demo menu). The checklist is in [docs/ime-manual-check.md](docs/ime-manual-check.md) (in Korean) |
 
 ## Browser support
 

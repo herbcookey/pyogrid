@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Input event log · PyoGrid demo</title>
+  <script src="shared/i18n.js"></script>
+  <link rel="stylesheet" href="shared/demo.css">
+  <link rel="stylesheet" href="../dist/pyogrid.css">
+  <style>
+    .il-bar { display: flex; gap: 8px; align-items: center; margin: 12px 0 8px; flex-wrap: wrap; }
+    .il-bar button { font: inherit; padding: 4px 12px; }
+    .il-env { font-size: 12px; color: #667085; word-break: break-all; }
+    .il-wrap { max-height: 420px; overflow: auto; border: 1px solid #dde2e8; }
+    .il-table { border-collapse: collapse; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; width: 100%; }
+    .il-table th, .il-table td { border-bottom: 1px solid #eef1f4; padding: 2px 8px; text-align: left; white-space: nowrap; }
+    .il-table th { position: sticky; top: 0; background: #f4f6f9; }
+    .il-table tr.il-keydown td:nth-child(2) { color: #2f6fd6; }
+    .il-table tr.il-composition td:nth-child(2) { color: #b54708; }
+    .il-table td.il-num { text-align: right; }
+  </style>
+</head>
+<body>
+<header class="d-top">
+  <a class="d-brand" href="index.html"><span class="d-logo" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>PyoGrid</a>
+  <nav class="d-nav" aria-label="Demos">
+    <a href="index.html"><span class="en">Demos</span><span class="ko">데모 목록</span></a>
+    <a href="weekly.html"><span class="en">Weekly</span><span class="ko">주간 현황</span></a>
+    <a href="editors.html"><span class="en">Editors</span><span class="ko">편집기</span></a>
+    <a href="summary.html"><span class="en">Totals &amp; tree</span><span class="ko">합계·트리</span></a>
+    <a href="paging.html"><span class="en">Paging</span><span class="ko">페이징</span></a>
+    <a href="big.html"><span class="en">50,000 rows</span><span class="ko">5만 행</span></a>
+  </nav>
+  <div class="d-links">
+    <a href="https://herbcookey.github.io/pyogrid/">Docs</a>
+    <a href="https://github.com/herbcookey/pyogrid">GitHub</a>
+  </div>
+  <div class="d-lang" aria-label="Language"><a data-lang-switch="en" href="?lang=en">EN</a><a data-lang-switch="ko" href="?lang=ko">한국어</a></div>
+</header>
+<main class="d-main">
+<div class="d-head">
+  <h1><span class="en">Input event log</span><span class="ko">입력 이벤트 기록</span></h1>
+  <p class="en">For checking IME input (Korean, Japanese, Chinese) by hand. Every keydown, composition, and input event on the grid's input box is listed in order, with what the grid did after it.</p>
+  <p class="ko">한글 같은 조합 입력을 손으로 확인하는 페이지입니다. 그리드 입력칸의 keydown, compositionstart, compositionend, input 이벤트를 순서대로 찍고, 그 뒤 그리드 상태를 함께 보여 줍니다.</p>
+</div>
+<ul class="d-tips en">
+  <li>Click a cell in the Text column, switch to a Korean input method, type a word, and press Enter (or Tab, or an arrow key) while the last syllable is still being composed.</li>
+  <li>The grid should save once and move once. "Δms" is the time since the previous event by <code>event.timeStamp</code>; "prevented" means the grid called <code>preventDefault()</code>.</li>
+  <li>Press <b>Copy log</b> and paste the result into the issue or the checklist (docs/ime-manual-check.md).</li>
+</ul>
+<ul class="d-tips ko">
+  <li>"글자" 컬럼의 셀을 누르고 한글 입력기로 바꾼 뒤, 낱말을 치고 마지막 글자를 조합하는 중에 Enter(또는 Tab, 방향키)를 누릅니다.</li>
+  <li>그리드는 한 번 저장하고 한 칸만 움직여야 합니다. "Δms"는 앞 이벤트와의 <code>event.timeStamp</code> 차이, "prevented"는 그리드가 <code>preventDefault()</code>를 불렀다는 뜻입니다.</li>
+  <li><b>기록 복사</b>를 눌러 이슈나 확인표(docs/ime-manual-check.md)에 붙여 넣으세요.</li>
+</ul>
+<div id="grid" style="height:240px; max-width: 760px;"></div>
+<div class="il-bar">
+  <button type="button" id="copy"><span class="en">Copy log</span><span class="ko">기록 복사</span></button>
+  <button type="button" id="clear"><span class="en">Clear</span><span class="ko">지우기</span></button>
+  <span id="status" role="status"></span>
+</div>
+<div class="il-env" id="env"></div>
+<div class="il-wrap">
+  <table class="il-table" aria-label="Input events">
+    <thead><tr><th>#</th><th>event</th><th>key</th><th>code</th><th>keyCode</th><th>isComposing</th><th>timeStamp</th><th>Δms</th><th>data</th><th>inputType</th><th>input value</th><th>prevented</th><th>after: editing</th><th>after: active</th><th>after pending key</th></tr></thead>
+    <tbody id="log"></tbody>
+  </table>
+</div>
+</main>
+<script src="../dist/pyogrid.js"></script>
+<script>
+  var L = DemoI18n.lang, T = DemoI18n.t;
+  document.title = T("Input event log · PyoGrid demo", "입력 이벤트 기록 · PyoGrid 데모");
+  var grid = new PyoGrid("#grid", {
+    locale: L,
+    lineNumber: true,
+    columns: [
+      { key: "text", label: T("Text", "글자"), width: 200, editor: { type: "text" } },
+      { key: "num", label: T("Number", "숫자"), width: 100, align: "right", editor: { type: "number" } },
+      { key: "kind", label: T("Select", "목록"), width: 140, editor: { type: "select", config: { options: [
+        { value: "A", text: T("Apple", "사과") }, { value: "B", text: T("Banana", "바나나") }, { value: "C", text: T("Cherry", "체리") }
+      ] } } },
+      { key: "memo", label: T("Read-only", "읽기 전용"), width: 160 }
+    ]
+  });
+  var data = [];
+  for (var i = 0; i < 20; i++) data.push({ text: "", num: "", kind: "", memo: T("row ", "행 ") + (i + 1) });
+  grid.setData(data);
+  grid.setRange(0, 0);
+  window.grid = grid;
+
+  var input = document.querySelector("#grid .pyo-input");
+  var tbody = document.getElementById("log");
+  var records = [];
+  var last = null;
+  var env = navigator.userAgent + " · PyoGrid " + PyoGrid.version;
+  document.getElementById("env").textContent = env;
+
+  var COLS = ["n", "type", "key", "code", "keyCode", "isComposing", "timeStamp", "delta", "data", "inputType", "value", "prevented", "editing", "active", "pending"];
+  function cellText(v) { return v === undefined || v === null ? "" : String(v); }
+  function activeText() { var r = grid.getRange(); return r ? r.active.r + "," + r.active.c : ""; }
+
+  // 그리드보다 먼저(캡처 단계) 원래 이벤트를 적고, 그리드가 처리한 뒤(버블 단계) 결과를 채운다
+  function record(e) {
+    if (e.target !== input) return;
+    var rec = {
+      n: records.length + 1,
+      type: e.type,
+      key: e.key, code: e.code, keyCode: e.keyCode,
+      isComposing: e.isComposing,
+      timeStamp: e.timeStamp.toFixed(1),
+      delta: last === null ? "" : (e.timeStamp - last).toFixed(1),
+      data: e.data, inputType: e.inputType,
+      value: "", prevented: "", editing: "", active: "", pending: ""
+    };
+    last = e.timeStamp;
+    records.push(rec);
+    var tr = document.createElement("tr");
+    tr.className = e.type === "keydown" ? "il-keydown" : /^composition/.test(e.type) ? "il-composition" : "";
+    rec.tr = tr;
+    e.__ilRecord = rec;
+    render(rec);
+    tbody.appendChild(tr);
+    tr.scrollIntoView({ block: "nearest" });
+  }
+  function after(e) {
+    var rec = e.__ilRecord;
+    if (!rec) return;
+    // 그리드가 이 이벤트를 처리한 바로 뒤의 상태
+    rec.value = input.value;
+    rec.prevented = e.defaultPrevented;
+    rec.editing = grid.isEditing;
+    rec.active = activeText();
+    // 조합 중에 누른 Enter·Tab·방향키는 compositionend 뒤 setTimeout(0)으로 처리된다. 그 결과를 따로 적는다
+    if (e.type === "compositionend") {
+      setTimeout(function () {
+        rec.pending = "editing " + grid.isEditing + ", active " + activeText();
+        render(rec);
+      }, 0);
+    }
+    render(rec);
+  }
+  function render(rec) {
+    rec.tr.innerHTML = "";
+    COLS.forEach(function (k) {
+      var td = document.createElement("td");
+      td.textContent = cellText(rec[k]);
+      if (k === "n" || k === "keyCode" || k === "timeStamp" || k === "delta") td.className = "il-num";
+      rec.tr.appendChild(td);
+    });
+  }
+  ["keydown", "compositionstart", "compositionend", "input"].forEach(function (t) {
+    document.addEventListener(t, record, true);
+    window.addEventListener(t, after, false);
+  });
+
+  function asText() {
+    var head = ["#", "event", "key", "code", "keyCode", "isComposing", "timeStamp", "dms", "data", "inputType", "input value", "prevented", "after editing", "after active", "after pending key"];
+    var lines = [env, head.join("\t")];
+    records.forEach(function (r) { lines.push(COLS.map(function (k) { return cellText(r[k]).replace(/\t|\n/g, " "); }).join("\t")); });
+    return lines.join("\n");
+  }
+  var statusEl = document.getElementById("status");
+  document.getElementById("copy").addEventListener("click", function () {
+    var text = asText();
+    var done = function () { statusEl.textContent = T("Copied " + records.length + " events", records.length + "개 이벤트를 복사했습니다"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(text); done(); });
+    } else { fallback(text); done(); }
+  });
+  function fallback(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    ta.remove();
+  }
+  document.getElementById("clear").addEventListener("click", function () {
+    records = [];
+    last = null;
+    tbody.innerHTML = "";
+    statusEl.textContent = "";
+    grid.focus();
+  });
+</script>
+</body>
+</html>
