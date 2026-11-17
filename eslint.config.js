@@ -36,7 +36,7 @@ export default [
   },
   {
     // ESLint를 넣을 때 이미 있던 지적. 코드를 고치지 않고 이 파일들만 경고로 둔다. 정리하면 이 블록을 지운다.
-    //   src/grid.js: 쓰지 않는 import sortRows
+    //   src/grid.js: JSDoc 타입에만 쓰는 import CellRange, FilterPopup (grid.d.ts가 이 이름으로 import하므로 typedef로 바꾸지 않는다)
     //   test/unit/grid.test.js: 쓰지 않는 콜백 인자 r
     files: ["src/grid.js", "test/unit/grid.test.js"],
     rules: { "no-unused-vars": ["warn", { caughtErrors: "none", argsIgnorePattern: "^_" }] },

@@ -2,22 +2,20 @@
 import { parseWidth } from "./core/columns.js";
 import { formatters } from "./core/formatters.js";
 import { CellRange } from "./core/range.js";
-import { navigationHtml, targetPage, statusData, defaultStatusHtml, summaryText } from "./features/pagebar.js";
+import { targetPage } from "./features/pagebar.js";
 import { Editing } from "./features/editing.js";
-import { computeMerge } from "./features/view.js";
-import { sumRowHtml } from "./features/summary.js";
 import { FilterPopup } from "./features/filter.js";
 import { exportXlsx, buildExportData } from "./features/excel.js";
 import { storageKey, loadState, saveState, removeState } from "./features/state.js";
 import { History } from "./features/history.js";
 import { resolveMessages } from "./core/locales.js";
 import { formatNumber, intlLocale } from "./features/pagebar.js";
-import { editorTypes, selectOptions, isChecked } from "./editors/types.js";
-import { escapeHtml, getValue, h, isFn, clamp, deepMerge } from "./util.js";
+import { getValue, h, deepMerge } from "./util.js";
 import * as gData from "./grid/data.js";
 import * as gSelection from "./grid/selection.js";
 import * as gValues from "./grid/values.js";
 import * as gLayout from "./grid/layout.js";
+import * as gRender from "./grid/render.js";
 
 /**
  * @template [Row=any]
@@ -898,16 +896,7 @@ export class PyoGrid {
    * @param {string} msg
    */
   _flash(msg) {
-    if (!this.options.pageBar) return;
-    clearTimeout(this._flashTimer);
-    this._flashing = true;
-    this.el.summary.textContent = msg;
-    this.el.summary.dataset.flash = "true";
-    this._flashTimer = setTimeout(() => {
-      this._flashing = false;
-      delete this.el.summary.dataset.flash;
-      this._scheduleSummary();
-    }, 2500);
+    gRender._flash(this, msg);
   }
 
   /** @returns {Row[]} 값이 바뀐 행 (setData 순서) */
@@ -1077,21 +1066,12 @@ export class PyoGrid {
 
   /** 보이는 행을 모두 다시 그린다 (데이터 값이 바뀌었을 때). */
   refresh() {
-    if (this._destroyed) return this;
-    this._measure();
-    const mc = this.options.mergeCells;
-    if (!mc) this._merge = new Map();
-    else if (this._mergeDirty || this._mergeRows !== this.rows || this._mergeLeaves !== this.leaves) {
-      // 병합 덩어리는 행 목록·컬럼·병합 컬럼 값이 바뀔 때만 다시 센다 (셀 하나 고칠 때마다 전체를 세지 않게)
-      this._merge = computeMerge(this.rows, this.leaves, mc === true ? true : mc);
-      this._mergeRows = this.rows;
-      this._mergeLeaves = this.leaves;
-      this._mergeDirty = false;
-    }
-    this._clearRows();
-    this._render();
-    this._renderFoot();
-    this._renderStatus();
+    // render.js가 쓰는 셀 병합 기억값의 타입을 이 자리에 선언한다 (.d.ts가 분할 전과 같게). 값은 그대로 다시 넣는다
+    const self = /** @type {any} */ (this);
+    this._mergeRows = /** @type {any[]} */ (self._mergeRows);
+    this._mergeLeaves = /** @type {import("./core/columns.js").LeafColumn[]} */ (self._mergeLeaves);
+    this._mergeDirty = /** @type {boolean} */ (self._mergeDirty);
+    gRender.refresh(this);
     return this;
   }
 
@@ -1131,12 +1111,7 @@ export class PyoGrid {
    * @param {number} index
    */
   refreshRow(index) {
-    const old = this._rowEls.get(index);
-    if (!old) return this;
-    const el = this._createRow(index);
-    old.replaceWith(el);
-    this._rowEls.set(index, el);
-    this._paintMerge();
+    gRender.refreshRow(this, index);
     return this;
   }
 
@@ -1403,20 +1378,7 @@ export class PyoGrid {
 
   /** 아래 합계 행(footSum) */
   _renderFoot() {
-    const fs = this.options.footSum;
-    const foot = this.el.foot;
-    if (!Array.isArray(fs) || !fs.length) {
-      if (foot.innerHTML) foot.innerHTML = "";
-      foot.hidden = true;
-      return;
-    }
-    foot.hidden = false;
-    const rh = this.options.rowHeight;
-    let html = "";
-    fs.forEach((cells, i) => {
-      html += `<div class="pyo-row pyo-foot-row" data-foot="${i}" style="height:${rh}px;width:${this.totalWidth}px">${sumRowHtml(this, cells, this.dataRows)}</div>`;
-    });
-    foot.innerHTML = html;
+    gRender._renderFoot(this);
   }
 
   /* ==================================================================
@@ -1424,29 +1386,7 @@ export class PyoGrid {
    * ================================================================ */
 
   _renderHeader() {
-    const o = this.options;
-    const rh = o.headerRowHeight;
-    const depth = this.headerDepth;
-    const fz = [];
-    const sc = [];
-    let ax = 0;
-    for (const a of this.aside) {
-      const inner = a.special === "rowSelector" && o.headerSelector ? '<span class="pyo-check" role="checkbox" aria-checked="false"></span>' : "";
-      fz.push(
-        `<div class="pyo-hcell pyo-aside pyo-al-center" data-special="${a.special}" style="left:${ax}px;top:0;width:${a.width}px;height:${depth * rh}px">${inner}</div>`,
-      );
-      ax += a.width;
-    }
-    const frozen = this.frozenCount;
-    for (const cell of this.headerCells) {
-      const end = cell.colStart + cell.colSpan; // 미포함
-      // 고정 경계를 걸치는 묶음 헤더는 두 조각으로 나눠 양쪽에 같은 제목을 보여 준다
-      if (cell.colStart < frozen) fz.push(this._headerCellHtml(cell, cell.colStart, Math.min(end, frozen), rh));
-      if (end > frozen) sc.push(this._headerCellHtml(cell, Math.max(cell.colStart, frozen), end, rh));
-    }
-    this.el.headFz.innerHTML = fz.join("");
-    this.el.headSc.innerHTML = sc.join("");
-    this._updateHeaderSelector();
+    gRender._renderHeader(this);
   }
 
   /**
@@ -1457,79 +1397,17 @@ export class PyoGrid {
    * @param {number} rh
    */
   _headerCellHtml(cell, from, to, rh) {
-    const left = this.leafX[from];
-    let width = 0;
-    for (let i = from; i < to; i++) width += this.widths[i];
-    const o = this.options;
-    const def = cell.def;
-    const isLeaf = cell.leafIndex !== undefined;
-    const align = def.headerAlign || o.headerAlign || (isLeaf ? null : "center");
-    let cls = "pyo-hcell" + (align ? " pyo-al-" + align : "") + (isLeaf ? "" : " pyo-hgroup");
-    if (def.headerClass) cls += " " + escapeHtml((isFn(def.headerClass) ? def.headerClass.call(def, def) : def.headerClass) || "");
-    let attrs = "";
-    let sortMark = "";
-    if (isLeaf) {
-      attrs = ` data-leaf="${cell.leafIndex}"` + (def.key !== undefined ? ` data-key="${escapeHtml(def.key)}"` : "");
-      if (this.isSortable(this.leaves[cell.leafIndex])) {
-        cls += " pyo-sortable";
-        const s = this.sort.find((x) => x.key === def.key);
-        attrs += ` aria-sort="${s ? (s.dir === "asc" ? "ascending" : "descending") : "none"}"`;
-        if (s) attrs += ` data-sort="${s.dir}"`;
-        sortMark = '<span class="pyo-sort-mark"></span>';
-      }
-      if (this.isFilterable(this.leaves[cell.leafIndex])) {
-        const on = this.isFilterActive() && this.filters.has(def.key);
-        cls += " pyo-filterable";
-        const filterLabel = escapeHtml(this.messages.filter);
-        sortMark += `<span class="pyo-filter-btn${on ? " pyo-filter-on" : ""}" data-filter="${cell.leafIndex}" role="button" aria-label="${filterLabel}" title="${filterLabel}"></span>`;
-      }
-    }
-    const resizer = isLeaf && o.resizable && def.resizable !== false ? `<span class="pyo-resizer" data-resize="${cell.leafIndex}"></span>` : "";
-    return (
-      `<div class="${cls}"${attrs} role="columnheader" style="left:${left}px;top:${cell.row * rh}px;width:${width}px;height:${cell.rowSpan * rh}px">` +
-      `<span class="pyo-hlabel">${def.html ? cell.label : escapeHtml(cell.label)}</span>${sortMark}${resizer}</div>`
-    );
+    return gRender._headerCellHtml(this, cell, from, to, rh);
   }
 
   /** 헤더 전체 선택 체크박스 상태: 선택 가능한 행이 모두 선택됐으면 체크 */
   _updateHeaderSelector() {
-    const box = this.el.headFz.querySelector('[data-special="rowSelector"] .pyo-check');
-    if (!box) return;
-    let any = false;
-    let all = true;
-    for (const r of this.rows) {
-      if (!this.isRowSelectable(r)) continue;
-      any = true;
-      if (!this.isRowSelected(r)) {
-        all = false;
-        break;
-      }
-    }
-    const on = any && all;
-    box.classList.toggle("pyo-checked", on);
-    box.setAttribute("aria-checked", on ? "true" : "false");
+    gRender._updateHeaderSelector(this);
   }
 
   /** @param {MouseEvent} e */
   _onHeaderClick(e) {
-    const t = /** @type {HTMLElement} */ (e.target);
-    if (!t || !t.closest) return;
-    if (t.closest(".pyo-resizer") || Date.now() - this._justResized < 300) return;
-    if (this.editing.active && !this.editing.commit()) this.editing.cancel();
-    const fb = /** @type {HTMLElement|null} */ (t.closest("[data-filter]"));
-    if (fb) {
-      this.openFilter(Number(fb.dataset.filter), fb);
-      return;
-    }
-    if (t.closest('[data-special="rowSelector"]')) {
-      if (!this.options.headerSelector || !this.options.multipleSelect) return;
-      const box = this.el.headFz.querySelector('[data-special="rowSelector"] .pyo-check');
-      this.selectAll(!(box && box.classList.contains("pyo-checked")));
-      return;
-    }
-    const cell = /** @type {HTMLElement|null} */ (t.closest(".pyo-hcell[data-leaf]"));
-    if (!cell) return;
-    this.toggleSort(Number(cell.dataset.leaf));
+    gRender._onHeaderClick(this, e);
   }
 
   /* ==================================================================
@@ -1537,53 +1415,11 @@ export class PyoGrid {
    * ================================================================ */
 
   _visibleRange() {
-    const o = this.options;
-    const s = this.el.scroll;
-    const rh = o.rowHeight;
-    const viewH = Math.max(0, this._vh - this._headerHeight - this._footHeight);
-    const n = this.rows.length;
-    const r0 = clamp(Math.floor(s.scrollTop / rh) - o.overscanRows, 0, Math.max(0, n - 1));
-    const r1 = clamp(Math.ceil((s.scrollTop + viewH) / rh) + o.overscanRows, 0, n) - 1;
-
-    // 스크롤 영역 컬럼 중 보이는 범위 (고정 컬럼은 항상 그린다)
-    const frozen = this.frozenCount;
-    const last = this.leaves.length - 1;
-    let c0 = frozen;
-    let c1 = last;
-    if (this._vw > 0 && frozen <= last) {
-      const leftEdge = s.scrollLeft;
-      const rightEdge = s.scrollLeft + Math.max(0, this._vw - this.fzWidth);
-      while (c0 < last && this.leafX[c0] + this.widths[c0] <= leftEdge) c0++;
-      c1 = c0;
-      while (c1 < last && this.leafX[c1 + 1] < rightEdge) c1++;
-      c0 = Math.max(frozen, c0 - o.overscanColumns);
-      c1 = Math.min(last, c1 + o.overscanColumns);
-    }
-    return { r0, r1, c0, c1 };
+    return gRender._visibleRange(this);
   }
 
   _render() {
-    if (this._destroyed) return;
-    const next = this._visibleRange();
-    const cur = this._range;
-    if (next.c0 !== cur.c0 || next.c1 !== cur.c1) this._clearRows();
-    for (const [i, el] of this._rowEls) {
-      if (i < next.r0 || i > next.r1) {
-        el.remove();
-        this._rowEls.delete(i);
-      }
-    }
-    this._range = next;
-    if (next.r1 < next.r0) return;
-    const frag = document.createDocumentFragment();
-    for (let i = next.r0; i <= next.r1; i++) {
-      if (this._rowEls.has(i)) continue;
-      const el = this._createRow(i);
-      this._rowEls.set(i, el);
-      frag.append(el);
-    }
-    this.el.body.append(frag);
-    this._paintMerge();
+    gRender._render(this);
   }
 
   /**
@@ -1592,81 +1428,21 @@ export class PyoGrid {
    * (셀에는 늘 글자가 들어 있고 class로 숨기므로 행을 다시 만들지 않는다)
    */
   _paintMerge() {
-    if (!this._merge.size || !this._rowEls.size) return;
-    const rh = this.options.rowHeight;
-    const s = this.el.scroll;
-    const viewH = Math.max(rh, this._vh - this._headerHeight - this._footHeight);
-    const v0 = Math.floor(s.scrollTop / rh);
-    const v1 = Math.max(v0, Math.ceil((s.scrollTop + viewH) / rh) - 1);
-    for (const [c, mg] of this._merge) {
-      for (const [r, el] of this._rowEls) {
-        const st = mg.start[r];
-        const en = mg.end[r];
-        if (st === en) continue;
-        const cell = el.querySelector(`.pyo-cell[data-c="${c}"]`);
-        if (!cell) continue;
-        const a = Math.max(st, v0);
-        const b = Math.min(en, v1);
-        const label = a <= b ? a + ((b - a) >> 1) : st + ((en - st) >> 1);
-        cell.classList.toggle("pyo-merge-hide", r !== label);
-      }
-    }
+    gRender._paintMerge(this);
   }
 
   _clearRows() {
-    for (const el of this._rowEls.values()) el.remove();
-    this._rowEls.clear();
-    this._range = { r0: 0, r1: -1, c0: -1, c1: -1 };
+    gRender._clearRows(this);
   }
 
   /** @param {number} index */
   _rowClassName(index) {
-    const o = this.options;
-    const row = this.rows[index];
-    if (row.__isGrouping) return "pyo-row pyo-group-row pyo-group-depth-" + (row.__depth || 0);
-    let cls = "pyo-row " + (index % 2 ? "pyo-odd" : "pyo-even");
-    if (this.isRowSelected(row)) cls += " pyo-selected";
-    if (!this.isRowSelectable(row)) cls += " pyo-unselectable";
-    if (o.rowClass) {
-      const extra = isFn(o.rowClass) ? o.rowClass.call(this, row, index) : o.rowClass;
-      if (extra) cls += " " + extra;
-    }
-    return cls;
+    return gRender._rowClassName(this, index);
   }
 
   /** @param {number} index */
   _createRow(index) {
-    const o = this.options;
-    const row = this.rows[index];
-    const el = document.createElement("div");
-    el.className = this._rowClassName(index);
-    el.setAttribute("role", "row");
-    el.setAttribute("aria-selected", this.isRowSelected(row) ? "true" : "false");
-    el.dataset.row = String(index);
-    el.style.top = index * o.rowHeight + "px";
-    el.style.height = o.rowHeight + "px";
-    el.style.width = this.totalWidth + "px";
-
-    if (row.__isGrouping) {
-      // 그룹 합계 행: grouping.columns를 칸 정의로 그린다 (가로 가상 스크롤 없이 전부)
-      el.innerHTML = sumRowHtml(this, (this.options.grouping && this.options.grouping.columns) || [], row.__groupingList, row.__groupingBy);
-      return el;
-    }
-
-    let fz = "";
-    for (const a of this.aside) fz += this._asideCellHtml(a, index);
-    for (let c = 0; c < this.frozenCount; c++) fz += this._cellHtml(c, row, index);
-
-    const r = this._range;
-    const c0 = r.c0 < 0 ? this.frozenCount : r.c0;
-    const c1 = r.c1 < 0 ? this.leaves.length - 1 : r.c1;
-    let sc = "";
-    for (let c = c0; c <= c1; c++) sc += this._cellHtml(c, row, index);
-    const pad = c0 < this.leaves.length ? this.leafX[c0] || 0 : 0;
-    el.innerHTML =
-      `<div class="pyo-fz" style="width:${this.fzWidth}px">${fz}</div>` +
-      `<div class="pyo-sc" style="width:${this.scWidth}px;padding-left:${pad}px">${sc}</div>`;
-    return el;
+    return gRender._createRow(this, index);
   }
 
   /**
@@ -1674,9 +1450,7 @@ export class PyoGrid {
    * @param {number} index
    */
   _asideCellHtml(a, index) {
-    const ln = this._lineNo ? this._lineNo[index] : index;
-    const inner = a.special === "lineNumber" ? String((ln >= 0 ? ln : index) + 1) : '<span class="pyo-check"></span>';
-    return `<div class="pyo-cell pyo-aside pyo-al-center" data-special="${a.special}" style="width:${a.width}px">${inner}</div>`;
+    return gRender._asideCellHtml(this, a, index);
   }
 
   /**
@@ -1684,20 +1458,7 @@ export class PyoGrid {
    * @param {any} row
    */
   _treeControlHtml(row) {
-    const t = this.options.tree || {};
-    const m = this._treeMeta && this._treeMeta.get(row);
-    if (!m) return "";
-    const icons = { openedArrow: "▾", collapsedArrow: "▸", groupIcon: "⊚", collapsedGroupIcon: "⊚", itemIcon: "⊙", ...(t.icons || {}) };
-    const indent = (t.indentWidth ?? 10) * m.depth;
-    const aw = t.arrowWidth ?? 15;
-    const iw = t.iconWidth ?? 18;
-    const collapsed = !!row[t.collapseKey || "collapse"];
-    const has = m.children.length > 0;
-    const arrow = has
-      ? `<span class="pyo-tree-arrow" data-tree-toggle role="button" aria-expanded="${!collapsed}" style="width:${aw}px">${collapsed ? icons.collapsedArrow : icons.openedArrow}</span>`
-      : `<span class="pyo-tree-arrow" style="width:${aw}px"></span>`;
-    const icon = has ? (collapsed ? icons.collapsedGroupIcon : icons.groupIcon) : icons.itemIcon;
-    return `<span class="pyo-tree-indent" style="width:${indent}px"></span>${arrow}${icon ? `<span class="pyo-tree-icon" style="width:${iw}px">${icon}</span>` : ""}`;
+    return gRender._treeControlHtml(this, row);
   }
 
   /**
@@ -1710,28 +1471,7 @@ export class PyoGrid {
    * @param {boolean} [plain] 체크박스도 글자로 (내보내기용)
    */
   _cellContent(c, row, index, value, ctx, plain = false) {
-    const def = this.leaves[c].def;
-    const ed = def.editor;
-    const edType = ed && this.options.editable ? editorTypes[ed.type] : null;
-    const fn = def.formatter ? (isFn(def.formatter) ? def.formatter : formatters[/** @type {string} */ (def.formatter)]) : null;
-    if (edType && edType.kind === "toggle" && this.editing.editable(index, c)) {
-      // 체크박스 편집기는 셀 안에 바로 그린다 (formatter보다 우선). 편집할 수 없으면 값 그대로.
-      if (plain) return escapeHtml(value);
-      const on = isChecked(value, ed.config);
-      return `<span class="pyo-check pyo-cb${on ? " pyo-checked" : ""}" role="checkbox" aria-checked="${on}"></span>`;
-    }
-    if (fn) {
-      // formatter 결과는 글자로 넣는다. 컬럼에 html: true를 준 경우에만 HTML로 넣는다 (서버 글자로 스크립트가 들어오지 않게)
-      const out = fn.call(ctx, ctx);
-      const s = out === undefined || out === null ? "" : String(out);
-      return def.html ? s : escapeHtml(s);
-    }
-    if (edType && edType.kind === "list") {
-      // formatter가 없는 선택 목록은 값 대신 항목 글자를 보여 준다
-      const opt = selectOptions(ed.config).find((o) => String(o.value) === String(value));
-      return escapeHtml(opt ? opt.text : value);
-    }
-    return escapeHtml(value);
+    return gRender._cellContent(this, c, row, index, value, ctx, plain);
   }
 
   /**
@@ -1740,11 +1480,7 @@ export class PyoGrid {
    * @param {number} c 잎 컬럼 순번
    */
   cellText(r, c) {
-    const row = this.rows[r];
-    const def = this.leaves[c].def;
-    const value = getValue(row, def.key);
-    const ctx = { value, row, item: row, key: def.key, rowIndex: r, dindex: r, column: def, grid: this };
-    return this._cellContent(c, row, r, value, ctx, true);
+    return gRender.cellText(this, r, c);
   }
 
   /**
@@ -1754,35 +1490,7 @@ export class PyoGrid {
    * @param {number} index
    */
   _cellHtml(c, row, index) {
-    const def = this.leaves[c].def;
-    const value = getValue(row, def.key);
-    const ctx = { value, row, item: row, key: def.key, rowIndex: index, dindex: index, column: def, grid: this };
-    let content = this._cellContent(c, row, index, value, ctx);
-    const align = def.align || this.options.align;
-    let cls = "pyo-cell" + (align ? " pyo-al-" + align : "") + (def.multiLine ? " pyo-multiline" : "");
-    if (def.treeControl && this._treeMeta) {
-      cls += " pyo-tree-cell";
-      content = this._treeControlHtml(row) + `<span class="pyo-tree-text">${content}</span>`;
-    }
-    const mg = this._merge.get(c);
-    if (mg && mg.start[index] !== mg.end[index]) {
-      // 합친 덩어리: 안쪽 가로선을 지우고, 글자는 _paintMerge가 보이는 부분 가운데 행에만 보인다
-      const s = mg.start[index];
-      const e = mg.end[index];
-      cls += " pyo-merged" + (index !== e ? " pyo-merge-cont" : "");
-      if (index !== s + ((e - s) >> 1)) cls += " pyo-merge-hide";
-      content = `<span class="pyo-merge-text">${content}</span>`;
-    }
-    const g = this.range;
-    if (g && g.contains(index, c)) {
-      cls += " pyo-in-range";
-      if (g.active.r === index && g.active.c === c) cls += " pyo-active";
-    }
-    if (def.cellClass) {
-      const extra = isFn(def.cellClass) ? def.cellClass.call(ctx, ctx) : def.cellClass;
-      if (extra) cls += " " + escapeHtml(extra);
-    }
-    return `<div class="${cls}" role="gridcell" data-c="${c}" style="width:${this.widths[c]}px">${content}</div>`;
+    return gRender._cellHtml(this, c, row, index);
   }
 
   /* ==================================================================
@@ -1850,28 +1558,14 @@ export class PyoGrid {
    * ================================================================ */
 
   _renderPageNav() {
-    if (!this.options.pageBar) return;
-    this.el.nav.innerHTML = this.page ? navigationHtml(this.page, this.options.pageIcons || {}, this.options.pageNavigationCount) : "";
-    this._renderStatus();
+    gRender._renderPageNav(this);
   }
 
   _renderStatus() {
-    const o = this.options;
-    if (!o.pageBar) return;
-    if (!o.statusDisplay) {
-      this.el.status.innerHTML = "";
-      return;
-    }
-    const s = this.el.scroll;
-    const rh = o.rowHeight;
-    const first = Math.floor(s.scrollTop / rh);
-    const visible = Math.max(1, Math.ceil(Math.max(0, this._vh - this._headerHeight - this._footHeight) / rh));
-    const data = statusData(Math.min(first, Math.max(0, this.rows.length - 1)), visible, this.rows.length, this.page, this._intl);
-    const html = isFn(o.statusFormat) ? o.statusFormat.call(this, data) : defaultStatusHtml(data, this.messages);
-    if (this._lastStatus !== html) {
-      this._lastStatus = html;
-      this.el.status.innerHTML = html;
-    }
+    // render.js가 쓰는 마지막 상태 문구의 타입을 이 자리에 선언한다 (.d.ts가 분할 전과 같게). 값은 그대로 다시 넣는다
+    const self = /** @type {any} */ (this);
+    this._lastStatus = self._lastStatus;
+    gRender._renderStatus(this);
   }
 
   /** @param {MouseEvent} e */
@@ -1885,12 +1579,7 @@ export class PyoGrid {
   }
 
   _scheduleSummary() {
-    if (!this.options.selectionSummary || !this.options.pageBar) return;
-    clearTimeout(this._summaryTimer);
-    this._summaryTimer = setTimeout(() => {
-      if (this._destroyed || this._flashing) return;
-      this.el.summary.textContent = summaryText(this.getSelectionSummary(), this.messages, this._intl);
-    }, 30);
+    gRender._scheduleSummary(this);
   }
 
   /* ==================================================================
