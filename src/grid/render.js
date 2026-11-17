@@ -7,6 +7,7 @@ import { computeMerge } from "../features/view.js";
 import { sumRowHtml } from "../features/summary.js";
 import { editorTypes, selectOptions, isChecked } from "../editors/types.js";
 import { escapeHtml, getValue, isFn, clamp } from "../util.js";
+import { colAttrs, rowIndex, footRowIndex, activeCellId, updateCounts, updateActiveDescendant } from "./a11y.js";
 
 /**
  * @template [Row=any]
@@ -35,6 +36,7 @@ export function refresh(grid) {
   _render(grid);
   _renderFoot(grid);
   _renderStatus(grid);
+  updateCounts(grid);
   return grid;
 }
 
@@ -51,6 +53,7 @@ export function refreshRow(grid, index) {
   old.replaceWith(el);
   grid._rowEls.set(index, el);
   _paintMerge(grid);
+  updateActiveDescendant(grid);
   return grid;
 }
 
@@ -71,7 +74,7 @@ export function _renderFoot(grid) {
   const rh = grid.options.rowHeight;
   let html = "";
   fs.forEach((cells, i) => {
-    html += `<div class="pyo-row pyo-foot-row" data-foot="${i}" style="height:${rh}px;width:${grid.totalWidth}px">${sumRowHtml(grid, cells, grid.dataRows)}</div>`;
+    html += `<div class="pyo-row pyo-foot-row" role="row" aria-rowindex="${footRowIndex(grid, i)}" data-foot="${i}" style="height:${rh}px;width:${grid.totalWidth}px">${sumRowHtml(grid, cells, grid.dataRows)}</div>`;
   });
   foot.innerHTML = html;
 }
@@ -85,26 +88,37 @@ export function _renderHeader(grid) {
   const o = grid.options;
   const rh = o.headerRowHeight;
   const depth = grid.headerDepth;
-  const fz = [];
-  const sc = [];
+  // 헤더 칸은 고정·스크롤 두 상자에 절대 위치로 놓인다. 상자 안에 줄마다 크기 없는 role=row를 두고 그 줄의 칸을 넣는다.
+  // 이 줄 요소는 위치를 갖지 않아 칸의 기준 상자는 그대로 상자다 (배치가 바뀌지 않는다). 그래서 고정 칸이 있으면
+  // 한 헤더 줄이 role=row 둘(고정 쪽, 스크롤 쪽)로 나뉘고, 둘은 같은 aria-rowindex를 갖는다.
+  /** @type {string[][]} 줄마다 고정 쪽 칸 */
+  const fz = Array.from({ length: depth }, () => []);
+  /** @type {string[][]} 줄마다 스크롤 쪽 칸 */
+  const sc = Array.from({ length: depth }, () => []);
   let ax = 0;
-  for (const a of grid.aside) {
-    const inner = a.special === "rowSelector" && o.headerSelector ? '<span class="pyo-check" role="checkbox" aria-checked="false"></span>' : "";
-    fz.push(
-      `<div class="pyo-hcell pyo-aside pyo-al-center" data-special="${a.special}" style="left:${ax}px;top:0;width:${a.width}px;height:${depth * rh}px">${inner}</div>`,
+  grid.aside.forEach((a, k) => {
+    const label = a.special === "rowSelector" && o.headerSelector ? ` aria-label="${escapeHtml(grid.messages.selectAll)}"` : "";
+    const inner = a.special === "rowSelector" && o.headerSelector ? `<span class="pyo-check" role="checkbox" aria-checked="false"${label}></span>` : "";
+    const span = depth > 1 ? ` aria-rowspan="${depth}"` : "";
+    fz[0].push(
+      `<div class="pyo-hcell pyo-aside pyo-al-center" role="columnheader" aria-colindex="${k + 1}"${span} data-special="${a.special}" style="left:${ax}px;top:0;width:${a.width}px;height:${depth * rh}px">${inner}</div>`,
     );
     ax += a.width;
-  }
+  });
   const frozen = grid.frozenCount;
   for (const cell of grid.headerCells) {
     const end = cell.colStart + cell.colSpan; // 미포함
     // 고정 경계를 걸치는 묶음 헤더는 두 조각으로 나눠 양쪽에 같은 제목을 보여 준다
-    if (cell.colStart < frozen) fz.push(_headerCellHtml(grid, cell, cell.colStart, Math.min(end, frozen), rh));
-    if (end > frozen) sc.push(_headerCellHtml(grid, cell, Math.max(cell.colStart, frozen), end, rh));
+    if (cell.colStart < frozen) fz[cell.row].push(_headerCellHtml(grid, cell, cell.colStart, Math.min(end, frozen), rh));
+    if (end > frozen) sc[cell.row].push(_headerCellHtml(grid, cell, Math.max(cell.colStart, frozen), end, rh));
   }
-  grid.el.headFz.innerHTML = fz.join("");
-  grid.el.headSc.innerHTML = sc.join("");
+  // 칸이 없는 줄은 만들지 않는다 (빈 상자는 :empty로 그림자를 끈다)
+  const rows = (/** @type {string[][]} */ levels) =>
+    levels.map((cells, level) => (cells.length ? `<div class="pyo-hrow" role="row" aria-rowindex="${level + 1}">${cells.join("")}</div>` : "")).join("");
+  grid.el.headFz.innerHTML = rows(fz);
+  grid.el.headSc.innerHTML = rows(sc);
   _updateHeaderSelector(grid);
+  updateCounts(grid);
 }
 
 /**
@@ -146,7 +160,7 @@ export function _headerCellHtml(grid, cell, from, to, rh) {
   }
   const resizer = isLeaf && o.resizable && def.resizable !== false ? `<span class="pyo-resizer" data-resize="${cell.leafIndex}"></span>` : "";
   return (
-    `<div class="${cls}"${attrs} role="columnheader" style="left:${left}px;top:${cell.row * rh}px;width:${width}px;height:${cell.rowSpan * rh}px">` +
+    `<div class="${cls}"${attrs} role="columnheader"${colAttrs(grid, from, to)}${cell.rowSpan > 1 ? ` aria-rowspan="${cell.rowSpan}"` : ""} style="left:${left}px;top:${cell.row * rh}px;width:${width}px;height:${cell.rowSpan * rh}px">` +
     `<span class="pyo-hlabel">${def.html ? cell.label : escapeHtml(cell.label)}</span>${sortMark}${resizer}</div>`
   );
 }
@@ -264,6 +278,7 @@ export function _render(grid) {
   }
   grid.el.body.append(frag);
   _paintMerge(grid);
+  updateActiveDescendant(grid);
 }
 
 /**
@@ -336,6 +351,7 @@ export function _createRow(grid, index) {
   const el = document.createElement("div");
   el.className = _rowClassName(grid, index);
   el.setAttribute("role", "row");
+  el.setAttribute("aria-rowindex", String(rowIndex(grid, index)));
   el.setAttribute("aria-selected", grid.isRowSelected(row) ? "true" : "false");
   el.dataset.row = String(index);
   el.style.top = index * o.rowHeight + "px";
@@ -376,7 +392,7 @@ export function _createRow(grid, index) {
 export function _asideCellHtml(grid, a, index) {
   const ln = grid._lineNo ? grid._lineNo[index] : index;
   const inner = a.special === "lineNumber" ? String((ln >= 0 ? ln : index) + 1) : '<span class="pyo-check"></span>';
-  return `<div class="pyo-cell pyo-aside pyo-al-center" data-special="${a.special}" style="width:${a.width}px">${inner}</div>`;
+  return `<div class="pyo-cell pyo-aside pyo-al-center" role="gridcell" aria-colindex="${grid.aside.indexOf(a) + 1}" data-special="${a.special}" style="width:${a.width}px">${inner}</div>`;
 }
 
 /**
@@ -422,7 +438,7 @@ export function _cellContent(grid, c, row, index, value, ctx, plain = false) {
     // 체크박스 편집기는 셀 안에 바로 그린다 (formatter보다 우선). 편집할 수 없으면 값 그대로.
     if (plain) return escapeHtml(value);
     const on = isChecked(value, ed.config);
-    return `<span class="pyo-check pyo-cb${on ? " pyo-checked" : ""}" role="checkbox" aria-checked="${on}"></span>`;
+    return `<span class="pyo-check pyo-cb${on ? " pyo-checked" : ""}" role="checkbox" aria-checked="${on}" aria-label="${escapeHtml(columnName(def))}"></span>`;
   }
   if (fn) {
     // formatter 결과는 글자로 넣는다. 컬럼에 html: true를 준 경우에만 HTML로 넣는다 (서버 글자로 스크립트가 들어오지 않게)
@@ -482,15 +498,19 @@ export function _cellHtml(grid, c, row, index) {
     content = `<span class="pyo-merge-text">${content}</span>`;
   }
   const g = grid.range;
+  let id = "";
   if (g && g.contains(index, c)) {
     cls += " pyo-in-range";
-    if (g.active.r === index && g.active.c === c) cls += " pyo-active";
+    if (g.active.r === index && g.active.c === c) {
+      cls += " pyo-active";
+      id = ` id="${activeCellId(grid, index, c)}"`;
+    }
   }
   if (def.cellClass) {
     const extra = isFn(def.cellClass) ? def.cellClass.call(ctx, ctx) : def.cellClass;
     if (extra) cls += " " + escapeHtml(extra);
   }
-  return `<div class="${cls}" role="gridcell" data-c="${c}" style="width:${grid.widths[c]}px">${content}</div>`;
+  return `<div class="${cls}"${id} role="gridcell" aria-colindex="${grid.aside.length + c + 1}" data-c="${c}" style="width:${grid.widths[c]}px">${content}</div>`;
 }
 
 /**
@@ -559,4 +579,14 @@ export function _flash(grid, msg) {
     delete grid.el.summary.dataset.flash;
     _scheduleSummary(grid);
   }, 2500);
+}
+
+/**
+ * 스크린 리더에 읽힐 컬럼 이름: label(html이면 태그를 뺀 글자), 없으면 key
+ * @param {import("../grid.js").ColumnDef} def
+ * @returns {string}
+ */
+function columnName(def) {
+  if (def.label === undefined || def.label === null || def.label === "") return def.key === undefined ? "" : String(def.key);
+  return def.html ? String(def.label).replace(/<[^>]*>/g, "") : String(def.label);
 }

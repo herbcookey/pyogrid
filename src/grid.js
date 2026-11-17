@@ -1190,9 +1190,10 @@ export class PyoGrid {
     const t = this.target;
     t.innerHTML = "";
     t.classList.add("pyo-host");
-    const root = h("div", "pyo", { "data-pyo": this.id, role: "grid" });
+    const root = h("div", "pyo", { "data-pyo": this.id });
     const scroll = h("div", "pyo-scroll");
-    const canvas = h("div", "pyo-canvas");
+    // role=grid는 헤더·본문·합계 행만 담은 canvas에 둔다. 입력칸·안내 문구·아래 바는 grid의 자식이 될 수 없다 (ARIA)
+    const canvas = h("div", "pyo-canvas", { role: "grid" });
     const head = h("div", "pyo-head", { role: "rowgroup" });
     const headFz = h("div", "pyo-head-fz");
     const headSc = h("div", "pyo-head-sc");

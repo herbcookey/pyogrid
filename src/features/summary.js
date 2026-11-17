@@ -2,6 +2,7 @@
 import { collectors } from "./view.js";
 import { formatters } from "../core/formatters.js";
 import { isFn, escapeHtml } from "../util.js";
+import { colAttrs } from "../grid/a11y.js";
 
 /**
  * 합계 행(footSum)과 그룹 합계 행의 칸 정의:
@@ -57,13 +58,13 @@ function sumCellRaw(cell, list, groupBy) {
 export function sumRowHtml(g, cells, list, groupBy) {
   let fz = "";
   let sc = "";
-  for (const a of g.aside) fz += `<div class="pyo-cell pyo-aside pyo-sum-cell" style="width:${a.width}px"></div>`;
+  g.aside.forEach((a, k) => (fz += `<div class="pyo-cell pyo-aside pyo-sum-cell" role="gridcell" aria-colindex="${k + 1}" style="width:${a.width}px"></div>`));
   const n = g.leaves.length;
   let c = 0;
   const part = (from, to, html, align, extra) => {
     let w = 0;
     for (let i = from; i < to; i++) w += g.widths[i];
-    return `<div class="pyo-cell pyo-sum-cell${align ? " pyo-al-" + align : ""}${extra ? " " + escapeHtml(extra) : ""}" data-c="${from}" style="width:${w}px">${html}</div>`;
+    return `<div class="pyo-cell pyo-sum-cell${align ? " pyo-al-" + align : ""}${extra ? " " + escapeHtml(extra) : ""}" role="gridcell"${colAttrs(g, from, to)} data-c="${from}" style="width:${w}px">${html}</div>`;
   };
   for (const cell of cells || []) {
     if (c >= n) break;

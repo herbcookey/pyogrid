@@ -3,6 +3,7 @@ import { editorTypes, selectOptions, isChecked, checkboxValue, sameValue } from 
 import { Dropdown, Calendar } from "../editors/popups.js";
 import { getValue, isFn, clamp } from "../util.js";
 import { headerHeight, viewportHeight } from "../grid/layout.js";
+import { updateActiveDescendant } from "../grid/a11y.js";
 
 /** 조합을 끝낸 뒤 같은 키가 다시 오면 무시하는 시간 (ms, 이벤트 timeStamp 기준) */
 const SUPPRESS_MS = 80;
@@ -137,6 +138,8 @@ export class Editing {
       }
     }
     this.edit = { r, c, key: info.key, def: info.def, type: info.type, cfg: info.cfg, mode, original: value, popup: null, attrs, initialText: null };
+    // 편집 중에는 입력칸 자체를 읽게 활성 칸 가리키기를 뗀다
+    updateActiveDescendant(g);
     const root = g.el.root;
     root.classList.add("pyo-editing");
     input.dataset.editor = info.def.editor.type;
@@ -244,6 +247,7 @@ export class Editing {
     if (e) for (const a of e.attrs) input.removeAttribute(a);
     this.edit = null;
     this._pending = null;
+    updateActiveDescendant(this.grid);
     input.classList.remove("pyo-input-on", "pyo-invalid");
     input.removeAttribute("aria-invalid");
     input.style.width = "";

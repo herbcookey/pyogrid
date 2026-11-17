@@ -3,6 +3,7 @@
 // PyoGrid의 메서드 구현. 공개 메서드와 JSDoc 설명은 grid.js의 클래스에 있고, 클래스는 여기 함수를 부르기만 한다.
 import { CellRange } from "../core/range.js";
 import { getValue, clamp, toNumber } from "../util.js";
+import { activeCellId, updateActiveDescendant } from "./a11y.js";
 
 /**
  * @template [Row=any]
@@ -350,10 +351,14 @@ export function _paintRange(grid) {
       const cell = /** @type {HTMLElement} */ (cells[k]);
       const c = Number(cell.dataset.c);
       const inR = !!g && g.contains(r, c);
+      const act = inR && g.active.r === r && g.active.c === c;
       cell.classList.toggle("pyo-in-range", inR);
-      cell.classList.toggle("pyo-active", inR && g.active.r === r && g.active.c === c);
+      cell.classList.toggle("pyo-active", act);
+      if (act) cell.id = activeCellId(grid, r, c);
+      else if (cell.id) cell.removeAttribute("id");
     }
   }
+  updateActiveDescendant(grid);
 }
 
 /**
