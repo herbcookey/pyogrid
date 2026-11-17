@@ -560,7 +560,7 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | `getDeletedRows()` | Deleted rows that existed before (send these as deletes) |
 | `getAddedRows()` | Rows added with `addRow` since the last save (send these as inserts). They are also in `getModifiedRows()` |
 | `getModifiedRows()` | Rows that changed or were added. A row drops out once every cell is back to its original value (for example, after undo) |
-| `getChanges()` | What to send when saving: `{added, modified, deleted}`. Each array holds shallow copies of the rows with the grid's marker keys removed (the property names in `selectedKey`, `modifiedKey`, `addedKey`, and `deletedKey`). `modified` leaves out added rows. The row objects themselves are not changed. Because the copies are shallow, nested objects and arrays are shared with the original rows |
+| `getChanges()` | What to send when saving: `{added, modified, deleted}`. Each array holds shallow copies of the rows with the grid's marker keys removed (the property names in `selectedKey`, `modifiedKey`, `addedKey`, and `deletedKey`). `modified` leaves out added rows. A value still being edited is not included; call `commitEdit()` first. The row objects themselves are not changed. Because the copies are shallow, nested objects and arrays are shared with the original rows |
 | `cleanRow(row)` | A shallow copy of one row with the same marker keys removed. Works for rows that aren't in the grid |
 | `clearModified(rows?)` | Clear the modified and added flags (all rows if `rows` is omitted). Call after saving. Rows that lose the added flag follow header filters again |
 | `clearDeleted()` | Clear the deleted-row list |
@@ -866,7 +866,12 @@ A typical save button:
 
 ```js
 function save() {
-  if (!grid.commitEdit()) return;               // stop if the cell being edited is invalid
+  // A value still being typed into a cell isn't in the row yet. Commit it first.
+  if (!grid.commitEdit()) {
+    // The value is invalid (for example, text in a number cell): the cell stays in edit mode with a red border
+    grid.focus();
+    return;
+  }
   // added: rows added with addRow (inserts), modified: changed rows (updates), deleted: removed rows (deletes)
   var changes = grid.getChanges();              // copies without __selected__, __modified__, __added__, __deleted__
   return fetch("/api/save", {
@@ -885,6 +890,8 @@ document.getElementById("btnDelete").onclick = function () {
   grid.deleteRows(grid.getSelectedRows());
 };
 ```
+
+Call `commitEdit()` before `getChanges()`. While a cell is being edited, the typed value is only in the editor, not in the row, so `getChanges()` (and `getModifiedRows()`) don't include it. `commitEdit()` saves it to the row and returns `true`, or returns `false` and keeps editing if the value is invalid; don't save in that case.
 
 The rows in `getChanges()` are shallow copies: top-level properties are copied, but nested objects and arrays (`row.meta`, `row.items`) are the same objects as in the grid. Don't change those in the copies if you don't want the grid's rows to change. `getAddedRows()`, `getModifiedRows()`, and `getDeletedRows()` still return the grid's own row objects, marker keys included. To send one row, use `grid.cleanRow(row)`.
 
