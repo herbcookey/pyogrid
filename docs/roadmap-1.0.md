@@ -32,6 +32,34 @@
   - 테스트·도구가 직접 부르는 것: `_render`·`_renderStatus`(tools/probe-big.mjs, test/unit/pagebar.test.js), `_scrollbarWidth`(test/unit/performance.test.js). 이것을 없애려면 그 테스트와 도구도 바꿔야 한다
   - 위임을 없애면 .d.ts에서 그 멤버가 빠진다 (`_` 멤버라 Stability 약속 밖)
 
+### 검토: 행 상태를 행 객체 대신 WeakMap에 두기
+
+- [ ] 1.0 전에 할지 정한다. 지금은 선택·수정·추가·삭제 표시를 행 객체의 속성(`__selected__` 등)으로 둔다. 저장할 때 이 키가 서버로 가는 문제는 `getChanges()`·`cleanRow()`로 풀었다. WeakMap(그리드마다 행 → 상태)으로 옮기면 행 객체가 깨끗해지지만 아래가 바뀐다. 구현은 하지 않았다.
+
+바꿔야 할 곳 (src/):
+
+| 상태 | 옵션 | 읽고 쓰는 곳 |
+|---|---|---|
+| 선택 | `selectedKey` | grid/selection.js `isRowSelected`, `selectRow`(단일 선택이면 `source` 전체를 돌며 푼다), `selectRowRange`, `selectAll` |
+| 선택 막기 | `disableSelectionKey` | grid/selection.js `isRowSelectable` |
+| 수정 | `modifiedKey` | grid/values.js `_trackModified`(바꾸기 전에 데이터에 이미 표시가 있었는지 `was`로 기억), `clearModified`, `getModifiedRows`; grid/data.js `addRow`(`markAddedModified`) |
+| 추가 | `addedKey` | grid/data.js `addRow`, `deleteRows`, `getAddedRows`, `_applyView`(필터를 통과시키는 `pass`); grid/values.js `clearModified` |
+| 삭제 | `deletedKey` | grid/data.js `deleteRows` |
+| 트리 접힘 | `tree.collapseKey` | grid/data.js `toggleNode`, `_setAllCollapsed`; features/view.js `buildTree`, `isUnderCollapsed`; grid/render.js 펼침 단추 |
+
+깨지는 동작:
+
+1. **데이터로 정하는 처음 상태.** README Core concepts는 "데이터에 `__selected__`를 넣으면 처음부터 선택된다"고 약속한다. weekly 데모(`demo/shared/weekly-data.js`)가 이렇게 쓴다. `__disable_selection__`으로 선택을 막는 것, 데이터의 `__modified__`를 수정된 행으로 보는 것, 트리의 `collapse: true`로 처음부터 접는 것(summary 데모)도 같다. setData 때 이 키를 읽어 WeakMap으로 옮기면 처음 상태는 지킬 수 있지만, 그 뒤 행 객체를 고쳐 상태를 바꾸는 코드는 듣지 않게 된다.
+2. **행에서 상태를 읽는 사용자 코드.** formatter·cellClass·rowClass에서 `row.__modified__`를 보는 코드, 합계 계산기에서 `r.__selected__`를 보는 코드(weekly 데모의 이월 수량 합계), 지운 행의 `__deleted__`를 보는 코드가 모두 바뀌어야 한다. 대신 `grid.isRowSelected(row)` 같은 메서드를 써야 한다 (수정·추가·삭제용 메서드는 새로 필요).
+3. **옵션 `selectedKey`·`modifiedKey`·`addedKey`·`deletedKey`·`disableSelectionKey`.** 뜻이 없어지므로 빼야 한다. 공개 API 삭제라 예고 뒤 0.x.0에서 한다.
+4. **행 하나를 두 그리드에 넘길 때.** 지금은 행 객체에 상태가 있어 두 그리드가 선택·수정을 함께 쓴다. 그리드마다 WeakMap이면 따로 된다.
+5. **같은 행 객체로 setData를 다시 부를 때.** 지금은 선택·수정 표시가 행에 남아 그대로 이어진다. WeakMap이면 setData에서 상태를 비울지 남길지 정해야 한다.
+6. **Vue의 반응형 프록시.** 프록시와 원본 객체는 WeakMap 키로 서로 다르다. 그리드에는 `toRaw`로 원본을 넘기고 `selectRow(row)`·`setValue(row, ...)`에는 프록시를 넘기면 상태를 찾지 못한다 (지금은 같은 객체를 고치므로 문제가 없다).
+7. **사용자가 복사한 행.** 지금은 `{...row}`나 JSON 복사본에도 표시가 따라간다. WeakMap이면 따라가지 않는다 (이것이 원래 목적이지만, 복사본으로 상태를 보던 코드는 바뀐다).
+8. **테스트.** 단위·e2e 테스트가 표시 키를 직접 읽는 곳이 47곳 있다.
+
+할 경우의 방법 후보: 옵션 하나(예: `rowState: "object" | "map"`)로 고르게 하고 기본값을 지금 방식으로 두면 깨지는 것 없이 시험할 수 있다. 다만 두 방식을 함께 유지하는 비용이 든다.
+
 ### 폐기 절차
 
 - [ ] 약속한 것을 빼거나 바꿀 때는 적어도 한 번의 0.x.0 릴리스에서 먼저 예고한다. CHANGELOG에 적고, 할 수 있으면 `deprecate(id, message)`(src/util.js)로 한 번 경고한다.
