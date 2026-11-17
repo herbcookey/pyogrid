@@ -854,3 +854,46 @@ describe("11. date 편집기 저장 형식 (config.valueFormat)", () => {
     expect(sameValue(editorTypes.date, { valueFormat: "yyyyMMdd" }, "20260102", "20260102")).toBe(true);
   });
 });
+
+describe("조합 직후 같은 키 무시는 처리 시간과 관계없다", () => {
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
+    vi.useRealTimers();
+  });
+  const keydown = (k, init = {}) => new KeyboardEvent("keydown", { key: k, code: init.code || k, bubbles: true, cancelable: true, ...init });
+
+  it("change 핸들러가 100ms 걸려도 조합 직후의 두 번째 Enter를 버린다", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    const grid = new PyoGrid(host, { columns: [{ key: "name", editor: { type: "text" } }] });
+    const rows = [{ name: "가" }, { name: "나" }, { name: "다" }];
+    grid.setData(rows);
+    // 저장 뒤 다시 계산하는 화면처럼 change 처리가 오래 걸린다 (실제 시간)
+    grid.on("change", () => {
+      const t = Date.now();
+      while (Date.now() - t < 100);
+    });
+    const input = grid.editing.input;
+    grid.setRange(0, 0);
+    input.dispatchEvent(keydown("Process", { keyCode: 229, code: "KeyG" }));
+    input.dispatchEvent(new CompositionEvent("compositionstart"));
+    input.value = "글";
+    input.dispatchEvent(new InputEvent("input", { isComposing: true }));
+    input.dispatchEvent(keydown("Process", { keyCode: 229, code: "Enter", isComposing: true }));
+    input.dispatchEvent(new CompositionEvent("compositionend", { data: "글" }));
+    // macOS 입력기가 조합을 끝내며 바로 보내는 Enter. 만들어진 시각은 지금이고, 처리는 저장이 끝난 뒤다
+    const dup = keydown("Enter");
+    vi.runOnlyPendingTimers();
+    input.dispatchEvent(dup);
+    expect(rows[0].name).toBe("글");
+    expect(dup.defaultPrevented).toBe(true);
+    expect(grid.isEditing).toBe(false);
+    expect(grid.getRange().active).toEqual({ r: 1, c: 0 });
+  });
+});
