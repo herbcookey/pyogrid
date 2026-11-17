@@ -543,14 +543,14 @@ Clicking another cell or outside the grid commits the current edit.
 
 ## Accessibility
 
-The grid follows the ARIA grid pattern, so screen readers can tell its size and where the current cell is:
+The grid marks up its size and the current cell with ARIA attributes, following the ARIA grid pattern. Automated checks (axe) pass; how NVDA and VoiceOver read the grid has not been checked on real devices yet.
 
 - The element with `role="grid"` has `aria-rowcount` and `aria-colcount` for the whole grid, even though only the visible rows and columns are in the DOM. Rows are counted as header rows, then the rows on screen (group subtotal rows included, collapsed tree children not), then footer total rows. Columns are counted as the line-number and row-selector columns, then the leaf columns.
 - Each rendered row has `aria-rowindex` and each cell and header cell has `aria-colindex` (and `aria-colspan` / `aria-rowspan` for grouped and multi-row headers), numbered from the start of the grid, not from the first rendered row.
 - Keyboard focus stays on the grid's input box (that keeps IME input working), and its `aria-activedescendant` points at the focused cell. While a cell is being edited, or when the focused cell is scrolled out of view and not rendered, the attribute is removed.
 - Sortable headers have `aria-sort`, selected rows `aria-selected`, checkboxes `aria-checked` and a name (the column label, or `messages.selectAll` for the select-all box), and the bottom bar's selection summary is a live region.
 
-The demo pages are checked with [axe](https://github.com/dequelabs/axe-core) (WCAG 2.1 A and AA rules) in Chrome, Firefox, and WebKit. Screen reader behavior (NVDA, VoiceOver) is checked by hand; see [docs/a11y-manual-check.md](docs/a11y-manual-check.md) (in Korean). The ARIA attributes and DOM structure are not covered by [Stability](#stability).
+The demo pages are checked with [axe](https://github.com/dequelabs/axe-core) (WCAG 2.1 A and AA rules) in Chrome, Firefox, and WebKit. Screen reader behavior (NVDA, VoiceOver) has not been checked on real devices yet; the checklist for that is [docs/a11y-manual-check.md](docs/a11y-manual-check.md) (in Korean). In particular, focus stays on the input box, which is not a parent of the cells, so whether a screen reader follows `aria-activedescendant` from cell to cell is not confirmed. The ARIA attributes and DOM structure are not covered by [Stability](#stability).
 
 ## Methods
 
