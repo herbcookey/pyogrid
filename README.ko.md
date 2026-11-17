@@ -34,7 +34,7 @@
 - **바로 입력:** 셀을 고르고 치면 그 자리에서 편집이 시작됩니다. 한글 조합이 끊기지 않습니다.
 - **편집기 6종:** text, number, money, date(달력), select, checkbox. 직접 만든 편집기도 등록할 수 있습니다.
 - **엑셀식 복사·붙여넣기:** 범위를 탭으로 나눈 글자로 복사하고 붙입니다. 채우기·반복 규칙이 엑셀과 같고, 붙인 값도 입력할 때와 같은 검증을 거칩니다.
-- **실행 취소·다시 실행:** 셀 편집, Delete, 붙여넣기, 잘라내기를 되돌립니다.
+- **실행 취소·다시 실행:** 셀 편집, Delete, 붙여넣기, 잘라내기를 되돌립니다. `addRow`·`deleteRows`·`removeRows`에 `undoable: true`를 주면 행 추가·삭제도 되돌립니다.
 - **변경 추적:** 수정·추가·삭제된 행을 모아 줍니다. 값을 처음대로 되돌리면 수정된 행에서 빠집니다.
 - **헤더 값 필터:** 엑셀 자동 필터처럼 값 목록에서 고르고, 전체 값에서 검색합니다. 조건(포함, 보다 큼, 날짜 범위)으로도 거를 수 있습니다.
 - **합계 행, 그룹 합계, 트리, 셀 병합**
@@ -189,6 +189,7 @@ pyogrid는 아직 1.0 전입니다. 버전이 올라가도 그대로 유지하�
 | 헤더 값 필터 | [Header filters](README.md#header-filters) |
 | 셀 병합 | [Merged cells](README.md#merged-cells) |
 | 복사·붙여넣기·실행 취소 | [Copy, paste, and undo](README.md#copy-paste-and-undo) |
+| 행 추가·삭제 실행 취소 | [Undoing row changes](README.md#undoing-row-changes) |
 | 서버 페이징·서버 정렬 | [Server-side paging and sorting](README.md#server-side-paging-and-sorting) |
 | 엑셀 내보내기 | [Excel export](README.md#excel-export) |
 | 컬럼 너비·정렬 기억 | [Remembering column widths and sort](README.md#remembering-column-widths-and-sort) |

@@ -140,7 +140,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 | `copy` | grid.js `_afterCopy` | `{range, text}` | 있음 |
 | `paste` | grid.js `paste` | `{applied, skipped, rows}` | 있음 |
 | `undo`, `redo` | grid.js `undo`, `redo` | `{source, count}` | 있음 |
-| `rowsadd`, `rowsremove`, `rowsdelete` | grid.js `addRow`, `removeRows`, `deleteRows` | `{rows}` | 있음 |
+| `rowsadd`, `rowsremove`, `rowsdelete` | grid/data.js `addRow`, `removeRows`, `deleteRows`, `_applyRowHistory`(실행 취소·다시 실행) | `{rows, source}` | 있음 |
 | `treetoggle` | grid.js `toggleNode` | `{row, collapsed}` | 있음 |
 | `columnresize` | grid.js `setColumnWidth` | `{index, column, width}` | 있음 |
 | `columnmove` | grid/layout.js `_applyColumnOrder` (moveColumn, setColumnOrder, 헤더 끌기, Alt+Shift+←/→) | `{column, from, to, order}` | 있음 |

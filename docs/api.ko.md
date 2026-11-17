@@ -159,9 +159,9 @@
 | `getAllRows()` | 모든 행 (필터로 숨은 행 포함) |
 | `getRow(rowIndex)` | 화면 순번의 행 |
 | `rowCount` | 화면의 행 수 (읽기 전용 속성) |
-| `addRow(rows, at?, opts?)` | 행 하나 또는 행 배열을 넣습니다. `at`: `"last"`(기본), `"first"`, 또는 화면 순번(그 행 앞에 넣음). `opts.focus: true`면 넣은 행으로 이동합니다 |
-| `removeRows(targets)` | 행을 목록에서 빼되 지운 행으로 기록하지 않습니다. 행 객체, 화면 순번, 또는 그 배열 |
-| `deleteRows(targets)` | 행을 지웁니다. 목록에서 빠지고 `getDeletedRows()`에 남습니다. `addRow`로 넣고 저장하지 않은 행은 서버에 없으므로 남기지 않습니다. 트리면 자손도 지웁니다 |
+| `addRow(rows, at?, opts?)` | 행 하나 또는 행 배열을 넣습니다. `at`: `"last"`(기본), `"first"`, 또는 화면 순번(그 행 앞에 넣음). `opts.focus: true`면 넣은 행으로 이동합니다. `opts.undoable: true`면 Ctrl+Z로 되돌릴 수 있게 기록합니다 ([Undoing row changes](../README.md#undoing-row-changes) 참고) |
+| `removeRows(targets, opts?)` | 행을 목록에서 빼되 지운 행으로 기록하지 않습니다. 행 객체, 화면 순번, 또는 그 배열. `opts.undoable: true`면 Ctrl+Z로 되돌릴 수 있게 기록합니다 |
+| `deleteRows(targets, opts?)` | 행을 지웁니다. 목록에서 빠지고 `getDeletedRows()`에 남습니다. `addRow`로 넣고 저장하지 않은 행은 서버에 없으므로 남기지 않습니다. 트리면 자손도 지웁니다. `opts.undoable: true`면 Ctrl+Z로 되돌릴 수 있게 기록합니다 (자손까지 한 번에) |
 | `getDeletedRows()` | 원래 있던 행 중 지운 행 (삭제로 보낼 행) |
 | `getAddedRows()` | 마지막 저장 뒤 `addRow`로 넣은 행 (추가로 보낼 행). `getModifiedRows()`에도 들어 있습니다 |
 | `getModifiedRows()` | 바뀌었거나 추가된 행. 모든 셀이 처음 값으로 돌아오면 (예: 실행 취소 뒤) 빠집니다 |
@@ -294,7 +294,7 @@ grid.off("change", handler);               // handler를 빼면 그 이벤트의
 | `keydown` | 그리드에서 키를 눌렀을 때 | `{event, editing}`. **false를 돌려주면 그리드가 그 키를 처리하지 않습니다** |
 | `copy` / `paste` | 복사 / 붙여넣기 | `{range, text}` / `{applied, skipped, rows}` |
 | `undo` / `redo` | | `{source, count}` |
-| `rowsadd` / `rowsremove` / `rowsdelete` | 행을 넣었을 때 / 뺐을 때 / 지웠을 때 | `{rows}` |
+| `rowsadd` / `rowsremove` / `rowsdelete` | 행을 넣었을 때 / 뺐을 때 / 지웠을 때 | `{rows, source}`. `source`는 메서드로 부르면 `"api"`, Ctrl+Z·Ctrl+Y로 행이 돌아오거나 빠지면 `"undo"`·`"redo"`입니다. 삭제를 되돌리면 서버에 이미 있는 행으로 `rowsadd`가 나가므로 핸들러에서 `source`를 확인하세요 |
 | `treetoggle` | 트리 노드를 접거나 펼쳤을 때 | `{row, collapsed}` |
 | `columnresize` | 컬럼 너비를 바꿨을 때 | `{index, column, width}` |
 | `columnmove` | 컬럼 순서가 바뀌었을 때 | `{column, from, to, order}`. `column`은 옮긴 정의(그룹이면 그룹 정의), `from`·`to`는 그 (첫) 잎 번호, `order`는 `getColumnOrder()`와 같습니다. `setColumnOrder`로 바꾸면 `column`은 null, `from`·`to`는 -1 |

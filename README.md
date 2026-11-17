@@ -37,6 +37,7 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - [Header filters](#header-filters)
 - [Merged cells](#merged-cells)
 - [Copy, paste, and undo](#copy-paste-and-undo)
+  - [Undoing row changes](#undoing-row-changes)
 - [Server-side paging and sorting](#server-side-paging-and-sorting)
 - [Excel export](#excel-export)
 - [Remembering column widths and sort](#remembering-column-widths-and-sort)
@@ -574,9 +575,9 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | `getAllRows()` | All rows (including rows hidden by filters) |
 | `getRow(rowIndex)` | Row at a view index |
 | `rowCount` | Number of rows on screen (read-only property) |
-| `addRow(rows, at?, opts?)` | Add a row or an array of rows. `at`: `"last"` (default), `"first"`, or a view index (inserts before that row). `opts.focus: true` moves to the new row |
-| `removeRows(targets)` | Take rows out of the list without recording them as deleted. Accepts row objects, view indexes, or an array of either |
-| `deleteRows(targets)` | Delete rows: they leave the list and are kept in `getDeletedRows()`. Rows added with `addRow` and not saved yet aren't kept, since the server never had them. In a tree, descendants are deleted too |
+| `addRow(rows, at?, opts?)` | Add a row or an array of rows. `at`: `"last"` (default), `"first"`, or a view index (inserts before that row). `opts.focus: true` moves to the new row. `opts.undoable: true` records it for Ctrl+Z (see [Undoing row changes](#undoing-row-changes)) |
+| `removeRows(targets, opts?)` | Take rows out of the list without recording them as deleted. Accepts row objects, view indexes, or an array of either. `opts.undoable: true` records it for Ctrl+Z |
+| `deleteRows(targets, opts?)` | Delete rows: they leave the list and are kept in `getDeletedRows()`. Rows added with `addRow` and not saved yet aren't kept, since the server never had them. In a tree, descendants are deleted too. `opts.undoable: true` records it for Ctrl+Z (descendants included, as one step) |
 | `getDeletedRows()` | Deleted rows that existed before (send these as deletes) |
 | `getAddedRows()` | Rows added with `addRow` since the last save (send these as inserts). They are also in `getModifiedRows()` |
 | `getModifiedRows()` | Rows that changed or were added. A row drops out once every cell is back to its original value (for example, after undo) |
@@ -702,7 +703,7 @@ grid.off("change", handler);               // omit handler to remove all listene
 | `keydown` | A key is pressed in the grid | `{event, editing}`. **Return false to stop the grid from handling it** |
 | `copy` / `paste` | Copy / paste | `{range, text}` / `{applied, skipped, rows}` |
 | `undo` / `redo` | | `{source, count}` |
-| `rowsadd` / `rowsremove` / `rowsdelete` | Rows are added / removed / deleted | `{rows}` |
+| `rowsadd` / `rowsremove` / `rowsdelete` | Rows are added / removed / deleted | `{rows, source}`. `source` is `"api"` for a method call, `"undo"` or `"redo"` when Ctrl+Z / Ctrl+Y brought rows back or took them out. See [Undoing row changes](#undoing-row-changes) |
 | `treetoggle` | A tree node is collapsed or expanded | `{row, collapsed}` |
 | `columnresize` | A column is resized | `{index, column, width}` |
 | `columnmove` | The column order changes | `{column, from, to, order}`. `column` is the moved definition (a group's for a group), `from` and `to` its (first) leaf index, `order` the same as `getColumnOrder()`. After `setColumnOrder`, `column` is null and `from` and `to` are -1 |
@@ -857,7 +858,25 @@ A cell merges with the one above when the text is the same and the merge columns
   - A value that means the same as the current one (0 and "0" in a text cell, "1,200" and 1200 in a money cell) is left alone, so the row isn't marked modified. The same goes for pressing Enter without changing a value while editing.
   - Select cells accept the option value or its name. Checkbox cells accept `trueValue`/`falseValue`, Y/N, true/false, and 1/0.
 - **Cut (Ctrl+X):** copies, then clears.
-- **Undo (Ctrl+Z):** undoes one action at a time: a cell edit, a Delete, a paste (as a whole), or a cut. Redo is Ctrl+Y. Undo finds the right row even after the order changes through sorting. `setValue` calls from code are not recorded.
+- **Undo (Ctrl+Z):** undoes one action at a time: a cell edit, a Delete, a paste (as a whole), or a cut. Redo is Ctrl+Y. Undo finds the right row even after the order changes through sorting. `setValue` calls from code are not recorded, and neither are `addRow`, `deleteRows`, and `removeRows` unless you pass `undoable: true` (see below).
+- `undoLimit` counts steps: a paste of many cells, or one `deleteRows` call with many rows, is one step.
+- If a row was deleted without recording, undoing an earlier edit of that row only writes the value back to the row object; the row stays deleted.
+
+### Undoing row changes
+
+```js
+grid.addRow({ SKU: "", QTY: 0 }, "last", { focus: true, undoable: true });
+grid.deleteRows(grid.getSelectedRows(), { undoable: true });
+```
+
+With `undoable: true`, one call is one step for Ctrl+Z and Ctrl+Y, mixed in order with cell edits.
+
+- **Undoing a delete** puts the rows back where they were, with their marker keys: they leave `getDeletedRows()`, and rows that had been added stay added rows. Tree descendants deleted with them come back under the same parent. Under a sort they go to their sorted place, and rows hidden by a filter stay hidden. The range moves to the first row that came back, and the grid scrolls to it.
+- **Undoing an add** takes the rows out; redo puts them back at the same place.
+- **Events.** Rows coming back fire `rowsadd`, rows taken out fire `rowsremove` (or `rowsdelete` when redoing a delete), all with `source: "undo"` or `"redo"`. **Check `source` in your handlers:** after undoing a delete, `rowsadd` fires for rows that already exist on the server. Selected rows that come back or leave also fire `selectionchange` with the same `source`.
+- **Rows changed by your code in between.** A row that isn't in the expected state is skipped, in both directions: if you removed an added row yourself, undo and redo leave it out; if you put a deleted row back yourself, undo doesn't add it twice. When the row a group was next to is gone, the rows go back to their old index.
+- **After saving.** The simplest is `acceptChanges()`, which clears undo history, so nothing saved can be undone. If you only call `clearModified()` or `clearDeleted()`, history stays. Undoing then keeps `getChanges()` correct: undoing the add of a saved row turns it into a deleted row, and undoing an already-processed delete brings the row back as an added row. Redo returns to the state right after saving.
+- `setData` also clears history. `replaceRow` isn't recorded.
 
 ## Server-side paging and sorting
 
@@ -1091,9 +1110,10 @@ Numbers passed to message functions are already formatted with thousands separat
 | `selected(count)` | `"6 cells selected"` | Selection summary |
 | `selectedNumbers(numCount, sum, avg)` | `"Numbers 3 · Sum 2,502.5 · Average 834.17"` | Selection summary, numeric part |
 | `summarySeparator` | `" · "` | Between the two summary parts |
-| `actions` | `{edit: "edit", clear: "clear", paste: "paste", cut: "cut"}` | Action names in undo and redo messages |
+| `actions` | `{edit: "edit", clear: "clear", paste: "paste", cut: "cut", addRow: "add rows", deleteRows: "delete rows", removeRows: "remove rows"}` | Action names in undo and redo messages |
 | `nothingToUndo` / `nothingToRedo` | `"Nothing to undo"` / `"Nothing to redo"` | Bottom bar |
 | `undone(action, count)` / `redone(action, count)` | `"Undo paste: 4 cells"` | Bottom bar |
+| `undoneRows(action, count)` / `redoneRows(action, count)` | `"Undo delete rows: 3 rows"` | Bottom bar, for row changes (`count` is the number of rows) |
 | `copied(count)` | `"Copied 6 cells"` | Bottom bar |
 | `pasted(count, skipped)` | `"Pasted 5 cells (1 skipped)"` | Bottom bar (`skipped` is `"0"` when nothing was skipped) |
 | `status(from, to, count)` | `"1 - 15 of 300"` | Status text on the right |
