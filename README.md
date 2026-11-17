@@ -1079,20 +1079,24 @@ Building from source requires Node.js 22 or later. `dist/` is not committed, so 
 ```bash
 npm install
 npm run build        # dist/ (js, min.js, esm.js, css, min.css, types)
+npm run lint         # ESLint, and Prettier in check mode
+npm run format       # rewrite src/, tools/, and config files with Prettier
 npm run typecheck    # type-check the JSDoc types (// @ts-check), plus strictNullChecks for the files in tsconfig.strict.json
 npm test             # unit tests (vitest + jsdom)
 npm run typecheck:types  # after a build: check test/types against the built dist/types
 npm run test:e2e     # build, then run headless browser tests in Chrome, Firefox, and WebKit (Playwright)
 npm run test:e2e:chrome  # build, then e2e in Chrome only
-npm run test:all     # typecheck, unit, e2e, and the type tests
+npm run test:all     # lint, typecheck, unit, e2e, and the type tests
 npm run demo         # demo server at http://127.0.0.1:5179/demo/
 ```
+
+Prettier formats `src/`, `tools/`, and the config files (`printWidth` 160). Tests, demos, CSS, and docs are left as they are written (see `.prettierignore`). Commits that only change formatting are listed in `.git-blame-ignore-revs`; GitHub's blame view skips them, and `git config blame.ignoreRevsFile .git-blame-ignore-revs` does the same locally.
 
 After changing the demos, refresh the README screenshots with `npm run build` and `node tools/screenshots.mjs` (they are saved to `docs/images/`).
 
 To release, bump the version with `npm version patch` (or `minor`, `major`). It also updates the version in `src/index.js` and this README, then commits and tags. `npm publish` refuses to run if those versions don't match `package.json`, and runs the typecheck, unit tests, and the Chrome e2e tests first.
 
-GitHub Actions runs the typecheck, unit tests, type tests, and e2e tests in Chrome, Firefox, and WebKit on every push and pull request (`.github/workflows/test.yml`). The CDN URLs above (`@0.9`) are changed by hand, only for releases that change the API.
+GitHub Actions runs the lint, typecheck, unit tests, type tests, and e2e tests in Chrome, Firefox, and WebKit on every push and pull request (`.github/workflows/test.yml`). The CDN URLs above (`@0.9`) are changed by hand, only for releases that change the API.
 
 The e2e tests use your installed Chrome. Download Firefox and WebKit for Playwright once with `npx playwright install firefox webkit`. To run one browser: `npx playwright test --project=firefox` (`chrome`, `firefox`, or `webkit`).
 

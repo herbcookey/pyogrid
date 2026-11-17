@@ -20,5 +20,7 @@ exclude:
   - package-lock.json
   - tsconfig.json
   - tsconfig.types.json
+  - tsconfig.strict.json
+  - eslint.config.js
   - vitest.config.js
   - playwright.config.js

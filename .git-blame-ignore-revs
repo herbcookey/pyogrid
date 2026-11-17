@@ -1,0 +1,6 @@
+# git blame에서 건너뛸 커밋 (서식만 바꾼 커밋). GitHub의 blame 화면은 이 파일을 자동으로 읽는다.
+# 로컬에서는 한 번만: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# 커밋을 rebase·squash로 바꾸면 해시도 바뀌므로 여기도 고친다.
+
+# 서식: Prettier 적용 (서식만, 빌드 결과 같음)
+61738599adcce878587333286411466a31cd59d7

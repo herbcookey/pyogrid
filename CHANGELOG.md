@@ -29,6 +29,7 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 - `test/unit/api-surface.test.js` pins the names of the `src/index.js` exports, `PyoGrid` static properties, public `PyoGrid.prototype` methods, default option keys, and emitted events.
 - `deprecate(id, message)` in `src/util.js` logs a `console.warn` once per id. It is not exported and not used yet.
 - `npm run typecheck:types` checks `test/types/usage.test-d.ts` against the built `dist/types` with `strict: true`. It runs in `test:all` and CI.
+- ESLint and Prettier (`npm run lint`, `npm run format`), set up to match the existing code. Lint runs in `test:all` and CI. The one formatting-only commit is listed in `.git-blame-ignore-revs`.
 - `npm run typecheck` also runs `tsconfig.strict.json`, which turns on `strictNullChecks` for `src/util.js`, `src/core/*.js`, `src/editors/*.js`, and the `src/features/` files that don't import the grid (`history`, `pagebar`, `state`, `clipboard`, `filter`, `view`). The remaining files are listed in `docs/roadmap-1.0.md`.
 
 ## 0.9.0

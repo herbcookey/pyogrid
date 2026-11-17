@@ -67,7 +67,7 @@
     "test": "node tools/vitest.mjs run",
     "test:unit": "node tools/vitest.mjs run",
     "test:e2e": "node tools/build.mjs && playwright test",
-    "test:all": "npm run typecheck && npm run test:unit && npm run test:e2e && npm run typecheck:types",
+    "test:all": "npm run lint && npm run typecheck && npm run test:unit && npm run test:e2e && npm run typecheck:types",
     "demo": "node tools/serve.mjs",
     "version": "node tools/sync-version.mjs && git add src/index.js README.md",
     "prepublishOnly": "node tools/sync-version.mjs --check && npm run typecheck && npm run test:unit && npm run test:e2e:chrome",

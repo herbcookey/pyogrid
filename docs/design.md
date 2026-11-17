@@ -123,3 +123,10 @@ div.pyo                         (테두리, position:relative)
 
 - **xlsx:** SheetJS(`window.XLSX` 또는 `opts.XLSX`)가 있을 때만 쓰고, 없으면 경고와 함께 false. 화면 그대로(필터·정렬·그룹 합계·합계 행) 내보낸다. 숫자 판단: 쉼표 숫자 → 숫자 + `#,##0`, 원래 값이 숫자이거나 money·오른쪽 정렬·합계 칸이면 숫자, 앞자리 0 코드는 글자. 다단 헤더와 합계 칸 colspan은 병합 셀. ".xls" 이름은 ".xlsx"로 바꾼다. 셀 글자에서 HTML을 걷어낼 때는 스크립트를 실행하지 않는 빈 문서 하나를 다시 쓴다 (셀마다 DOMParser를 만들지 않음).
 - **너비·정렬 기억:** localStorage `"pyogrid:" + 경로 + ":" + stateKey`에 `{widths: {컬럼키: px}, sort: [{key, dir}]}`. 사용자가 너비를 끌거나 헤더로 정렬할 때 저장하고, 생성·`setColumns` 때 되살린다. 지금 컬럼에 없는 키의 너비는 지우지 않는다. 10px 이하 너비, 정렬할 수 없게 된 컬럼, 깨진 저장값은 무시한다.
+
+## 개발 도구
+
+- **ESLint·Prettier:** 넣을 때 코드가 이미 거의 Prettier 모양(2칸, 큰따옴표, 세미콜론, 끝 쉼표)이었다. 줄 너비를 120~180으로 바꿔 가며 바뀌는 줄 수를 세어 가장 적은 160으로 정했다 (src·tools 합쳐 30여 줄). 서식만 바꾼 커밋은 `.git-blame-ignore-revs`에 적어 blame이 그 커밋을 건너뛰게 한다.
+- **Prettier 범위:** src/, tools/, 설정 파일만 맞춘다. test/는 기존 테스트를 서식 때문에 고치지 않으려고, demo/는 한 줄에 한 행씩 쓴 데모 데이터가 수십 줄로 펼쳐져서, CSS는 규칙을 한 줄에 쓰는 모양을 두려고 뺐다. `endOfLine: "auto"`는 Windows 작업 트리(CRLF)와 CI(LF)를 모두 통과시키려는 것이다.
+- **JSDoc 타입 변환과 Prettier:** Prettier는 `(/** @type {T} */ (b).x = v)`의 괄호를 `/** @type {T} */ ((b).x = v)`로 옮겨, 타입 변환이 b가 아니라 대입식 전체에 붙는다 (filter.js에서 tsc 오류). 그런 줄은 `// prettier-ignore`로 둔다.
+- **ESLint 규칙:** `recommended`에 두 가지만 풀었다. `catch (e)`의 쓰지 않는 e와 `_`로 시작하는 인자는 이 저장소의 관례다. 넣을 때 이미 있던 지적 4곳(쓰지 않는 import·인자, 문자 집합의 `\-`)은 코드를 고치지 않고 그 파일만 경고로 두었다. 고치면 eslint.config.js의 해당 블록을 지운다.
