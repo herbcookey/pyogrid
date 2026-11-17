@@ -1,0 +1,19 @@
+# Prettier는 src/, tools/, 설정 파일만 맞춘다 (npm run format). 아래는 손으로 맞춘 모양을 그대로 둔다.
+# test/: 기존 테스트 파일을 서식 때문에 고치지 않는다
+# demo/: 한 줄에 한 행씩 쓴 데모 데이터가 펼쳐진다
+# *.css: 규칙을 한 줄에 쓰는 모양을 둔다
+# *.md, *.html, *.json, *.yml: 문서·설정은 맞추지 않는다
+dist/
+ref/
+node_modules/
+test-results/
+playwright-report/
+coverage/
+test/
+demo/
+*.css
+*.md
+*.html
+*.json
+*.yml
+*.yaml

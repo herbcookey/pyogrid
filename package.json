@@ -61,6 +61,8 @@
     "build": "node tools/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.strict.json --noEmit",
     "typecheck:types": "tsc -p test/types/tsconfig.json",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
     "types": "tsc -p tsconfig.types.json",
     "test": "node tools/vitest.mjs run",
     "test:unit": "node tools/vitest.mjs run",
@@ -72,9 +74,14 @@
     "test:e2e:chrome": "node tools/build.mjs && playwright test --project=chrome"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.65.0",
     "esbuild": "^0.28.2",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
     "jsdom": "^26.1.0",
+    "prettier": "^3.10.1",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
