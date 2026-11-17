@@ -1,11 +1,10 @@
 // @ts-check
 import { buildColumnModel, computeWidths, parseWidth } from "./core/columns.js";
 import { formatters } from "./core/formatters.js";
-import { sortRows, nextSortDir } from "./core/sort.js";
 import { CellRange } from "./core/range.js";
 import { navigationHtml, targetPage, statusData, defaultStatusHtml, summaryText } from "./features/pagebar.js";
 import { Editing } from "./features/editing.js";
-import { buildView, filterKey, computeMerge, filterRows } from "./features/view.js";
+import { computeMerge } from "./features/view.js";
 import { sumRowHtml } from "./features/summary.js";
 import { FilterPopup } from "./features/filter.js";
 import { exportXlsx, buildExportData } from "./features/excel.js";
@@ -16,6 +15,7 @@ import { parseTSV, buildTSV, pastePlan, convertPasteValue } from "./features/cli
 import { formatNumber, intlLocale } from "./features/pagebar.js";
 import { editorTypes, selectOptions, isChecked, sameValue } from "./editors/types.js";
 import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMerge, toNumber } from "./util.js";
+import * as gData from "./grid/data.js";
 
 /**
  * @template [Row=any]
@@ -413,22 +413,7 @@ export class PyoGrid {
    * @param {PageInfo|null} [page] 서버 페이징 정보 (currentPage는 0부터)
    */
   setData(rows, page) {
-    this.editing.cancel();
-    this.history.clear();
-    this._orig = new WeakMap();
-    this.source = Array.isArray(rows) ? rows.slice() : [];
-    this.deleted = [];
-    if (page !== undefined) this.page = page ? { ...page } : null;
-    this._applyView();
-    this.range = null;
-    this._lastRowClick = null;
-    this._updateBodySize();
-    this.el.scroll.scrollTop = 0;
-    this.refresh();
-    this._renderPageNav();
-    this._updateHeaderSelector();
-    this._scheduleSummary();
-    this.emit("datachange", { rows: this.rows });
+    gData.setData(this, rows, page);
     return this;
   }
 
@@ -437,17 +422,17 @@ export class PyoGrid {
    * 그룹 합계 행은 빠지고, 트리는 접힌 자식도 들어간다.
    */
   getRows() {
-    return this.dataRows.slice();
+    return gData.getRows(this);
   }
 
   /** @returns {ViewRow<Row>[]} 화면에 그리는 순서의 행 (그룹 합계 행 포함, 트리는 펼친 행만) */
   getViewRows() {
-    return this.rows.slice();
+    return gData.getViewRows(this);
   }
 
   /** @returns {Row[]} setData로 받은 행 전체 (필터로 숨은 행 포함, 지운 행 제외) */
   getAllRows() {
-    return this.source.slice();
+    return gData.getAllRows(this);
   }
 
   /**
@@ -455,7 +440,7 @@ export class PyoGrid {
    * @returns {ViewRow<Row>|undefined} 그룹 합계 행일 수 있다
    */
   getRow(index) {
-    return this.rows[index];
+    return gData.getRow(this, index);
   }
 
   /** 화면 행 수 (그룹 합계 행 포함) */
@@ -475,31 +460,7 @@ export class PyoGrid {
    * @param {{focus?: boolean}} [opts] focus: 넣은 첫 행의 첫 셀로 이동
    */
   addRow(rows, at = "last", opts = {}) {
-    const list = /** @type {any[]} */ (Array.isArray(rows) ? rows : [rows]);
-    if (!list.length) return this;
-    this.editing.cancel();
-    for (const r of list) r[this.options.addedKey] = true;
-    if (this.options.markAddedModified) for (const r of list) r[this.options.modifiedKey] = true;
-    let pos = this.source.length;
-    if (at === "first") pos = 0;
-    else if (typeof at === "number") {
-      let ref = this.rows[at];
-      for (let i = at; ref && ref.__isGrouping && i < this.rows.length; i++) ref = this.rows[i];
-      const si = ref ? this.source.indexOf(ref) : -1;
-      if (si >= 0) pos = si;
-    }
-    // splice(pos, 0, ...list)는 수십만 행이면 인자 수 한도를 넘으므로 배열을 이어 붙인다
-    this.source = this.source.slice(0, pos).concat(list, this.source.slice(pos));
-    this._afterRowsChanged();
-    if (opts.focus) {
-      const i = this.rows.indexOf(list[0]);
-      if (i >= 0) {
-        this.setRange(i, 0);
-        this.scrollToCell(i, 0);
-        this.focus();
-      }
-    }
-    this.emit("rowsadd", { rows: list });
+    gData.addRow(this, rows, at, opts);
     return this;
   }
 
@@ -508,12 +469,7 @@ export class PyoGrid {
    * @param {Row|number|(Row|number)[]} targets 행 객체 또는 화면 순번
    */
   removeRows(targets) {
-    const set = this._targetRows(targets);
-    if (!set.size) return this;
-    this.editing.cancel();
-    this.source = this.source.filter((r) => !set.has(r));
-    this._afterRowsChanged();
-    this.emit("rowsremove", { rows: [...set] });
+    gData.removeRows(this, targets);
     return this;
   }
 
@@ -524,38 +480,18 @@ export class PyoGrid {
    * @param {Row|number|(Row|number)[]} targets 행 객체 또는 화면 순번
    */
   deleteRows(targets) {
-    const set = this._targetRows(targets);
-    if (this._treeMeta) {
-      const add = (r) => {
-        const m = this._treeMeta.get(r);
-        if (m) for (const ch of m.children) if (!set.has(ch)) (set.add(ch), add(ch));
-      };
-      for (const r of [...set]) add(r);
-    }
-    if (!set.size) return this;
-    this.editing.cancel();
-    const k = this.options.deletedKey;
-    const ak = this.options.addedKey;
-    const removed = this.source.filter((r) => set.has(r));
-    for (const r of removed) {
-      r[k] = true;
-      if (!r[ak]) this.deleted.push(r);
-    }
-    this.source = this.source.filter((r) => !set.has(r));
-    this._afterRowsChanged();
-    this.emit("rowsdelete", { rows: removed });
+    gData.deleteRows(this, targets);
     return this;
   }
 
   /** @returns {Row[]} deleteRows로 지운 행 (저장 전에 넣었다 지운 행은 빠진다) */
   getDeletedRows() {
-    return this.deleted.slice();
+    return gData.getDeletedRows(this);
   }
 
   /** @returns {Row[]} 저장 전에 addRow로 넣은 행 (setData 순서). getModifiedRows()에도 들어 있다 */
   getAddedRows() {
-    const k = this.options.addedKey;
-    return this.source.filter((r) => r && r[k]);
+    return gData.getAddedRows(this);
   }
 
   /**
@@ -564,34 +500,18 @@ export class PyoGrid {
    * @param {Row} row
    */
   replaceRow(index, row) {
-    const old = this.rows[index];
-    if (!old || old.__isGrouping) return this;
-    const si = this.source.indexOf(old);
-    if (si < 0) return this;
-    this.source[si] = row;
-    this._afterRowsChanged();
+    gData.replaceRow(this, index, row);
     return this;
   }
 
   /** @param {any} targets */
   _targetRows(targets) {
-    const arr = Array.isArray(targets) ? targets : [targets];
-    const set = new Set();
-    for (const t of arr) {
-      const r = typeof t === "number" ? this.rows[t] : t;
-      if (r && !r.__isGrouping) set.add(r);
-    }
-    return set;
+    return gData._targetRows(this, targets);
   }
 
   /** 행이 늘거나 줄었을 때: 보이는 위치는 그대로 두고 다시 그린다 */
   _afterRowsChanged() {
-    this._applyView();
-    if (this.range) this.range = this.range.clamp(this.rows.length, this.leaves.length);
-    this._updateBodySize();
-    this.refresh();
-    this._updateHeaderSelector();
-    this._scheduleSummary();
+    gData._afterRowsChanged(this);
   }
 
   /* ==================================================================
@@ -603,44 +523,27 @@ export class PyoGrid {
    * @param {any[]|null} values 보여 줄 값 목록. null이면 이 컬럼 조건을 지운다.
    */
   setFilter(key, values) {
-    if (values === null || values === undefined) this.filters.delete(key);
-    else this.filters.set(key, new Set(values.map(filterKey)));
-    this._afterFilter();
+    gData.setFilter(this, key, values);
     return this;
   }
 
   clearFilters() {
-    this.filters.clear();
-    this._afterFilter();
+    gData.clearFilters(this);
     return this;
   }
 
   /** @returns {Record<string, string[]>} */
   getFilters() {
-    /** @type {Record<string, string[]>} */
-    const out = {};
-    for (const [k, v] of this.filters) out[k] = [...v];
-    return out;
+    return gData.getFilters(this);
   }
 
   _afterFilter() {
-    this.editing.cancel();
-    this._applyView();
-    this.range = null;
-    this._updateBodySize();
-    this.el.scroll.scrollTop = 0;
-    this.refresh();
-    this._renderHeader();
-    this._scheduleSummary();
-    this.emit("filterchange", { filters: this.getFilters(), count: this.dataRows.length });
+    gData._afterFilter(this);
   }
 
   /** @param {LeafColumn} leaf */
   isFilterable(leaf) {
-    const def = leaf.def;
-    if (def.key === undefined || def.key === null || this.options.tree || this.page) return false;
-    if (def.filter === false) return false;
-    return def.filter === true || !!this.options.filter;
+    return gData.isFilterable(this, leaf);
   }
 
   /**
@@ -648,41 +551,7 @@ export class PyoGrid {
    * @param {HTMLElement} [_anchor] (쓰지 않음: 헤더가 다시 그려져도 따라가도록 단추를 그때마다 찾는다)
    */
   openFilter(leafIndex, _anchor) {
-    const leaf = this.leaves[leafIndex];
-    if (!leaf || !this.isFilterable(leaf)) return;
-    if (this._filterPopup) this._filterPopup.close();
-    const def = leaf.def;
-    const key = def.key;
-    const seen = new Set();
-    for (const r of filterRows(this.source, this.filters, key)) seen.add(filterKey(getValue(r, key)));
-    const cur = this.filters.get(key) || null;
-    if (cur) for (const v of cur) seen.add(v);
-    const opts = def.editor && def.editor.type === "select" ? selectOptions(def.editor.config) : null;
-    const label = (v) => {
-      if (opts) {
-        const o = opts.find((x) => String(x.value) === v);
-        if (o) return o.text;
-      }
-      if (def.formatter === "money" && toNumber(v) !== null) return this._fmt(toNumber(v));
-      return v;
-    };
-    const title = def.label === undefined || def.label === null ? String(key) : def.html ? String(def.label).replace(/<[^>]*>/g, "") : String(def.label);
-    this._filterPopup = new FilterPopup({
-      title,
-      values: [...seen],
-      label,
-      current: cur,
-      messages: this.messages,
-      locale: this._intl,
-      onApply: (allowed) => this.setFilter(key, allowed ? [...allowed] : null),
-      onClose: () => {
-        this._filterPopup = null;
-        this._filterLeaf = -1;
-        this.focus();
-      },
-    });
-    this._filterLeaf = leafIndex;
-    this._placeFilterPopup(true);
+    gData.openFilter(this, leafIndex, _anchor);
   }
 
   /**
@@ -690,10 +559,7 @@ export class PyoGrid {
    * @param {boolean} [focus]
    */
   _placeFilterPopup(focus = false) {
-    if (!this._filterPopup) return;
-    const i = this._filterLeaf;
-    const a = this.el.head.querySelector(`.pyo-filter-btn[data-filter="${i}"]`) || this.el.head.querySelector(`[data-leaf="${i}"]`) || this.el.root;
-    this._filterPopup.place(a.getBoundingClientRect(), focus);
+    gData._placeFilterPopup(this, focus);
   }
 
   /**
@@ -722,8 +588,7 @@ export class PyoGrid {
    * @returns {{depth: number, children: Row[], parent: Row|null}|null} 트리가 아니거나 모르는 행이면 null
    */
   getTreeInfo(row) {
-    const m = this._treeMeta && this._treeMeta.get(row);
-    return m ? { depth: m.depth, children: m.children.slice(), parent: m.parent } : null;
+    return gData.getTreeInfo(this, row);
   }
 
   /**
@@ -731,38 +596,28 @@ export class PyoGrid {
    * @param {boolean} [collapsed] 없으면 반전
    */
   toggleNode(target, collapsed) {
-    const row = typeof target === "number" ? this.rows[target] : target;
-    const t = this._treeCfg();
-    if (!row || !t) return this;
-    const m = this._treeMeta.get(row);
-    if (!m || !m.children.length) return this;
-    row[t.collapseKey] = collapsed === undefined ? !row[t.collapseKey] : !!collapsed;
-    this._afterRowsChanged();
-    this.emit("treetoggle", { row, collapsed: !!row[t.collapseKey] });
+    gData.toggleNode(this, target, collapsed);
     return this;
   }
 
   expandAll() {
-    return this._setAllCollapsed(false);
+    gData.expandAll(this);
+    return this;
   }
 
   collapseAll() {
-    return this._setAllCollapsed(true);
+    gData.collapseAll(this);
+    return this;
   }
 
   /** @param {boolean} v */
   _setAllCollapsed(v) {
-    const t = this._treeCfg();
-    if (!t) return this;
-    for (const r of this.source) if (this._treeMeta.get(r) && this._treeMeta.get(r).children.length) r[t.collapseKey] = v;
-    this._afterRowsChanged();
+    gData._setAllCollapsed(this, v);
     return this;
   }
 
   _treeCfg() {
-    const t = this.options.tree;
-    if (!t) return null;
-    return { parentKey: t.parentKey || "pid", selfKey: t.selfKey || "id", collapseKey: t.collapseKey || "collapse" };
+    return gData._treeCfg(this);
   }
 
   /* ==================================================================
@@ -1421,30 +1276,18 @@ export class PyoGrid {
    * @param {{silent?: boolean}} [opts]
    */
   setSort(sort, opts = {}) {
-    this.editing.cancel();
-    this.sort = (sort || []).filter((s) => s && s.key !== undefined && (s.dir === "asc" || s.dir === "desc")).map((s) => ({ key: s.key, dir: s.dir }));
-    this._applyView();
-    this.range = null;
-    this._renderHeader();
-    this.refresh();
-    this._scheduleSummary();
-    if (!opts.silent) {
-      this._saveState();
-      this.emit("sortchange", { sort: this.getSort() });
-    }
+    gData.setSort(this, sort, opts);
     return this;
   }
 
   /** @returns {SortItem[]} */
   getSort() {
-    return this.sort.map((s) => ({ ...s }));
+    return gData.getSort(this);
   }
 
   /** @param {LeafColumn} leaf */
   isSortable(leaf) {
-    const def = leaf.def;
-    if (def.key === undefined || def.key === null || def.sortable === false) return false;
-    return def.sortable === true || this.options.sortable === true;
+    return gData.isSortable(this, leaf);
   }
 
   /**
@@ -1452,19 +1295,8 @@ export class PyoGrid {
    * @param {number} leafIndex
    */
   toggleSort(leafIndex) {
-    const leaf = this.leaves[leafIndex];
-    if (!leaf || !this.isSortable(leaf)) return this;
-    const key = leaf.def.key;
-    const cur = this.sort.find((s) => s.key === key);
-    const dir = nextSortDir(cur ? cur.dir : undefined);
-    let next = this.options.multiSort ? this.sort.filter((s) => s.key !== key) : [];
-    if (dir) {
-      if (this.options.multiSort && cur) {
-        // 다중 정렬에서 방향만 바꿀 때는 순서를 유지한다
-        next = this.sort.map((s) => (s.key === key ? { key, dir } : s));
-      } else next.push({ key, dir });
-    }
-    return this.setSort(next);
+    gData.toggleSort(this, leafIndex);
+    return this;
   }
 
   /* ==================================================================
@@ -2043,31 +1875,12 @@ export class PyoGrid {
   }
 
   _applyView() {
-    const o = this.options;
-    const v = buildView({
-      source: this.source,
-      filters: this.isFilterActive() ? this.filters : new Map(),
-      sort: this.sort,
-      compare: o.sortCompare,
-      locale: this._intl,
-      remoteSort: o.remoteSort,
-      grouping: o.grouping && Array.isArray(o.grouping.by) ? o.grouping : null,
-      tree: this._treeCfg(),
-      pass: (r) => !!r[o.addedKey],
-    });
-    this.rows = v.rows;
-    this.dataRows = v.dataRows;
-    this._treeMeta = v.treeMeta;
-    const ln = new Int32Array(this.rows.length);
-    let n = 0;
-    for (let i = 0; i < this.rows.length; i++) ln[i] = this.rows[i].__isGrouping ? -1 : n++;
-    this._lineNo = ln;
-    this._merge = new Map();
+    gData._applyView(this);
   }
 
   /** 필터가 걸려 있는가 (트리·서버 페이징에서는 쓰지 않는다) */
   isFilterActive() {
-    return this.filters.size > 0 && !this.options.tree && !this.page;
+    return gData.isFilterActive(this);
   }
 
   _updateBodySize() {
