@@ -29,7 +29,19 @@ jobs:
       - run: node tools/sync-version.mjs --check
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test:unit
+      # 단위 테스트를 커버리지와 함께 돌린다. vitest.config.js의 기준보다 낮으면 실패한다
+      - run: npm run test:coverage
+      - name: Report coverage
+        if: always()
+        run: node tools/coverage-summary.mjs
+      - name: Keep the coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
       - run: npm run build
       - run: npm run typecheck:types
 

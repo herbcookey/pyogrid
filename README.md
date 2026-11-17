@@ -1083,6 +1083,7 @@ npm run lint         # ESLint, and Prettier in check mode
 npm run format       # rewrite src/, tools/, and config files with Prettier
 npm run typecheck    # type-check the JSDoc types (// @ts-check), plus strictNullChecks for the files in tsconfig.strict.json
 npm test             # unit tests (vitest + jsdom)
+npm run test:coverage    # unit tests with coverage of src/ (report in coverage/); fails below the thresholds in vitest.config.js
 npm run typecheck:types  # after a build: check test/types against the built dist/types
 npm run test:e2e     # build, then run headless browser tests in Chrome, Firefox, and WebKit (Playwright)
 npm run test:e2e:chrome  # build, then e2e in Chrome only

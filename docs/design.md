@@ -130,3 +130,4 @@ div.pyo                         (테두리, position:relative)
 - **Prettier 범위:** src/, tools/, 설정 파일만 맞춘다. test/는 기존 테스트를 서식 때문에 고치지 않으려고, demo/는 한 줄에 한 행씩 쓴 데모 데이터가 수십 줄로 펼쳐져서, CSS는 규칙을 한 줄에 쓰는 모양을 두려고 뺐다. `endOfLine: "auto"`는 Windows 작업 트리(CRLF)와 CI(LF)를 모두 통과시키려는 것이다.
 - **JSDoc 타입 변환과 Prettier:** Prettier는 `(/** @type {T} */ (b).x = v)`의 괄호를 `/** @type {T} */ ((b).x = v)`로 옮겨, 타입 변환이 b가 아니라 대입식 전체에 붙는다 (filter.js에서 tsc 오류). 그런 줄은 `// prettier-ignore`로 둔다.
 - **ESLint 규칙:** `recommended`에 두 가지만 풀었다. `catch (e)`의 쓰지 않는 e와 `_`로 시작하는 인자는 이 저장소의 관례다. 넣을 때 이미 있던 지적 4곳(쓰지 않는 import·인자, 문자 집합의 `\-`)은 코드를 고치지 않고 그 파일만 경고로 두었다. 고치면 eslint.config.js의 해당 블록을 지운다.
+- **커버리지:** vitest의 V8 커버리지로 src/만 센다. 기준은 넣을 때 잰 값을 소수 첫째 자리에서 내린 값이다 (같은 코드를 두 번 재도 같은 값이 나왔다). 기준을 정수로 잡으면 1%가까이 떨어져도 통과하므로 소수 첫째 자리로 했다. 테스트를 더해 수치가 오르면 기준도 손으로 올린다. CI는 단위 테스트를 한 번만 돌리도록 `test:unit` 대신 `test:coverage`를 돌리고 표를 작업 요약에 붙인다.
