@@ -711,7 +711,10 @@ describe("한글 조합 (IME)", () => {
     expect(rows[2].name).toBe("한");
   });
 
-  it("조합 중 누른 Enter는 조합이 끝난 뒤 저장·이동한다 (한 번만)", async () => {
+  // 조합을 끝내고 Enter를 처리한 뒤, 같은 Enter를 timeStamp가 compositionend보다 gap(ms) 뒤인 이벤트로 보낸다.
+  // 실제 시간에 기대지 않게 setTimeout은 가짜 타이머로 돌리고, 두 이벤트의 timeStamp는 직접 정한다.
+  const enterAfterComposition = (gap) => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
     const { grid, rows, input } = setup();
     grid.setRange(1, 0);
     key(input, "Process", { keyCode: 229, code: "KeyG" });
@@ -720,15 +723,41 @@ describe("한글 조합 (IME)", () => {
     input.dispatchEvent(new InputEvent("input", { isComposing: true }));
     // 조합 중 Enter (Windows Chrome: keyCode 229, code Enter)
     key(input, "Process", { keyCode: 229, code: "Enter", isComposing: true });
-    expect(grid.isEditing).toBe(true);
-    input.dispatchEvent(new CompositionEvent("compositionend", { data: "글" }));
-    await new Promise((r) => setTimeout(r, 5));
-    expect(rows[1].name).toBe("글");
-    expect(grid.getRange().active).toEqual({ r: 2, c: 0 });
-    // macOS처럼 조합 뒤 Enter가 한 번 더 오면 무시
-    const dup = key(input, "Enter");
+    const editingDuringComposition = grid.isEditing;
+    const end = new CompositionEvent("compositionend", { data: "글" });
+    Object.defineProperty(end, "timeStamp", { value: 10000 });
+    input.dispatchEvent(end);
+    vi.runOnlyPendingTimers();
+    const afterCommit = { name: rows[1].name, active: grid.getRange().active };
+    const dup = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true });
+    Object.defineProperty(dup, "timeStamp", { value: 10000 + gap });
+    input.dispatchEvent(dup);
+    vi.useRealTimers();
+    return { grid, editingDuringComposition, afterCommit, dup };
+  };
+
+  it("조합 중 누른 Enter는 조합이 끝난 뒤 저장·이동한다 (한 번만)", () => {
+    const { grid, editingDuringComposition, afterCommit, dup } = enterAfterComposition(30);
+    expect(editingDuringComposition).toBe(true);
+    expect(afterCommit.name).toBe("글");
+    expect(afterCommit.active).toEqual({ r: 2, c: 0 });
+    // macOS처럼 조합 뒤 Enter가 한 번 더 오면 (80ms 안) 무시
     expect(dup.defaultPrevented).toBe(true);
     expect(grid.isEditing).toBe(false);
+    expect(grid.getRange().active).toEqual({ r: 2, c: 0 });
+  });
+
+  it("Safari처럼 같은 Enter의 timeStamp가 compositionend보다 조금 일러도 무시한다", () => {
+    const { grid, dup } = enterAfterComposition(-30);
+    expect(dup.defaultPrevented).toBe(true);
+    expect(grid.isEditing).toBe(false);
+    expect(grid.getRange().active).toEqual({ r: 2, c: 0 });
+  });
+
+  it("80ms 뒤에 만들어진 Enter는 사용자가 다시 누른 것으로 보고 처리한다 (다음 셀 편집 시작)", () => {
+    const { grid, dup } = enterAfterComposition(200);
+    expect(dup.defaultPrevented).toBe(true); // Enter로 편집을 시작했다
+    expect(grid.isEditing).toBe(true);
     expect(grid.getRange().active).toEqual({ r: 2, c: 0 });
   });
 
