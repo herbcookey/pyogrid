@@ -188,7 +188,7 @@
 | `setRange(r0, c0, r1?, c1?)` | 범위를 고릅니다. 표 밖의 좌표는 안쪽으로 맞춥니다 |
 | `clearRange()` | |
 | `getRange()` | `{r0, c0, r1, c1, active: {r, c}}` 또는 null |
-| `getActiveCell()` | `{rowIndex, colIndex, row, column, key, value}` 또는 null |
+| `getActiveCell()` | `{rowIndex, colIndex, row, column, key, value}` 또는 null. 범위에서는 범위를 시작한 칸이 아니라 마지막으로 움직인 끝 칸입니다 (끌기, Shift+클릭, Shift+방향키가 끝난 칸). `setRange(r0, c0, r1, c1)` 뒤에는 `(r1, c1)`입니다 |
 | `getRangeCells()` | 범위 안의 셀: `[{rowIndex, colIndex, row, key, value}]` |
 | `getSelectionSummary()` | `{count, numCount, sum, avg}` |
 | `getRangeText()` | 범위를 엑셀식 글자(탭과 줄바꿈)로. 원래 값을 씁니다 |
@@ -222,7 +222,7 @@
 | `focus()` | 그리드에 키보드 포커스 주기 |
 | `copy()` | 범위를 클립보드에 복사 (Promise를 돌려주고 클립보드 권한이 필요합니다. Ctrl+C는 필요 없음) |
 | `paste(text)` | 범위 왼쪽 위부터 글자를 붙여넣습니다. `{applied, skipped, rows}`를 돌려줍니다 |
-| `cut()` | 범위를 글자로 돌려주고 비웁니다 |
+| `cut()` | 범위를 글자로 돌려주고 비웁니다. 비우는 셀은 Delete와 같습니다: 막히지 않은 편집기가 있는 셀만, 체크박스는 빼고. 돌려주는 글자에는 범위의 모든 셀이 들어갑니다 |
 | `undo()` / `redo()` | 되돌릴(다시 할) 것이 없으면 false |
 | `canUndo` / `canRedo` | (속성) |
 | `clearHistory()` | |
@@ -233,7 +233,7 @@
 | 메서드 | 설명 |
 |---|---|
 | `setColumns(columns)` | 컬럼을 모두 바꿉니다 (사용자가 조절한 너비는 처음으로, `stateKey`에 저장한 너비는 되살림). 없어진 키, 또는 필터·정렬을 못 하게 된 키의 필터·정렬 조건은 지우고 `filterchange` / `sortchange`를 알립니다. `addColumn`, `removeColumn`, `updateColumn`도 같습니다 |
-| `getColumns()` | |
+| `getColumns()` | 그리드가 쓰는 컬럼 정의 배열을 복사하지 않고 그대로 돌려줍니다. 이 배열을 고쳐도 다시 그리지 않으므로, 고친 내용을 반영하려면 `setColumns`에 넘깁니다 |
 | `addColumn(column, index?)` | 맨 위 단계에 컬럼을 넣습니다. `index`가 없으면 끝에 |
 | `removeColumn(index?)` | 컬럼을 뺍니다. `index`가 없으면 마지막 컬럼 |
 | `updateColumn(column, index)` | |

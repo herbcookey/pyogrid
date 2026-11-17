@@ -586,7 +586,7 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | `setRange(r0, c0, r1?, c1?)` | Select a range. Out-of-bounds coordinates are clamped |
 | `clearRange()` | |
 | `getRange()` | `{r0, c0, r1, c1, active: {r, c}}` or null |
-| `getActiveCell()` | `{rowIndex, colIndex, row, column, key, value}` or null |
+| `getActiveCell()` | `{rowIndex, colIndex, row, column, key, value}` or null. In a range this is the end that moved last (where a drag, Shift+click, or Shift+arrow ended), not the cell where the range started. After `setRange(r0, c0, r1, c1)` it is `(r1, c1)` |
 | `getRangeCells()` | Cells in the range: `[{rowIndex, colIndex, row, key, value}]` |
 | `getSelectionSummary()` | `{count, numCount, sum, avg}` |
 | `getRangeText()` | The range as Excel-style text (tabs and newlines), using raw values |
@@ -618,7 +618,7 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | `focus()` | Give the grid keyboard focus |
 | `copy()` | Copy the range to the clipboard (returns a Promise and needs clipboard permission; Ctrl+C doesn't) |
 | `paste(text)` | Paste text starting at the top-left of the range. Returns `{applied, skipped, rows}` |
-| `cut()` | Return the range as text and clear it |
+| `cut()` | Return the range as text and clear it. Only cells that Delete would clear are emptied: cells with an editor that isn't disabled, except checkboxes. The text still includes every cell in the range |
 | `undo()` / `redo()` | Return false when there is nothing to undo or redo |
 | `canUndo` / `canRedo` | (properties) |
 | `clearHistory()` | |
@@ -628,7 +628,7 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | Method | Description |
 |---|---|
 | `setColumns(columns)` | Replace all columns (resets user-resized widths and restores widths saved under `stateKey`). Filters and sorts on keys that no longer exist, or are no longer filterable or sortable, are removed and `filterchange` / `sortchange` fire. The same applies to `addColumn`, `removeColumn`, and `updateColumn` |
-| `getColumns()` | |
+| `getColumns()` | The column definitions array the grid is using, not a copy. Changing it doesn't redraw the grid; to apply changes, pass the columns to `setColumns` |
 | `addColumn(column, index?)` | Add a top-level column, at the end if `index` is omitted |
 | `removeColumn(index?)` | Remove a column, the last one if `index` is omitted |
 | `updateColumn(column, index)` | |

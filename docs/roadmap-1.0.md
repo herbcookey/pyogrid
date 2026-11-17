@@ -13,6 +13,7 @@
 - [ ] 문서에 없는 인스턴스 속성(`options`, `rows`, `el` 등 26개)을 정한다. 남길 것은 읽기 전용으로 README에 적고, 나머지는 `_`를 붙인다.
 - [ ] 문서에 없는 인자(`selectRow`의 `opts.source`, `setSort`의 `opts`, `openFilter`의 두 번째 인자)를 문서에 넣거나 내부용으로 정한다.
 - [ ] 이름만 적힌 `parseTSV`, `buildTSV`에 인자와 돌려주는 값을 적는다.
+- [ ] Shift로 범위를 넓힌 뒤 글자를 치면 끝 칸(`getActiveCell()`)이 편집된다. 엑셀은 시작 칸이 편집된다. 1.0 전에 맞출지 정한다. 맞추면 `getActiveCell()`, 범위 안 포커스 색(`.pyo-active`), Enter·Tab 이동의 기준 칸도 같이 바뀌므로 호환성을 깨는 변경이다.
 - [ ] README에 없는 색 CSS 변수 6개(`--pyo-head-hover`, `--pyo-aside-bg`, `--pyo-aside-text`, `--pyo-scroll-track`, `--pyo-scroll-thumb`, `--pyo-scroll-thumb-hover`)를 Theming 표에 넣는다. 높이 변수 3개(`--pyo-row-h`, `--pyo-head-row-h`, `--pyo-head-h`)는 내부용으로 둔다.
 - [ ] `dist/types`의 선언 파일이 정리한 공개 API와 맞는지 본다 (빠진 이름이 선언에도 없고, 남긴 이름에 설명이 있는지).
 - [ ] [test/unit/api-surface.test.js](../test/unit/api-surface.test.js)의 목록과 README가 같다.
