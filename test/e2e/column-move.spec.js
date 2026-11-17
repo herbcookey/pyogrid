@@ -13,7 +13,9 @@ test.afterEach(async ({ page }) => expect(page.__errors).toEqual([]));
 const order = (page) => page.evaluate(() => window.grid.getColumnOrder());
 const head = (page, key) => page.locator(`#gridWrap .pyo-hcell[data-key="${key}"]`);
 const center = async (loc) => {
-  const b = await loc.boundingBox();
+  // 창 크기를 바꾼 직후에는 헤더를 다시 그리는 중일 수 있어, 상자를 얻을 때까지 다시 잰다
+  let b = null;
+  await expect.poll(async () => (b = await loc.boundingBox()) !== null).toBe(true);
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 };
 
