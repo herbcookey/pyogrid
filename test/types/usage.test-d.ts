@@ -273,3 +273,21 @@ namespace readmeExample {
   });
   void moved, order, ok;
 }
+
+/* ------------------------------------------------------------------
+ * 행 작업 실행 취소
+ * ---------------------------------------------------------------- */
+{
+  const g = new PyoGrid<Order>(el, { columns: [{ key: "SKU" }] });
+  g.addRow({ SKU: "A", QTY: 1 }, "last", { focus: true, undoable: true });
+  g.deleteRows(0, { undoable: true });
+  g.removeRows([0, 1], { undoable: true });
+  g.deleteRows(0);
+  // @ts-expect-error undoable은 boolean
+  g.deleteRows(0, { undoable: "yes" });
+  g.on("rowsadd", (e) => {
+    const s: "api" | "undo" | "redo" = e.source;
+    const rows: Order[] = e.rows;
+    void s, rows;
+  });
+}

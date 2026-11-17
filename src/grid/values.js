@@ -162,8 +162,9 @@ export function undo(grid) {
     grid._flash(grid.messages.nothingToUndo);
     return false;
   }
-  const n = _applyHistory(grid, entry, "undo");
-  grid._flash(grid.messages.undone(grid.messages.actions[entry.source] || entry.source, grid._fmt(n)));
+  const n = entry.rows ? grid._applyRowHistory(entry, "undo") : _applyHistory(grid, entry, "undo");
+  const action = grid.messages.actions[entry.source] || entry.source;
+  grid._flash(entry.rows ? grid.messages.undoneRows(action, grid._fmt(n)) : grid.messages.undone(action, grid._fmt(n)));
   grid.emit("undo", { source: entry.source, count: n });
   return true;
 }
@@ -180,8 +181,9 @@ export function redo(grid) {
     grid._flash(grid.messages.nothingToRedo);
     return false;
   }
-  const n = _applyHistory(grid, entry, "redo");
-  grid._flash(grid.messages.redone(grid.messages.actions[entry.source] || entry.source, grid._fmt(n)));
+  const n = entry.rows ? grid._applyRowHistory(entry, "redo") : _applyHistory(grid, entry, "redo");
+  const action = grid.messages.actions[entry.source] || entry.source;
+  grid._flash(entry.rows ? grid.messages.redoneRows(action, grid._fmt(n)) : grid.messages.redone(action, grid._fmt(n)));
   grid.emit("redo", { source: entry.source, count: n });
   return true;
 }

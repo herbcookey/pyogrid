@@ -42,7 +42,7 @@ describe("resolveMessages", () => {
     const m = resolveMessages("ko", { ok: "적용", actions: { paste: "붙이기" } });
     expect(m.ok).toBe("적용");
     expect(m.cancel).toBe("취소");
-    expect(m.actions).toEqual({ edit: "셀 편집", clear: "지우기", paste: "붙이기", cut: "잘라내기" });
+    expect(m.actions).toEqual({ edit: "셀 편집", clear: "지우기", paste: "붙이기", cut: "잘라내기", addRow: "행 추가", deleteRows: "행 삭제", removeRows: "행 빼기" });
     expect(locales.ko.ok).toBe("확인"); // 내장 문구는 바뀌지 않는다
   });
 

@@ -43,16 +43,19 @@
  * @property {(from: string, to: string, count: string) => string} status  오른쪽 상태 문구 (보이는 행 범위와 전체 행 수)
  * @property {(total: string) => string} statusTotal  서버 페이징일 때 상태 문구 뒤에 붙는 전체 건수
  * @property {string} summarySeparator      선택 합계 조각 사이
- * @property {{edit: string, clear: string, paste: string, cut: string}} actions  실행 취소 대상
+ * @property {{edit: string, clear: string, paste: string, cut: string, addRow: string, deleteRows: string, removeRows: string}} actions  실행 취소 대상
  * @property {string} nothingToUndo
  * @property {string} nothingToRedo
  * @property {(action: string, count: string) => string} undone
  * @property {(action: string, count: string) => string} redone
+ * @property {(action: string, count: string) => string} undoneRows  행 작업을 되돌렸을 때 (count: 행 수)
+ * @property {(action: string, count: string) => string} redoneRows
  * @property {(count: string) => string} copied
  * @property {(count: string, skipped: string) => string} pasted       skipped가 "0"이면 건너뛴 칸 없음
  */
 
 const cells = (n) => (n === "1" ? "1 cell" : n + " cells");
+const rowsOf = (n) => (n === "1" ? "1 row" : n + " rows");
 
 /** @type {Messages} */
 const en = {
@@ -94,11 +97,13 @@ const en = {
   status: (from, to, count) => `${from} - ${to} of ${count}`,
   statusTotal: (total) => "Total " + total,
   summarySeparator: " · ",
-  actions: { edit: "edit", clear: "clear", paste: "paste", cut: "cut" },
+  actions: { edit: "edit", clear: "clear", paste: "paste", cut: "cut", addRow: "add rows", deleteRows: "delete rows", removeRows: "remove rows" },
   nothingToUndo: "Nothing to undo",
   nothingToRedo: "Nothing to redo",
   undone: (action, count) => `Undo ${action}: ${cells(count)}`,
   redone: (action, count) => `Redo ${action}: ${cells(count)}`,
+  undoneRows: (action, count) => `Undo ${action}: ${rowsOf(count)}`,
+  redoneRows: (action, count) => `Redo ${action}: ${rowsOf(count)}`,
   copied: (count) => "Copied " + cells(count),
   pasted: (count, skipped) => "Pasted " + cells(count) + (skipped !== "0" ? ` (${skipped} skipped)` : ""),
 };
@@ -142,11 +147,13 @@ const ko = {
   status: (from, to, count) => `${from} - ${to} / ${count}`,
   statusTotal: (total) => "전체 " + total,
   summarySeparator: " · ",
-  actions: { edit: "셀 편집", clear: "지우기", paste: "붙여넣기", cut: "잘라내기" },
+  actions: { edit: "셀 편집", clear: "지우기", paste: "붙여넣기", cut: "잘라내기", addRow: "행 추가", deleteRows: "행 삭제", removeRows: "행 빼기" },
   nothingToUndo: "되돌릴 작업이 없습니다",
   nothingToRedo: "다시 실행할 작업이 없습니다",
   undone: (action, count) => `실행 취소: ${action} ${count}셀`,
   redone: (action, count) => `다시 실행: ${action} ${count}셀`,
+  undoneRows: (action, count) => `실행 취소: ${action} ${count}행`,
+  redoneRows: (action, count) => `다시 실행: ${action} ${count}행`,
   copied: (count) => `복사: ${count}셀`,
   pasted: (count, skipped) => `붙여넣기: ${count}셀` + (skipped !== "0" ? ` (건너뜀 ${skipped})` : ""),
 };

@@ -92,6 +92,7 @@ export function getRow(grid, index) {
  * @param {"first" | "last" | number} [at]
  * @param {{
         focus?: boolean;
+        undoable?: boolean;
     }} [opts]
  * @returns {Grid<Row>}
  */
@@ -109,8 +110,13 @@ export function addRow(grid, rows, at = "last", opts = {}) {
     const si = ref ? grid.source.indexOf(ref) : -1;
     if (si >= 0) pos = si;
   }
+  const before = pos < grid.source.length ? grid.source[pos] : null;
   // splice(pos, 0, ...list)는 수십만 행이면 인자 수 한도를 넘으므로 배열을 이어 붙인다
   grid.source = grid.source.slice(0, pos).concat(list, grid.source.slice(pos));
+  if (opts.undoable && grid.options.undo) {
+    const items = list.map((row, j) => ({ row, at: pos + j, before, done: true }));
+    grid.history.push({ source: "addRow", changes: [], rows: { op: "add", items } });
+  }
   _afterRowsChanged(grid);
   if (opts.focus) {
     const i = grid.rows.indexOf(list[0]);
@@ -120,7 +126,7 @@ export function addRow(grid, rows, at = "last", opts = {}) {
       grid.focus();
     }
   }
-  grid.emit("rowsadd", { rows: list });
+  grid.emit("rowsadd", { rows: list, source: "api" });
   return grid;
 }
 
@@ -128,15 +134,20 @@ export function addRow(grid, rows, at = "last", opts = {}) {
  * @template [Row=any]
  * @param {Grid<Row>} grid
  * @param {Row | number | (Row | number)[]} targets
+ * @param {{undoable?: boolean}} [opts]
  * @returns {Grid<Row>}
  */
-export function removeRows(grid, targets) {
+export function removeRows(grid, targets, opts = {}) {
   const set = _targetRows(grid, targets);
   if (!set.size) return grid;
   grid.editing.cancel();
+  if (opts.undoable && grid.options.undo) {
+    const items = removalItems(grid.source, set);
+    grid.history.push({ source: "removeRows", changes: [], rows: { op: "remove", items } });
+  }
   grid.source = grid.source.filter((r) => !set.has(r));
   _afterRowsChanged(grid);
-  grid.emit("rowsremove", { rows: [...set] });
+  grid.emit("rowsremove", { rows: [...set], source: "api" });
   return grid;
 }
 
@@ -144,9 +155,10 @@ export function removeRows(grid, targets) {
  * @template [Row=any]
  * @param {Grid<Row>} grid
  * @param {Row | number | (Row | number)[]} targets
+ * @param {{undoable?: boolean}} [opts]
  * @returns {Grid<Row>}
  */
-export function deleteRows(grid, targets) {
+export function deleteRows(grid, targets, opts = {}) {
   const set = _targetRows(grid, targets);
   if (grid._treeMeta) {
     const add = (r) => {
@@ -159,6 +171,11 @@ export function deleteRows(grid, targets) {
   grid.editing.cancel();
   const k = grid.options.deletedKey;
   const ak = grid.options.addedKey;
+  if (opts.undoable && grid.options.undo) {
+    const items = removalItems(grid.source, set);
+    for (const it of items) it.mark = it.row[k];
+    if (items.length) grid.history.push({ source: "deleteRows", changes: [], rows: { op: "delete", items } });
+  }
   const removed = grid.source.filter((r) => set.has(r));
   for (const r of removed) {
     r[k] = true;
@@ -166,8 +183,179 @@ export function deleteRows(grid, targets) {
   }
   grid.source = grid.source.filter((r) => !set.has(r));
   _afterRowsChanged(grid);
-  grid.emit("rowsdelete", { rows: removed });
+  grid.emit("rowsdelete", { rows: removed, source: "api" });
   return grid;
+}
+
+/**
+ * 빼는 행마다 자리와 바로 뒤에 남는 행 (source 순서). 다시 넣을 때 쓴다
+ * @param {any[]} source
+ * @param {Set<any>} set
+ * @returns {import("../features/history.js").RowItem[]}
+ */
+function removalItems(source, set) {
+  const items = [];
+  let next = null;
+  for (let i = source.length - 1; i >= 0; i--) {
+    const r = source[i];
+    if (set.has(r)) items.push({ row: r, at: i, before: next, done: true });
+    else next = r;
+  }
+  return items.reverse();
+}
+
+/**
+ * 기록한 행들을 source에 다시 넣는다. before 행이 있으면 그 앞, before가 null이면 맨 끝,
+ * before 행이 (기록하지 않은 작업으로) 없어졌으면 기록한 순번 자리.
+ * @param {any[]} source
+ * @param {import("../features/history.js").RowItem[]} items 기록 순서
+ * @returns {any[]}
+ */
+function insertItems(source, items) {
+  const inSrc = new Set(source);
+  /** @type {Map<any, any[]>} */
+  const byBefore = new Map();
+  const tail = [];
+  const fallback = [];
+  for (const it of items) {
+    if (it.before === null) tail.push(it.row);
+    else if (inSrc.has(it.before)) {
+      let l = byBefore.get(it.before);
+      if (!l) byBefore.set(it.before, (l = []));
+      l.push(it.row);
+    } else fallback.push(it);
+  }
+  let out = [];
+  for (const r of source) {
+    const l = byBefore.get(r);
+    if (l) for (const x of l) out.push(x);
+    out.push(r);
+  }
+  for (const x of tail) out.push(x);
+  if (fallback.length) {
+    fallback.sort((a, b) => a.at - b.at);
+    const res = [];
+    let k = 0;
+    for (const r of out) {
+      while (k < fallback.length && fallback[k].at <= res.length) res.push(fallback[k++].row);
+      res.push(r);
+    }
+    while (k < fallback.length) res.push(fallback[k++].row);
+    out = res;
+  }
+  return out;
+}
+
+/**
+ * 행 작업 묶음을 되돌리거나 다시 실행한다. 기대한 상태가 아닌 행(앱이 기록 없이 빼거나 다시 넣은 행)은 건너뛴다.
+ * 건너뛴 행은 done이 바뀌지 않으므로 반대 방향에서도 건너뛴다.
+ * - 되돌리기: 추가는 빼고, 삭제·빼기는 다시 넣는다. 다시 실행은 반대.
+ * - 추가를 되돌릴 때 이미 저장된 행(addedKey 없음, clearModified 뒤)은 지운 행으로 만든다.
+ * - 삭제를 되돌릴 때 지운 행 목록에 없는 행(clearDeleted 뒤)은 추가한 행으로 되살린다.
+ * - 이렇게 바꾼 것은 다시 실행할 때 그 전 표시 키로 되돌린다 (저장 처리 직후와 같아진다).
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
+ * @param {import("../features/history.js").Entry} entry
+ * @param {"undo" | "redo"} dir
+ * @returns {number} 처리한 행 수
+ */
+export function _applyRowHistory(grid, entry, dir) {
+  const rows = /** @type {import("../features/history.js").RowOp} */ (entry.rows);
+  const o = grid.options;
+  const dk = o.deletedKey;
+  const ak = o.addedKey;
+  const mk = o.modifiedKey;
+  const inSrc = new Set(grid.source);
+  const insert = (rows.op === "add") === (dir === "redo");
+  const ok = rows.items.filter((it) => (dir === "undo" ? it.done : !it.done) && (insert ? !inSrc.has(it.row) : inSrc.has(it.row)));
+  if (!ok.length) return 0;
+  const activeC = grid.range ? grid.range.active.c : 0;
+  const inDeleted = new Set(grid.deleted);
+  /** @type {any[]} */
+  const toDeleted = [];
+  /** @type {Set<any>} */
+  const fromDeleted = new Set();
+  /** @type {any[]} 이벤트: 다시 들어온 행 / 빠진 행 / 지운 행이 된 행 */
+  const added = [];
+  const removed = [];
+  const deleted = [];
+  const restore = (/** @type {any} */ r, /** @type {string} */ key, /** @type {any} */ v) => {
+    if (v === undefined) delete r[key];
+    else r[key] = v;
+  };
+
+  if (insert) {
+    for (const it of ok) {
+      const r = it.row;
+      if (rows.op === "delete") {
+        if (inDeleted.has(r)) fromDeleted.add(r);
+        else if (!r[ak]) {
+          // clearDeleted 뒤: 서버에서 이미 지운 행이므로 추가한 행으로 되살린다
+          it.conv = { type: "added", added: r[ak], modified: r[mk], deleted: r[dk] };
+          r[ak] = true;
+          if (o.markAddedModified) r[mk] = true;
+        }
+        restore(r, dk, it.mark);
+      } else if (rows.op === "add" && it.conv && it.conv.type === "deleted") {
+        fromDeleted.add(r);
+        restore(r, dk, it.conv.deleted);
+        it.conv = null;
+      }
+      added.push(r);
+    }
+    grid.source = insertItems(grid.source, ok);
+  } else {
+    const out = new Set(ok.map((it) => it.row));
+    for (const it of ok) {
+      const r = it.row;
+      if (rows.op === "add") {
+        if (!r[ak]) {
+          // clearModified 뒤: 저장된 행이므로 지운 행으로 만든다
+          it.conv = { type: "deleted", added: r[ak], modified: r[mk], deleted: r[dk] };
+          r[dk] = true;
+          toDeleted.push(r);
+          deleted.push(r);
+        } else removed.push(r);
+      } else if (rows.op === "delete") {
+        if (it.conv && it.conv.type === "added") {
+          restore(r, ak, it.conv.added);
+          restore(r, mk, it.conv.modified);
+          it.conv = null;
+        } else if (!r[ak]) toDeleted.push(r);
+        r[dk] = true;
+        deleted.push(r);
+      } else removed.push(r);
+    }
+    grid.source = grid.source.filter((r) => !out.has(r));
+  }
+  for (const it of ok) it.done = dir === "redo";
+  if (fromDeleted.size) grid.deleted = grid.deleted.filter((r) => !fromDeleted.has(r));
+  for (const r of toDeleted) grid.deleted.push(r);
+
+  _afterRowsChanged(grid);
+  if (insert) {
+    const index = new Map();
+    grid.rows.forEach((r, i) => index.set(r, i));
+    let first = Infinity;
+    for (const r of added) {
+      const i = index.get(r);
+      if (i !== undefined && i < first) first = i;
+    }
+    if (first !== Infinity && grid.leaves.length) {
+      const c = Math.min(activeC, grid.leaves.length - 1);
+      grid.setRange(first, c);
+      grid.scrollToCell(first, c);
+    }
+  }
+  const sel = ok.map((it) => it.row).filter((r) => r[o.selectedKey]);
+  if (sel.length) {
+    const indexes = insert ? sel.map((r) => grid.rows.indexOf(r)).filter((i) => i >= 0) : [];
+    grid.emit("selectionchange", { index: -1, row: null, selected: insert, source: dir, changed: sel, indexes });
+  }
+  if (added.length) grid.emit("rowsadd", { rows: added, source: dir });
+  if (removed.length) grid.emit("rowsremove", { rows: removed, source: dir });
+  if (deleted.length) grid.emit("rowsdelete", { rows: deleted, source: dir });
+  return ok.length;
 }
 
 /**

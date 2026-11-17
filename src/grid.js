@@ -102,9 +102,9 @@ import * as gRender from "./grid/render.js";
  * @property {{applied: number, skipped: number, rows: number}} paste  rows: 붙여넣은 글자의 줄 수
  * @property {{source: string, count: number}} undo
  * @property {{source: string, count: number}} redo
- * @property {{rows: Row[]}} rowsadd
- * @property {{rows: Row[]}} rowsremove
- * @property {{rows: Row[]}} rowsdelete
+ * @property {{rows: Row[], source: "api"|"undo"|"redo"}} rowsadd  source: 코드에서 부름(api), 실행 취소(undo), 다시 실행(redo)
+ * @property {{rows: Row[], source: "api"|"undo"|"redo"}} rowsremove
+ * @property {{rows: Row[], source: "api"|"undo"|"redo"}} rowsdelete
  * @property {{row: Row, collapsed: boolean}} treetoggle
  * @property {{index: number, column: ColumnDef<Row>, width: number}} columnresize  index: 잎 컬럼 순번
  * @property {{column: ColumnDef<Row>|null, from: number, to: number, order: string[]}} columnmove
@@ -489,7 +489,8 @@ export class PyoGrid {
    * 헤더 필터 조건에 맞지 않아도 보인다.
    * @param {Row|Row[]} rows
    * @param {"first"|"last"|number} [at="last"]  숫자면 그 화면 순번의 행 앞
-   * @param {{focus?: boolean}} [opts] focus: 넣은 첫 행의 첫 셀로 이동
+   * @param {{focus?: boolean, undoable?: boolean}} [opts] focus: 넣은 첫 행의 첫 셀로 이동.
+   *   undoable: Ctrl+Z로 되돌릴 수 있게 기록한다 (기본은 기록하지 않음)
    */
   addRow(rows, at = "last", opts = {}) {
     gData.addRow(this, rows, at, opts);
@@ -499,9 +500,10 @@ export class PyoGrid {
   /**
    * 행을 목록에서 뺀다 (지운 행 기록에 남기지 않음).
    * @param {Row|number|(Row|number)[]} targets 행 객체 또는 화면 순번
+   * @param {{undoable?: boolean}} [opts] undoable: Ctrl+Z로 되돌릴 수 있게 기록한다
    */
-  removeRows(targets) {
-    gData.removeRows(this, targets);
+  removeRows(targets, opts = {}) {
+    gData.removeRows(this, targets, opts);
     return this;
   }
 
@@ -510,9 +512,10 @@ export class PyoGrid {
    * 저장 전에 addRow로 넣은 행(addedKey)은 서버에 없으므로 기록에 남기지 않는다.
    * 트리면 자손도 같이 지운다.
    * @param {Row|number|(Row|number)[]} targets 행 객체 또는 화면 순번
+   * @param {{undoable?: boolean}} [opts] undoable: Ctrl+Z로 되돌릴 수 있게 기록한다 (자손까지 한 묶음)
    */
-  deleteRows(targets) {
-    gData.deleteRows(this, targets);
+  deleteRows(targets, opts = {}) {
+    gData.deleteRows(this, targets, opts);
     return this;
   }
 
@@ -1472,6 +1475,15 @@ export class PyoGrid {
 
   _endResize() {
     gLayout._endResize(this);
+  }
+
+  /**
+   * grid/values.js의 undo·redo가 행 작업 묶음을 적용할 때
+   * @param {import("./features/history.js").Entry} entry
+   * @param {"undo"|"redo"} dir
+   */
+  _applyRowHistory(entry, dir) {
+    return gData._applyRowHistory(this, entry, dir);
   }
 
   /**
