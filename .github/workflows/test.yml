@@ -74,3 +74,23 @@ jobs:
           name: e2e-${{ matrix.browser }}
           path: test-results/
           retention-days: 7
+
+  # 성능 회귀 확인: big.html(50,000행 × 30열)을 재서 tools/perf-baseline.json과 비교한다.
+  # CI 기계는 편차가 커서 느려져도 경고(::warning::)와 작업 요약만 남기고 실패시키지 않는다.
+  # 배포(release.yml이 부를 때, 태그)에서는 돌지 않는다.
+  perf:
+    name: Performance check (warning only)
+    if: github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install the browser
+        run: npx playwright install --with-deps chrome
+      - run: npm run build
+      - run: npm run perf

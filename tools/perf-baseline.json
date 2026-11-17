@@ -1,0 +1,11 @@
+{
+  "tolerance": 1.5,
+  "metrics": {
+    "initAndSetData": 55.8,
+    "scrollToRow": 5.87,
+    "renderMedian": 3.3,
+    "renderP95": 9.8,
+    "frameMedian": 16.7,
+    "frameP95": 19.6
+  }
+}

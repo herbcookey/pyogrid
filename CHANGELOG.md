@@ -32,6 +32,7 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 - ESLint and Prettier (`npm run lint`, `npm run format`), set up to match the existing code. Lint runs in `test:all` and CI. The one formatting-only commit is listed in `.git-blame-ignore-revs`.
 - Coverage: `npm run test:coverage` measures `src/` with V8. CI runs the unit tests this way, shows the numbers in the job summary, and fails if they drop below the thresholds in `vitest.config.js` (set to the current numbers: statements 91.3%, branches 85.2%, functions 93.5%, lines 94.8%).
 - Release workflow (`.github/workflows/release.yml`): pushing a `v*` tag checks the version and CHANGELOG, runs the whole test workflow, stages the package on npm through trusted publishing, and creates a GitHub Release from the CHANGELOG section. Setup steps are in `docs/releasing.md`.
+- Performance check: `npm run perf` times `demo/big.html` (50,000 rows × 30 columns) five times and compares the medians with `tools/perf-baseline.json`. CI runs it as a separate job that only warns, because CI machines vary a lot. `tools/probe-big.mjs` and `tools/probe-frames.mjs` work as before and now also export their measuring functions.
 - `npm run typecheck` also runs `tsconfig.strict.json`, which turns on `strictNullChecks` for `src/util.js`, `src/core/*.js`, `src/editors/*.js`, and the `src/features/` files that don't import the grid (`history`, `pagebar`, `state`, `clipboard`, `filter`, `view`). The remaining files are listed in `docs/roadmap-1.0.md`.
 
 ## 0.9.0

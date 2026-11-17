@@ -1089,6 +1089,7 @@ npm run test:e2e     # build, then run headless browser tests in Chrome, Firefox
 npm run test:e2e:chrome  # build, then e2e in Chrome only
 npm run test:all     # lint, typecheck, unit, e2e, and the type tests
 npm run demo         # demo server at http://127.0.0.1:5179/demo/
+npm run perf         # after a build: time demo/big.html and compare with tools/perf-baseline.json (warns, never fails)
 ```
 
 Prettier formats `src/`, `tools/`, and the config files (`printWidth` 160). Tests, demos, CSS, and docs are left as they are written (see `.prettierignore`). Commits that only change formatting are listed in `.git-blame-ignore-revs`; GitHub's blame view skips them, and `git config blame.ignoreRevsFile .git-blame-ignore-revs` does the same locally.
