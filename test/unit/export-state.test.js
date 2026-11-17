@@ -1,11 +1,25 @@
+// 엑셀 내보내기와 너비·정렬 기억
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import * as XLSX from "xlsx";
 import { PyoGrid } from "../../src/grid.js";
+import * as XLSX from "xlsx";
 import { toXlsxCell, htmlToText, toWorksheet } from "../../src/features/excel.js";
 import { storageKey } from "../../src/features/state.js";
 import { mockLayout, unmockLayout, fire } from "./helpers.js";
 
 describe("toXlsxCell", () => {
+  // stage6.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    localStorage.clear();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
+  });
+
   it("쉼표 숫자는 숫자 + 서식", () => {
     expect(toXlsxCell("1,234", "1,234", null, "body")).toEqual({ t: "n", v: 1234, z: "#,##0" });
     expect(toXlsxCell("-1,234.50", null, null, "body")).toEqual({ t: "n", v: -1234.5, z: "#,##0.00" });
@@ -26,33 +40,33 @@ describe("toXlsxCell", () => {
   });
 });
 
-let host;
-beforeEach(() => {
-  mockLayout();
-  localStorage.clear();
-  host = document.createElement("div");
-  document.body.append(host);
-});
-afterEach(() => {
-  host.remove();
-  unmockLayout();
-});
-
-const columns = () => [
-  { key: "code", label: "코드", width: 60 },
-  { label: "이번 주", columns: [
-    { key: "qty", label: "수량", width: 70, align: "right", formatter: "money" },
-    { key: "amt", label: "금액", width: 90, align: "right", formatter: "money" },
-  ] },
-  { key: "use", label: "사용", editor: { type: "checkbox", config: { trueValue: "Y", falseValue: "N" } } },
-  { key: "memo", label: "비고", html: true, formatter: (c) => "<i>" + c.value + "</i>" },
-];
-const rows = () => [
-  { code: "0012", qty: 1200, amt: 3500000, use: "Y", memo: "가" },
-  { code: "0034", qty: 30, amt: "1,000", use: "N", memo: "나" },
-];
-
 describe("엑셀 내보내기", () => {
+  // stage6.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    localStorage.clear();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
+  });
+  const columns = () => [
+    { key: "code", label: "코드", width: 60 },
+    { label: "이번 주", columns: [
+      { key: "qty", label: "수량", width: 70, align: "right", formatter: "money" },
+      { key: "amt", label: "금액", width: 90, align: "right", formatter: "money" },
+    ] },
+    { key: "use", label: "사용", editor: { type: "checkbox", config: { trueValue: "Y", falseValue: "N" } } },
+    { key: "memo", label: "비고", html: true, formatter: (c) => "<i>" + c.value + "</i>" },
+  ];
+  const rows = () => [
+    { code: "0012", qty: 1200, amt: 3500000, use: "Y", memo: "가" },
+    { code: "0034", qty: 30, amt: "1,000", use: "N", memo: "나" },
+  ];
+
   it("다단 헤더 병합·숫자 셀·합계 행 (SheetJS로 다시 읽어 확인)", () => {
     const grid = new PyoGrid(host, {
       columns: columns(),
@@ -109,6 +123,19 @@ describe("엑셀 내보내기", () => {
 });
 
 describe("컬럼 너비·정렬 기억", () => {
+  // stage6.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    localStorage.clear();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
+  });
+
   const cols = () => [
     { key: "a", label: "A", width: 80, sortable: true },
     { key: "b", label: "B", width: 80, sortable: true },

@@ -1,10 +1,26 @@
+// 합계 행·그룹 합계·트리·셀 병합
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { PyoGrid } from "../../src/grid.js";
 import { filterRows, insertGroupRows, buildTree, computeMerge, collectors, numberOf } from "../../src/features/view.js";
 import { sumCellValue } from "../../src/features/summary.js";
-import { mockLayout, unmockLayout, rowEl, cellsOf, fire } from "./helpers.js";
+import { money } from "../../src/core/formatters.js";
+import { mockLayout, unmockLayout, rowEl, cellsOf, fire, SIZE } from "./helpers.js";
 
 describe("view 도우미", () => {
+  // stage5.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
+    unmockLayout();
+    vi.useRealTimers();
+  });
+
   it("filterRows: 키별 허용 값, 빈 값은 ''", () => {
     const rows = [{ a: "x", b: 1 }, { a: "y", b: 2 }, { a: null, b: 1 }];
     expect(filterRows(rows, new Map([["a", new Set(["x", ""])]]))).toEqual([rows[0], rows[2]]);
@@ -67,32 +83,32 @@ describe("view 도우미", () => {
   });
 });
 
-let host;
-beforeEach(() => {
-  mockLayout();
-  host = document.createElement("div");
-  document.body.append(host);
-});
-afterEach(() => {
-  host.remove();
-  document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
-  unmockLayout();
-  vi.useRealTimers();
-});
-
-const cols = [
-  { key: "team", label: "팀", width: 80 },
-  { key: "name", label: "이름", width: 80 },
-  { key: "qty", label: "수량", width: 80, editor: { type: "number" } },
-];
-const data = () => [
-  { team: "A", name: "가", qty: 10 },
-  { team: "B", name: "나", qty: 20 },
-  { team: "A", name: "다", qty: 30 },
-  { team: "C", name: "라", qty: 40 },
-];
-
 describe("footSum", () => {
+  // stage5.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
+    unmockLayout();
+    vi.useRealTimers();
+  });
+  const cols = [
+    { key: "team", label: "팀", width: 80 },
+    { key: "name", label: "이름", width: 80 },
+    { key: "qty", label: "수량", width: 80, editor: { type: "number" } },
+  ];
+  const data = () => [
+    { team: "A", name: "가", qty: 10 },
+    { team: "B", name: "나", qty: 20 },
+    { team: "A", name: "다", qty: 30 },
+    { team: "C", name: "라", qty: 40 },
+  ];
+
   const footSum = [[{ label: "합계", colspan: 2, align: "center" }, { key: "qty", collector: "sum", formatter: "money", align: "right" }]];
 
   it("필터·편집을 따라 다시 계산된다, 높이만큼 보이는 행이 준다", () => {
@@ -122,6 +138,31 @@ describe("footSum", () => {
 });
 
 describe("그룹 합계 (grouping)", () => {
+  // stage5.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
+    unmockLayout();
+    vi.useRealTimers();
+  });
+  const cols = [
+    { key: "team", label: "팀", width: 80 },
+    { key: "name", label: "이름", width: 80 },
+    { key: "qty", label: "수량", width: 80, editor: { type: "number" } },
+  ];
+  const data = () => [
+    { team: "A", name: "가", qty: 10 },
+    { team: "B", name: "나", qty: 20 },
+    { team: "A", name: "다", qty: 30 },
+    { team: "C", name: "라", qty: 40 },
+  ];
+
   const grouping = {
     by: ["team"],
     columns: [{ label() { return this.groupBy.labels[0] + " 소계"; }, colspan: 2 }, { key: "qty", collector: "sum" }],
@@ -154,6 +195,20 @@ describe("그룹 합계 (grouping)", () => {
 });
 
 describe("트리", () => {
+  // stage5.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
+    unmockLayout();
+    vi.useRealTimers();
+  });
+
   const treeData = () => [
     { id: "1", pid: "", name: "제품" },
     { id: "1-1", pid: "1", name: "부품 A" },
@@ -202,6 +257,25 @@ describe("트리", () => {
 });
 
 describe("셀 병합 (mergeCells)", () => {
+  // stage5.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
+    unmockLayout();
+    vi.useRealTimers();
+  });
+  const cols = [
+    { key: "team", label: "팀", width: 80 },
+    { key: "name", label: "이름", width: 80 },
+    { key: "qty", label: "수량", width: 80, editor: { type: "number" } },
+  ];
+
   it("가운데 행에만 글자, 안쪽 가로선 없음", () => {
     const grid = new PyoGrid(host, { columns: cols, mergeCells: ["team"] });
     grid.setData([
@@ -217,113 +291,159 @@ describe("셀 병합 (mergeCells)", () => {
   });
 });
 
-describe("헤더 값 필터", () => {
-  it("필터 단추 → 팝업 값 목록 → 일부 해제 → 확인", () => {
-    const grid = new PyoGrid(host, { columns: cols, filter: true });
-    grid.setData(data());
-    const events = [];
-    grid.on("filterchange", (e) => events.push(e));
-    grid.el.headSc.querySelector('[data-filter="0"]').click();
-    const pop = document.querySelector(".pyo-filter");
-    const labels = [...pop.querySelectorAll(".pyo-f-list label")].map((l) => l.textContent.trim());
-    expect(labels).toEqual(["A", "B", "C"]);
-    pop.querySelectorAll(".pyo-f-list input")[1].click(); // B 해제
-    pop.querySelector(".pyo-f-ok").click();
-    expect(grid.getRows().map((r) => r.name)).toEqual(["가", "다", "라"]);
-    expect(events[0]).toEqual({ filters: { team: ["A", "C"] }, count: 3 });
-    expect(grid.el.headSc.querySelector('[data-filter="0"]').classList.contains("pyo-filter-on")).toBe(true);
-    expect(document.querySelector(".pyo-filter")).toBeNull();
+describe("큰 병합 덩어리도 글자가 보인다", () => {
+  // review-fixes.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
   });
 
-  it("다른 컬럼 조건에 걸린 값만 목록에, 검색 뒤 확인은 검색 결과 중 체크한 것만", () => {
-    const grid = new PyoGrid(host, { columns: cols, filter: true });
-    grid.setData(data());
-    grid.setFilter("team", ["A"]);
-    grid.openFilter(1);
-    let pop = document.querySelector(".pyo-filter");
-    expect([...pop.querySelectorAll(".pyo-f-list label")].map((l) => l.textContent.trim())).toEqual(["가", "다"]);
-    pop.querySelector(".pyo-f-cancel").click();
-    grid.clearFilters();
-    grid.openFilter(1);
-    pop = document.querySelector(".pyo-filter");
-    const search = pop.querySelector(".pyo-f-search");
-    search.value = "다";
-    search.dispatchEvent(new Event("input"));
-    pop.querySelector(".pyo-f-ok").click();
-    expect(grid.getRows().map((r) => r.name)).toEqual(["다"]);
-    expect(grid.el.empty.hidden).toBe(true);
-    grid.setFilter("name", ["없음"]);
-    expect(grid.el.empty.textContent).toBe("No rows match the filter");
+  it("200행 덩어리: 보이는 부분 가운데 행에 글자, 스크롤하면 따라온다", () => {
+    const grid = new PyoGrid(host, { columns: [{ key: "k" }, { key: "i" }], mergeCells: ["k"], pageBar: false });
+    grid.setData(Array.from({ length: 200 }, (_, i) => ({ k: "같은 값", i })));
+    const shown = () =>
+      [...grid.el.body.querySelectorAll('.pyo-cell[data-c="0"]')]
+        .filter((c) => !c.classList.contains("pyo-merge-hide"))
+        .map((c) => Number(c.closest(".pyo-row").dataset.row));
+    // 높이 400 - 헤더 27 = 373px → 0~14행이 보임, 가운데 7행
+    expect(shown()).toEqual([7]);
+    grid.el.scroll.scrollTop = 26 * 100;
+    grid.refresh();
+    const s = shown();
+    expect(s).toHaveLength(1);
+    expect(s[0]).toBeGreaterThanOrEqual(100);
+    expect(s[0]).toBeLessThanOrEqual(100 + 14);
+    // 덩어리 끝이 화면 안에 걸치면 보이는 부분의 가운데
+    grid.el.scroll.scrollTop = 26 * 195;
+    grid.refresh();
+    expect(shown()).toEqual([197]);
+    void SIZE;
   });
 
-  it("초기화, 빈 값 표시, filter:false 컬럼, 트리에서는 필터 없음", () => {
-    const grid = new PyoGrid(host, { columns: [{ key: "a", label: "A" }, { key: "b", filter: false }], filter: true });
-    grid.setData([{ a: "" }, { a: "x" }]);
-    expect(grid.el.headSc.querySelector('[data-filter="1"]')).toBeNull();
-    grid.openFilter(0);
-    const pop = document.querySelector(".pyo-filter");
-    expect([...pop.querySelectorAll(".pyo-f-list label")].map((l) => l.textContent.trim())).toEqual(["x", "(Blank)"]);
-    pop.querySelectorAll(".pyo-f-list input")[0].click();
-    pop.querySelector(".pyo-f-ok").click();
-    expect(grid.getRows()).toHaveLength(1);
-    grid.openFilter(0);
-    document.querySelector(".pyo-f-clear").click();
-    expect(grid.getRows()).toHaveLength(2);
-    const t = new PyoGrid(document.body.appendChild(document.createElement("div")), { columns: [{ key: "a" }], filter: true, tree: {} });
-    expect(t.el.headSc.querySelector("[data-filter]")).toBeNull();
-  });
-
-  it("setData 뒤에도 조건이 남는다, 필터로 숨은 행은 getAllRows에 있다", () => {
-    const grid = new PyoGrid(host, { columns: cols, filter: true });
-    grid.setFilter("team", ["B"]);
-    grid.setData(data());
-    expect(grid.getRows().map((r) => r.name)).toEqual(["나"]);
-    expect(grid.getAllRows()).toHaveLength(4);
+  it("짧은 덩어리는 전처럼 덩어리 가운데", () => {
+    const grid = new PyoGrid(host, { columns: [{ key: "k" }], mergeCells: true });
+    grid.setData([{ k: "A" }, { k: "A" }, { k: "A" }, { k: "B" }, { k: "B" }]);
+    const vis = [0, 1, 2, 3, 4].map((i) => !cellsOf(grid, i)[0].classList.contains("pyo-merge-hide"));
+    expect(vis).toEqual([false, true, false, true, false]);
   });
 });
 
-describe("행 넣기·빼기·지우기", () => {
-  it("addRow first/last/위치, 넣은 행은 __modified__", () => {
-    const grid = new PyoGrid(host, { columns: cols });
-    grid.setData(data());
-    grid.addRow({ name: "처음" }, "first");
-    grid.addRow([{ name: "끝1" }, { name: "끝2" }]);
-    grid.addRow({ name: "중간" }, 2);
-    expect(grid.getRows().map((r) => r.name)).toEqual(["처음", "가", "중간", "나", "다", "라", "끝1", "끝2"]);
-    expect(grid.getModifiedRows().map((r) => r.name)).toEqual(["처음", "중간", "끝1", "끝2"]);
+describe("2. 합계의 소수", () => {
+  // review-fixes3.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
+    unmockLayout();
+    vi.restoreAllMocks();
   });
 
-  it("addRow focus: 넣은 행으로 이동", () => {
-    const grid = new PyoGrid(host, { columns: cols });
-    grid.setData(data());
-    grid.addRow({ name: "새 행" }, "last", { focus: true });
-    expect(grid.getRange().active).toEqual({ r: 4, c: 0 });
+  it("sum은 넣은 값의 소수 자리에서 반올림한다", () => {
+    const list = [{ v: 0.1 }, { v: 0.7 }];
+    expect(collectors.sum.call({ key: "v", list })).toBe(0.8);
+    expect(sumCellValue({ key: "v", collector: "sum" }, [{ v: 0.1 }, { v: 0.2 }])).toBe("0.3");
+    expect(sumCellValue({ key: "v", collector: "sum", formatter: "money" }, list)).toBe("0.8");
+    expect(collectors.sum.call({ key: "v", list: [{ v: "1,234.56" }, { v: 0.01 }] })).toBe(1234.57);
   });
 
-  it("deleteRows는 getDeletedRows에 남기고 __deleted__, removeRows는 남기지 않는다, setData가 비운다", () => {
-    const grid = new PyoGrid(host, { columns: cols, rowSelector: true });
-    const rows = data();
+  it("money는 숫자의 부동소수 오차를 지운 뒤 2자리까지 자른다 (글자는 그대로)", () => {
+    expect(money({ value: 0.1 + 0.7 })).toBe("0.8");
+    expect(money({ value: 1234.5678 })).toBe("1,234.56");
+    expect(money({ value: 1e21 })).toBe("1,000,000,000,000,000,000,000");
+    expect(money({ value: 0.0000001 })).toBe("0.00");
+    expect(money({ value: "0.799" })).toBe("0.79");
+  });
+
+  it("선택 합계도 같은 오차를 지운다", () => {
+    const grid = new PyoGrid(host, { columns: [{ key: "v", numeric: true }] });
+    grid.setData([{ v: 0.1 }, { v: 0.2 }]);
+    grid.setRange(0, 0, 1, 0);
+    expect(grid.getSelectionSummary().sum).toBe(0.3);
+  });
+});
+
+describe("3. avg·min·max는 빈 값을 세지 않는다", () => {
+  // review-fixes3.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
+    unmockLayout();
+    vi.restoreAllMocks();
+  });
+
+  const list = [{ v: 10 }, { v: "" }, { v: null }, {}, { v: 30 }, { v: "n/a" }];
+  it("빈 값과 숫자가 없는 글자를 뺀다", () => {
+    expect(collectors.avg.call({ key: "v", list })).toBe(20);
+    expect(collectors.min.call({ key: "v", list })).toBe(10);
+    expect(collectors.max.call({ key: "v", list })).toBe(30);
+    expect(collectors.sum.call({ key: "v", list })).toBe(40);
+    expect(collectors.avg.call({ key: "v", list: [{ v: "" }] })).toBe("");
+    expect(collectors.min.call({ key: "v", list: [{ v: "" }] })).toBe("");
+    expect(collectors.min.call({ key: "v", list: [{ v: -5 }, { v: 0 }] })).toBe(-5);
+  });
+
+  it("합계 행 평균과 선택 합계 평균이 같다", () => {
+    const grid = new PyoGrid(host, { columns: [{ key: "v", numeric: true }], footSum: [[{ key: "v", collector: "avg" }]] });
+    grid.setData([{ v: 10 }, { v: "" }, { v: 30 }]);
+    grid.setRange(0, 0, 2, 0);
+    expect(grid.getSelectionSummary().avg).toBe(20);
+    expect(grid.el.foot.textContent).toContain("20");
+  });
+});
+
+describe("작은 것", () => {
+  // review-fixes5.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    document.querySelectorAll(".pyo-popup").forEach((p) => p.remove());
+    unmockLayout();
+    vi.restoreAllMocks();
+  });
+
+  it("트리 부모·자식 키는 타입이 달라도 같은 값이면 잇는다 (id 1, pid \"1\")", () => {
+    const rows = [{ id: 1, pid: "" }, { id: 2, pid: "1" }, { id: "3", pid: 2 }];
+    const t = buildTree(rows, { parentKey: "pid", selfKey: "id", collapseKey: "collapse" }, (s) => s);
+    expect(t.meta.get(rows[1]).parent).toBe(rows[0]);
+    expect(t.meta.get(rows[2]).parent).toBe(rows[1]);
+    expect(t.meta.get(rows[2]).depth).toBe(2);
+  });
+
+  it("그룹 키 컬럼 값을 고치면 그 행이 새 그룹으로 옮겨 가고 소계가 다시 계산된다", () => {
+    const grid = new PyoGrid(host, {
+      columns: [{ key: "g", editor: { type: "text" } }, { key: "q" }],
+      grouping: { by: ["g"], columns: [{ label() { return this.groupBy.labels[0]; } }, { key: "q", collector: "sum" }] },
+    });
+    const rows = [{ g: "A", q: 1 }, { g: "A", q: 2 }, { g: "B", q: 3 }];
     grid.setData(rows);
-    grid.selectRow(1, true);
-    grid.selectRow(3, true);
-    grid.deleteRows(grid.getSelectedRows());
-    expect(grid.getRows().map((r) => r.name)).toEqual(["가", "다"]);
-    expect(grid.getDeletedRows()).toEqual([rows[1], rows[3]]);
-    expect(rows[1].__deleted__).toBe(true);
-    grid.removeRows(0);
-    expect(grid.getRows().map((r) => r.name)).toEqual(["다"]);
-    expect(grid.getDeletedRows()).toHaveLength(2);
-    grid.setData(data());
-    expect(grid.getDeletedRows()).toEqual([]);
-  });
-
-  it("replaceRow, 정렬 중 넣은 행도 정렬된 자리", () => {
-    const grid = new PyoGrid(host, { columns: cols, sortable: true });
-    grid.setData(data());
-    grid.setSort([{ key: "qty", dir: "desc" }]);
-    grid.addRow({ name: "큰", qty: 99 });
-    expect(grid.getRow(0).name).toBe("큰");
-    grid.replaceRow(1, { name: "바꿈", qty: 1 });
-    expect(grid.getRows().map((r) => r.name)).toEqual(["큰", "다", "나", "가", "바꿈"]);
+    const groups = () => grid.getViewRows().filter((r) => r.__isGrouping).map((r) => r.__groupingBy.labels[0] + ":" + r.__groupingList.length);
+    expect(groups()).toEqual(["A:2", "B:1"]);
+    grid.setValue(rows[0], "g", "B");
+    expect(groups()).toEqual(["A:1", "B:2"]);
+    grid.setValues([{ row: rows[1], key: "g", value: "C" }]);
+    expect(groups()).toEqual(["B:2", "C:1"]);
+    expect(grid.getViewRows().indexOf(rows[1])).toBeGreaterThan(grid.getViewRows().indexOf(rows[2]));
   });
 });

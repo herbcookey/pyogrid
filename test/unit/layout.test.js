@@ -3,18 +3,19 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PyoGrid } from "../../src/grid.js";
 import { mockLayout, unmockLayout, makeRows } from "./helpers.js";
 
-let host;
-beforeEach(() => {
-  mockLayout();
-  host = document.createElement("div");
-  document.body.append(host);
-});
-afterEach(() => {
-  host.remove();
-  unmockLayout();
-});
-
 describe("getColumns", () => {
+  // layout.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
+  });
+
   it("지금의 컬럼 정의(묶음 포함)를 돌려주고, addColumn·removeColumn·setColumns를 따라간다", () => {
     const a = { key: "a", label: "A" };
     const group = { label: "묶음", columns: [{ key: "b" }, { key: "c" }] };
@@ -33,6 +34,18 @@ describe("getColumns", () => {
 });
 
 describe("setHeight", () => {
+  // layout.test.js의 공통 준비
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
+  });
+
   it("숫자는 px, CSS 값은 그대로, null이면 대상 요소를 채운다. 그리드를 돌려준다", () => {
     const grid = new PyoGrid(host, { columns: [{ key: "id" }] });
     grid.setData(makeRows(3));
