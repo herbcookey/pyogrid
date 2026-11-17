@@ -41,6 +41,7 @@
 
 - [ ] 실제 Safari(macOS, iOS)에서 손으로 확인한다. 지금은 Playwright WebKit만 자동으로 돌린다.
 - [ ] Firefox, Safari에서 한글 입력(IME)을 손으로 확인한다. 자동 테스트는 Chromium에서만 된다.
+- [ ] NVDA(Chrome·Firefox)와 VoiceOver(Safari·Chrome)로 [a11y-manual-check.md](a11y-manual-check.md)의 항목을 확인한다. 특히 입력칸의 `aria-activedescendant`로 칸을 옮길 때 새 칸을 읽는지.
 - [ ] macOS 실기기에서 한글 입력 확인 (Safari, Chrome, Firefox). [ime-manual-check.md](ime-manual-check.md)의 항목을 demo/input-log.html로 확인하고 결과 표를 채운다. 조합 뒤 같은 키가 compositionend와 몇 ms 차이로 오는지도 적어 80ms 창이 맞는지 본다.
 - [ ] CI(Test 워크플로)가 Chrome, Firefox, WebKit에서 연속으로 통과한다.
 

@@ -17,8 +17,13 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 
 - **Typed rows.** `PyoGrid<Row>` takes the row type (default `any`, so existing code compiles as before). Methods that take or return rows use it: `setData`, `getRows`, `getAllRows`, `getRow`, `getViewRows`, `getSelectedRows`, `getModifiedRows`, `getAddedRows`, `getDeletedRows`, `addRow`, `removeRows`, `deleteRows`, `replaceRow`, `setValue`, `setValues`, `toggleNode`, `getTreeInfo`, and `selectAll`'s filter. `ColumnDef<Row>` types `c.row` in `formatter`, `cellClass`, and `editor.disabled`, and `GridOptions<Row>` types `rowClass`.
 - **Typed events.** `GridEvents<Row>` lists every event and its argument, taken from the grid's own `emit` calls. `grid.on("change", (e) => e.row.SKU)` infers `e`. Event names that aren't in the list are still accepted.
+- **Accessibility.** The grid has `aria-rowcount` and `aria-colcount`; rendered rows have `aria-rowindex` and cells `aria-colindex` counted from the start of the grid, so screen readers get the right position while virtual scrolling. The input box's `aria-activedescendant` points at the focused cell. Header, footer, and subtotal rows use `role="row"` and `role="gridcell"`, and checkboxes have names. See [Accessibility](README.md#accessibility).
 - `getChanges()` returns `{added, modified, deleted}` for saving, as shallow copies of the rows without the grid's marker keys (`__selected__`, `__modified__`, `__added__`, `__deleted__`, or the names set in `selectedKey`, `modifiedKey`, `addedKey`, and `deletedKey`). `modified` leaves out added rows. `cleanRow(row)` copies one row the same way (a value that isn't an object is returned as it is). The rows in the grid are not changed, and `getModifiedRows()` and the other getters work as before.
 - Type exports from `pyogrid`: `GridOptions`, `ColumnDef`, `ColumnEditor`, `CellContext`, `GridCellInfo`, `GridEvents`, `GridClickEvent`, `ViewRow`, `GroupingRow`, `AppliedChange`, `RangeInfo`, `SortItem`, `SortCompare`, `PageInfo`. See [TypeScript](README.md#typescript).
+
+### Changed
+
+- **`role="grid"` moved from the outer `.pyo` element to `.pyo-canvas`** (the element that holds only the header, body, and footer rows), so the input box and the bottom bar are no longer inside the grid role. Header cells are now wrapped in `div.pyo-hrow` row elements inside the frozen and scrolling header boxes. Layout is unchanged. Code that looked up `[role="grid"]` or walked the header's DOM may need updating; the DOM structure is not covered by Stability.
 
 ### Fixed
 
@@ -27,6 +32,7 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 ### Documentation
 
 - `CONTRIBUTING.md` and GitHub issue forms for bug reports and feature requests.
+- `docs/a11y-manual-check.md`: what to check by hand with NVDA and VoiceOver.
 - `demo/input-log.html` logs the grid input's keyboard, composition, and input events for checking IME input by hand; `docs/ime-manual-check.md` is the checklist for macOS and Windows.
 - `docs/api.ko.md`: the Grid options, Column options, Methods, and Events sections in Korean. README.ko.md links to it. `npm run docs:check` (also in CI) fails when its sections, table names, row counts, or code blocks no longer match README.md.
 - README has a new [Stability](README.md#stability) section: what is covered between releases (documented options, methods, events, `messages` keys, CSS custom properties, and row marker keys), what is not (`_` members, DOM structure and `pyo-*` classes, undocumented exports, the shape of saved `localStorage` state), and the version rules before 1.0. README.ko.md has a summary.
@@ -39,6 +45,7 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 - Some undocumented internal `_` methods were removed from `PyoGrid` (28 that nothing called from outside their module, such as `_createRow`, `_cellHtml`, and `_trackModified`). Members starting with `_` are not covered by [Stability](README.md#stability).
 - `test/unit/api-surface.test.js` pins the names of the `src/index.js` exports, `PyoGrid` static properties, public `PyoGrid.prototype` methods, default option keys, and emitted events.
 - `deprecate(id, message)` in `src/util.js` logs a `console.warn` once per id. It is not exported and not used yet.
+- e2e tests run [axe](https://github.com/dequelabs/axe-core) (WCAG 2.1 A and AA rules) on every demo page in Chrome, Firefox, and WebKit (`test/e2e/a11y.spec.js`).
 - `npm run typecheck:types` checks `test/types/usage.test-d.ts` against the built `dist/types` with `strict: true`. It runs in `test:all` and CI.
 - ESLint and Prettier (`npm run lint`, `npm run format`), set up to match the existing code. Lint runs in `test:all` and CI. The one formatting-only commit is listed in `.git-blame-ignore-revs`.
 - Coverage: `npm run test:coverage` measures `src/` with V8. CI runs the unit tests this way, shows the numbers in the job summary, and fails if they drop below the thresholds in `vitest.config.js` (set to the current numbers: statements 91.3%, branches 85.2%, functions 93.5%, lines 94.8%).
