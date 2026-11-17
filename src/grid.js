@@ -501,11 +501,6 @@ export class PyoGrid {
     return this;
   }
 
-  /** @param {any} targets */
-  _targetRows(targets) {
-    return gData._targetRows(this, targets);
-  }
-
   /** 행이 늘거나 줄었을 때: 보이는 위치는 그대로 두고 다시 그린다 */
   _afterRowsChanged() {
     gData._afterRowsChanged(this);
@@ -532,10 +527,6 @@ export class PyoGrid {
   /** @returns {Record<string, string[]>} */
   getFilters() {
     return gData.getFilters(this);
-  }
-
-  _afterFilter() {
-    gData._afterFilter(this);
   }
 
   /** @param {LeafColumn} leaf */
@@ -605,16 +596,6 @@ export class PyoGrid {
   collapseAll() {
     gData.collapseAll(this);
     return this;
-  }
-
-  /** @param {boolean} v */
-  _setAllCollapsed(v) {
-    gData._setAllCollapsed(this, v);
-    return this;
-  }
-
-  _treeCfg() {
-    return gData._treeCfg(this);
   }
 
   /* ==================================================================
@@ -754,29 +735,6 @@ export class PyoGrid {
   }
 
   /**
-   * 화면 순번 또는 행 객체 → {row, index}. 행 객체는 이 그리드의 데이터(getAllRows)에 있어야 한다.
-   * index는 화면 순번 (화면에 없으면 -1).
-   * @param {number|any} target
-   * @param {Map<any, number>} [viewIndex] 여러 번 찾을 때 미리 만든 화면 순번 표
-   * @param {Set<any>} [sourceSet]
-   * @returns {{row:any, index:number}|null}
-   */
-  _resolveRow(target, viewIndex, sourceSet) {
-    return gValues._resolveRow(this, target, viewIndex, sourceSet);
-  }
-
-  /**
-   * @param {any} row
-   * @param {number} rowIndex 화면 순번 (화면에 없으면 -1)
-   * @param {string} key
-   * @param {any} value
-   * @param {{source?: string, refresh?: boolean, batch?: boolean}} opts
-   */
-  _setRowValue(row, rowIndex, key, value, opts) {
-    return gValues._setRowValue(this, row, rowIndex, key, value, opts);
-  }
-
-  /**
    * 여러 셀을 한 번에 바꾼다. 다 바꾼 뒤 한 번만 다시 그리고 batchchange를 알린다.
    * 셀마다 change도 알리며, 이때 batch:true가 붙는다. 행은 rowIndex(화면 순번) 또는 row(행 객체)로 준다.
    * @param {{rowIndex?: number, row?: Row, key: string, value: any}[]} changes
@@ -815,19 +773,6 @@ export class PyoGrid {
   }
 
   /**
-   * 수정 표시 관리. 셀마다 처음 값을 기억해 두고, 모든 셀이 처음 값으로 돌아오면
-   * (실행 취소나 직접 되돌리기) 수정 표시를 푼다. 바꾸기 전에 이미 표시가 있던 행
-   * (addRow로 넣은 행, 데이터에 __modified__가 있던 행)은 그대로 둔다.
-   * @param {any} row
-   * @param {string} key
-   * @param {any} old 바꾸기 전 값
-   * @param {any} value 바꾼 값
-   */
-  _trackModified(row, key, old, value) {
-    gValues._trackModified(this, row, key, old, value);
-  }
-
-  /**
    * 수정 표시(__modified__)와 추가 표시(__added__)를 지운다. 저장한 뒤 부른다.
    * 추가 표시가 빠진 행은 다시 헤더 필터 조건을 따른다.
    * @param {Row[]} [rows] 없으면 모든 행 (지운 행 포함)
@@ -847,15 +792,6 @@ export class PyoGrid {
   acceptChanges() {
     gValues.acceptChanges(this);
     return this;
-  }
-
-  /**
-   * @param {import("./features/history.js").Entry} entry
-   * @param {"undo"|"redo"} source
-   * @returns {number} 바꾼 셀 수
-   */
-  _applyHistory(entry, source) {
-    return gValues._applyHistory(this, entry, source);
   }
 
   /**
@@ -1000,15 +936,6 @@ export class PyoGrid {
     return this;
   }
 
-  /**
-   * 컬럼이 바뀐 뒤: 새 컬럼에 없거나 더는 필터·정렬할 수 없는 키의 조건을 지우고,
-   * 화면 행을 다시 만든 뒤 배치한다. 지운 조건이 있으면 filterchange·sortchange를 알린다.
-   * @param {boolean} restore stateKey 저장값을 되살릴지 (setColumns)
-   */
-  _afterColumnsChanged(restore) {
-    gLayout._afterColumnsChanged(this, restore);
-  }
-
   /** @returns {ColumnDef[]} 현재 컬럼 정의 */
   getColumns() {
     return gLayout.getColumns(this);
@@ -1073,28 +1000,6 @@ export class PyoGrid {
     this._mergeDirty = /** @type {boolean} */ (self._mergeDirty);
     gRender.refresh(this);
     return this;
-  }
-
-  /**
-   * 이 키를 바꾸면 셀 병합이 달라지는가 (computeMerge와 같은 기준: 편집기 없는 병합 컬럼)
-   * @param {string} key
-   */
-  _isMergeKey(key) {
-    return gValues._isMergeKey(this, key);
-  }
-
-  /** @param {string} key 그룹 합계 기준 키인가 (값이 바뀌면 그룹을 다시 나눠야 한다) */
-  _isGroupKey(key) {
-    return gValues._isGroupKey(this, key);
-  }
-
-  /**
-   * 값을 바꾼 뒤 다시 그리기. 그룹 기준 키면 그룹을 다시 나누고, 병합 컬럼이면 병합을 다시 센다.
-   * @param {Iterable<string>} keys 바뀐 키
-   * @param {number} [rowIndex] 한 셀만 바뀌었을 때 그 화면 순번 (-1이면 화면에 없는 행)
-   */
-  _redrawAfterValues(keys, rowIndex) {
-    gValues._redrawAfterValues(this, keys, rowIndex);
   }
 
   /**
@@ -1333,14 +1238,6 @@ export class PyoGrid {
   }
 
   /**
-   * 컬럼 구성을 바꾼다. 사용자가 조절한 너비는 같은 정의 객체를 찾아 새 잎 순번으로 옮긴다.
-   * @param {ColumnDef[]} cols
-   */
-  _replaceColumns(cols) {
-    gLayout._replaceColumns(this, cols);
-  }
-
-  /**
    * 이 브라우저의 세로 스크롤바 너비. ::-webkit-scrollbar를 쓰는 Chrome·Edge·Safari는 15,
    * Firefox는 운영체제 기본(Windows 17, 겹쳐 그리는 스크롤바면 0).
    * 스크롤 영역과 같은 class의 숨은 상자를 overflow:scroll로 만들어 잰다. 잴 수 없으면 SCROLLBAR.
@@ -1357,10 +1254,6 @@ export class PyoGrid {
 
   _scrollbarWidth() {
     return gLayout._scrollbarWidth(this);
-  }
-
-  _computeLayout() {
-    gLayout._computeLayout(this);
   }
 
   _applyView() {
@@ -1389,17 +1282,6 @@ export class PyoGrid {
     gRender._renderHeader(this);
   }
 
-  /**
-   * 제목(label)은 글자로 넣는다. 컬럼에 html: true가 있으면 HTML로 넣는다.
-   * @param {HeaderCell} cell
-   * @param {number} from
-   * @param {number} to  미포함
-   * @param {number} rh
-   */
-  _headerCellHtml(cell, from, to, rh) {
-    return gRender._headerCellHtml(this, cell, from, to, rh);
-  }
-
   /** 헤더 전체 선택 체크박스 상태: 선택 가능한 행이 모두 선택됐으면 체크 */
   _updateHeaderSelector() {
     gRender._updateHeaderSelector(this);
@@ -1414,64 +1296,13 @@ export class PyoGrid {
    * 본문 (세로·가로 가상 스크롤)
    * ================================================================ */
 
-  _visibleRange() {
-    return gRender._visibleRange(this);
-  }
-
   _render() {
     gRender._render(this);
-  }
-
-  /**
-   * 병합 덩어리마다 글자를 보이는 부분의 가운데 행에만 보인다.
-   * 덩어리가 화면보다 길어도 글자가 화면 안에 있게, 스크롤할 때마다 다시 고른다.
-   * (셀에는 늘 글자가 들어 있고 class로 숨기므로 행을 다시 만들지 않는다)
-   */
-  _paintMerge() {
-    gRender._paintMerge(this);
-  }
-
-  _clearRows() {
-    gRender._clearRows(this);
   }
 
   /** @param {number} index */
   _rowClassName(index) {
     return gRender._rowClassName(this, index);
-  }
-
-  /** @param {number} index */
-  _createRow(index) {
-    return gRender._createRow(this, index);
-  }
-
-  /**
-   * @param {{special: string, width: number}} a
-   * @param {number} index
-   */
-  _asideCellHtml(a, index) {
-    return gRender._asideCellHtml(this, a, index);
-  }
-
-  /**
-   * 트리 펼침 단추·들여쓰기 (기본 아이콘이 있고, 화면은 HTML 아이콘을 줄 수 있다)
-   * @param {any} row
-   */
-  _treeControlHtml(row) {
-    return gRender._treeControlHtml(this, row);
-  }
-
-  /**
-   * 셀 안 HTML (formatter 결과, 체크박스, 선택 목록 글자, 이스케이프한 값)
-   * @param {number} c
-   * @param {any} row
-   * @param {number} index
-   * @param {any} value
-   * @param {any} ctx
-   * @param {boolean} [plain] 체크박스도 글자로 (내보내기용)
-   */
-  _cellContent(c, row, index, value, ctx, plain = false) {
-    return gRender._cellContent(this, c, row, index, value, ctx, plain);
   }
 
   /**
@@ -1483,65 +1314,17 @@ export class PyoGrid {
     return gRender.cellText(this, r, c);
   }
 
-  /**
-   * formatter 결과와 값은 이스케이프해서 넣는다. 컬럼에 html: true가 있으면 formatter 결과를 HTML로 넣는다.
-   * @param {number} c
-   * @param {any} row
-   * @param {number} index
-   */
-  _cellHtml(c, row, index) {
-    return gRender._cellHtml(this, c, row, index);
-  }
-
   /* ==================================================================
    * 행 선택 반영
    * ================================================================ */
-
-  /**
-   * @param {number[]} changed 바뀐 화면 순번
-   * @param {{index:number,row:any,selected:boolean,source:string}} info
-   * @param {any[]} [changedRows] 화면에 없는 행(접힌 트리)까지 포함한 바뀐 행
-   */
-  _afterSelection(changed, info, changedRows) {
-    gSelection._afterSelection(this, changed, info, changedRows);
-  }
 
   /* ==================================================================
    * 셀 범위 선택 반영
    * ================================================================ */
 
-  /** @param {CellRange|null} rng */
-  _setRangeInternal(rng) {
-    gSelection._setRangeInternal(this, rng);
-  }
-
-  /** 그려진 셀의 범위 표시만 고친다 (행을 다시 만들지 않음) */
-  _paintRange() {
-    gSelection._paintRange(this);
-  }
-
-  /**
-   * 화면 좌표 → (행, 잎 컬럼). 영역 밖이면 가장 가까운 셀로 맞춘다.
-   * @param {number} x clientX
-   * @param {number} y clientY
-   */
-  _cellFromPoint(x, y) {
-    return gSelection._cellFromPoint(this, x, y);
-  }
-
   /** @param {PointerEvent} e */
   _onBodyPointerDown(e) {
     gSelection._onBodyPointerDown(this, e);
-  }
-
-  /**
-   * 끌어서 범위 넓히기. 영역 밖으로 나가면 자동으로 스크롤한다.
-   * 포인터 캡처를 쓰면 Chrome이 click 대상을 캡처한 요소로 바꿔서 셀 click·dblclick이 사라지므로
-   * document에 이동·놓기 리스너를 단다.
-   * @param {PointerEvent} e
-   */
-  _startDrag(e) {
-    gSelection._startDrag(this, e);
   }
 
   /**
