@@ -24,7 +24,7 @@ export function filterRows(list, conds, exceptKey, pass) {
   if (!keys.length) return list;
   return list.filter((row) => {
     if (pass && pass(row)) return true;
-    for (const k of keys) if (!/** @type {Set<string>} */ (conds.get(k)).has(filterKey(getValue(row, k)))) return false;
+    for (const k of keys) if (!(/** @type {Set<string>} */ (conds.get(k)).has(filterKey(getValue(row, k))))) return false;
     return true;
   });
 }
@@ -58,7 +58,7 @@ export function numericValue(v) {
 function decimalsOf(n) {
   const s = String(n);
   const e = s.indexOf("e-");
-  if (e >= 0) return Math.min(20, Number(s.slice(e + 2)) + ((s.split("e")[0].split(".")[1] || "").length));
+  if (e >= 0) return Math.min(20, Number(s.slice(e + 2)) + (s.split("e")[0].split(".")[1] || "").length);
   const d = s.indexOf(".");
   return d < 0 ? 0 : Math.min(20, s.length - d - 1);
 }
@@ -248,7 +248,7 @@ export function buildView(o) {
       const user = o.sort.find((s) => s.key === key);
       return { key, dir: user ? user.dir : "asc" };
     });
-    sort = fixed.concat(sort.filter((s) => !/** @type {{by: string[]}} */ (o.grouping).by.includes(s.key)));
+    sort = fixed.concat(sort.filter((s) => !(/** @type {{by: string[]}} */ (o.grouping).by.includes(s.key))));
   }
   const sorted = sort.length ? sortRows(filtered, sort, o.compare, o.locale) : filtered;
   if (o.grouping && o.grouping.by.length) return { rows: insertGroupRows(sorted, o.grouping.by), dataRows: sorted, treeMeta: null };

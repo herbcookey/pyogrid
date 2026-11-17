@@ -692,8 +692,7 @@ export class PyoGrid {
   _placeFilterPopup(focus = false) {
     if (!this._filterPopup) return;
     const i = this._filterLeaf;
-    const a =
-      this.el.head.querySelector(`.pyo-filter-btn[data-filter="${i}"]`) || this.el.head.querySelector(`[data-leaf="${i}"]`) || this.el.root;
+    const a = this.el.head.querySelector(`.pyo-filter-btn[data-filter="${i}"]`) || this.el.head.querySelector(`[data-leaf="${i}"]`) || this.el.root;
     this._filterPopup.place(a.getBoundingClientRect(), focus);
   }
 
@@ -1046,7 +1045,15 @@ export class PyoGrid {
       this._scheduleSummary();
     }
     this.emit("change", {
-      row, item: row, rowIndex, dindex: rowIndex, key, value, oldValue: old, source, batch: !!opts.batch,
+      row,
+      item: row,
+      rowIndex,
+      dindex: rowIndex,
+      key,
+      value,
+      oldValue: old,
+      source,
+      batch: !!opts.batch,
     });
     return true;
   }
@@ -1236,7 +1243,10 @@ export class PyoGrid {
     const applied = this.setValues(changes, { source });
     if (applied.length) {
       // 바뀐 셀을 감싸는 범위 (Math.min(...)은 셀이 수십만이면 스택 초과라 반복문으로). 화면에 있는 행만
-      let r0 = Infinity, r1 = -Infinity, c0 = Infinity, c1 = -Infinity;
+      let r0 = Infinity,
+        r1 = -Infinity,
+        c0 = Infinity,
+        c1 = -Infinity;
       const colOf = new Map(this.leaves.map((l, i) => [l.def.key, i]));
       for (const a of applied) {
         const c = colOf.get(a.key);
@@ -1650,7 +1660,8 @@ export class PyoGrid {
       return;
     }
     if (remerge) this._mergeDirty = true;
-    if (this.options.grouping || remerge || rowIndex === undefined) this.refresh(); // 소계 행은 다른 행에 걸린다
+    if (this.options.grouping || remerge || rowIndex === undefined)
+      this.refresh(); // 소계 행은 다른 행에 걸린다
     else {
       if (rowIndex >= 0) this.refreshRow(rowIndex);
       this._renderFoot();
@@ -2152,8 +2163,7 @@ export class PyoGrid {
         sortMark += `<span class="pyo-filter-btn${on ? " pyo-filter-on" : ""}" data-filter="${cell.leafIndex}" role="button" aria-label="${filterLabel}" title="${filterLabel}"></span>`;
       }
     }
-    const resizer =
-      isLeaf && o.resizable && def.resizable !== false ? `<span class="pyo-resizer" data-resize="${cell.leafIndex}"></span>` : "";
+    const resizer = isLeaf && o.resizable && def.resizable !== false ? `<span class="pyo-resizer" data-resize="${cell.leafIndex}"></span>` : "";
     return (
       `<div class="${cls}"${attrs} role="columnheader" style="left:${left}px;top:${cell.row * rh}px;width:${width}px;height:${cell.rowSpan * rh}px">` +
       `<span class="pyo-hlabel">${def.html ? cell.label : escapeHtml(cell.label)}</span>${sortMark}${resizer}</div>`
@@ -2360,7 +2370,7 @@ export class PyoGrid {
     const indent = (t.indentWidth ?? 10) * m.depth;
     const aw = t.arrowWidth ?? 15;
     const iw = t.iconWidth ?? 18;
-    const collapsed = !!row[(t.collapseKey || "collapse")];
+    const collapsed = !!row[t.collapseKey || "collapse"];
     const has = m.children.length > 0;
     const arrow = has
       ? `<span class="pyo-tree-arrow" data-tree-toggle role="button" aria-expanded="${!collapsed}" style="width:${aw}px">${collapsed ? icons.collapsedArrow : icons.openedArrow}</span>`
@@ -2667,7 +2677,16 @@ export class PyoGrid {
       }
     }
     this.emit(type, {
-      row, item: row, rowIndex: r, dindex: r, colIndex: c, column: def, key: def.key, value: getValue(row, def.key), event: e, grid: this,
+      row,
+      item: row,
+      rowIndex: r,
+      dindex: r,
+      colIndex: c,
+      column: def,
+      key: def.key,
+      value: getValue(row, def.key),
+      event: e,
+      grid: this,
     });
   }
 

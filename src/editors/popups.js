@@ -58,9 +58,7 @@ export class Dropdown extends Popup {
     this.onPick = onPick;
     this.el.setAttribute("role", "listbox");
     this.el.innerHTML = options.length
-      ? options
-          .map((o, i) => `<div class="pyo-option" role="option" data-i="${i}">${escapeHtml(o.text) || "&nbsp;"}</div>`)
-          .join("")
+      ? options.map((o, i) => `<div class="pyo-option" role="option" data-i="${i}">${escapeHtml(o.text) || "&nbsp;"}</div>`).join("")
       : `<div class="pyo-option-empty">${escapeHtml(messages.noOptions)}</div>`;
     this.index = options.findIndex((o) => String(o.value) === String(current));
     this._paint();

@@ -57,9 +57,7 @@ const en = {
   cellInput: "Cell input",
   weekdays: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
   calendarTitle: (year, month) =>
-    ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][month - 1] +
-    " " +
-    year,
+    ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][month - 1] + " " + year,
   prevMonth: "Previous month",
   nextMonth: "Next month",
   today: "Today",

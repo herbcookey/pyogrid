@@ -32,7 +32,16 @@ async function around(page, selectors, pad = 12) {
 
 if (process.argv.includes("--pages")) {
   fs.mkdirSync("test-results/pages", { recursive: true });
-  for (const [name, w] of [["index", 1280], ["weekly", 1280], ["editors", 1280], ["summary", 1280], ["paging", 1280], ["big", 1280], ["index", 390], ["weekly", 390]]) {
+  for (const [name, w] of [
+    ["index", 1280],
+    ["weekly", 1280],
+    ["editors", 1280],
+    ["summary", 1280],
+    ["paging", 1280],
+    ["big", 1280],
+    ["index", 390],
+    ["weekly", 390],
+  ]) {
     const page = await open(`/demo/${name}.html${name === "weekly" ? "?date=2026-11-12" : ""}`, w, w < 500 ? 844 : 800);
     const file = `test-results/pages/${name}-${w}.png`;
     await page.screenshot({ path: file, fullPage: true });
@@ -53,7 +62,10 @@ if (process.argv.includes("--pages")) {
     await shot(page, "weekly.png", await around(page, [".d-head", ".d-toolbar", "#gridWrap"], 16));
     // 헤더 값 필터 팝업
     await page.locator('#gridWrap .pyo-hcell[data-key="OWNER"] .pyo-filter-btn').click();
-    await page.locator(".pyo-filter .pyo-f-list label", { hasText: LANG === "ko" ? "김철수" : "Brian" }).locator("input").uncheck();
+    await page
+      .locator(".pyo-filter .pyo-f-list label", { hasText: LANG === "ko" ? "김철수" : "Brian" })
+      .locator("input")
+      .uncheck();
     const g = await page.locator("#gridWrap").boundingBox();
     await shot(page, "filter.png", { x: g.x - 8, y: g.y - 8, width: 760, height: 420 });
     await page.close();

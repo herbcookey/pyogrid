@@ -81,7 +81,5 @@ export function sumRowHtml(g, cells, list, groupBy) {
     if (c < g.frozenCount) fz += part(c, c + 1, "", "");
     else sc += part(c, c + 1, "", "");
   }
-  return (
-    `<div class="pyo-fz" style="width:${g.fzWidth}px">${fz}</div>` + `<div class="pyo-sc" style="width:${g.scWidth}px">${sc}</div>`
-  );
+  return `<div class="pyo-fz" style="width:${g.fzWidth}px">${fz}</div>` + `<div class="pyo-sc" style="width:${g.scWidth}px">${sc}</div>`;
 }

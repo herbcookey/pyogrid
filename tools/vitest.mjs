@@ -13,4 +13,4 @@ const require = createRequire(path.join(root, "package.json"));
 const cli = upperDrive(path.join(path.dirname(require.resolve("vitest/package.json")), "vitest.mjs"));
 
 const child = spawn(process.execPath, [cli, ...process.argv.slice(2)], { cwd: root, stdio: "inherit" });
-child.on("exit", (code, signal) => process.exit(signal ? 1 : code ?? 1));
+child.on("exit", (code, signal) => process.exit(signal ? 1 : (code ?? 1)));

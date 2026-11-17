@@ -40,7 +40,7 @@ export class FilterPopup {
     this.search_ = this.values.map((v, i) => (this.labels[i] + "\u0000" + v).toLowerCase());
     /** @type {Set<number>} 체크를 푼 값의 순번 */
     this.unchecked = new Set();
-    if (o.current) this.values.forEach((v, i) => !/** @type {Set<string>} */ (o.current).has(v) && this.unchecked.add(i));
+    if (o.current) this.values.forEach((v, i) => !(/** @type {Set<string>} */ (o.current).has(v)) && this.unchecked.add(i));
     /** @type {number[]} 지금 검색에 걸린 값의 순번 (전체) */
     this.matching = this.values.map((_, i) => i);
 
@@ -71,6 +71,8 @@ export class FilterPopup {
         if (this.all.checked) this.unchecked.delete(i);
         else this.unchecked.add(i);
       }
+      // Prettier가 JSDoc 타입 변환의 괄호를 대입식 전체로 옮겨 타입 뜻을 바꾸므로 이 줄은 맞추지 않는다
+      // prettier-ignore
       this.list.querySelectorAll("input").forEach((b) => (/** @type {HTMLInputElement} */ (b).checked = this.all.checked));
       this._syncAll();
     });
@@ -117,7 +119,10 @@ export class FilterPopup {
   _render() {
     const shown = this.matching.length > this.max ? this.matching.slice(0, this.max) : this.matching;
     this.list.innerHTML = shown
-      .map((i) => `<label class="pyo-f-item"><input type="checkbox" data-i="${i}"${this.unchecked.has(i) ? "" : " checked"}> ${escapeHtml(this.labels[i])}</label>`)
+      .map(
+        (i) =>
+          `<label class="pyo-f-item"><input type="checkbox" data-i="${i}"${this.unchecked.has(i) ? "" : " checked"}> ${escapeHtml(this.labels[i])}</label>`,
+      )
       .join("");
     const cut = this.matching.length - shown.length;
     this.note.hidden = cut <= 0;

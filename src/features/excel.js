@@ -42,7 +42,9 @@ export function htmlToText(v) {
  * @returns {XCell|null}
  */
 export function toXlsxCell(html, raw, col, kind) {
-  const s = htmlToText(html).replace(/\u00a0/g, " ").trim();
+  const s = htmlToText(html)
+    .replace(/\u00a0/g, " ")
+    .trim();
   if (s === "") return null;
   if (kind !== "header") {
     if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) {
@@ -149,7 +151,10 @@ export function exportXlsx(g, fileName, opts = {}) {
   const ws = toWorksheet(buildExportData(g), XLSX);
   let name = String(fileName || "export").replace(/\.xls$/i, ".xlsx");
   if (!/\.xlsx$/i.test(name)) name += ".xlsx";
-  const sheet = String(opts.sheetName || "Sheet1").replace(/[[\]:*?/\\]/g, "").substring(0, 31) || "Sheet1";
+  const sheet =
+    String(opts.sheetName || "Sheet1")
+      .replace(/[[\]:*?/\\]/g, "")
+      .substring(0, 31) || "Sheet1";
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheet);
   XLSX.writeFile(wb, name);

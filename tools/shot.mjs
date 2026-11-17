@@ -10,7 +10,14 @@ page.on("pageerror", (e) => console.log("[pageerror]", e.stack));
 await page.goto("http://127.0.0.1:5179/" + url, { waitUntil: "networkidle" });
 if (scroll) {
   const [top, left] = scroll.split(",").map(Number);
-  await page.evaluate(([t, l]) => document.querySelectorAll(".pyo-scroll").forEach((s) => { s.scrollTop = t; s.scrollLeft = l; }), [top, left]);
+  await page.evaluate(
+    ([t, l]) =>
+      document.querySelectorAll(".pyo-scroll").forEach((s) => {
+        s.scrollTop = t;
+        s.scrollLeft = l;
+      }),
+    [top, left],
+  );
 }
 await page.waitForTimeout(300);
 await page.screenshot({ path: out });

@@ -15,10 +15,30 @@ fs.rmSync(path.join(root, "dist"), { recursive: true, force: true });
 const common = { bundle: true, target: "es2020", legalComments: "none", banner: { js: banner }, charset: "utf8" };
 
 await esbuild.build({ ...common, entryPoints: [path.join(root, "src/global.js")], format: "iife", outfile: out("pyogrid.js") });
-await esbuild.build({ ...common, entryPoints: [path.join(root, "src/global.js")], format: "iife", minify: true, sourcemap: true, outfile: out("pyogrid.min.js") });
+await esbuild.build({
+  ...common,
+  entryPoints: [path.join(root, "src/global.js")],
+  format: "iife",
+  minify: true,
+  sourcemap: true,
+  outfile: out("pyogrid.min.js"),
+});
 await esbuild.build({ ...common, entryPoints: [path.join(root, "src/index.js")], format: "esm", outfile: out("pyogrid.esm.js") });
-await esbuild.build({ entryPoints: [path.join(root, "src/css/pyogrid.css")], bundle: true, banner: { css: banner }, outfile: out("pyogrid.css"), charset: "utf8" });
-await esbuild.build({ entryPoints: [path.join(root, "src/css/pyogrid.css")], bundle: true, minify: true, banner: { css: banner }, outfile: out("pyogrid.min.css"), charset: "utf8" });
+await esbuild.build({
+  entryPoints: [path.join(root, "src/css/pyogrid.css")],
+  bundle: true,
+  banner: { css: banner },
+  outfile: out("pyogrid.css"),
+  charset: "utf8",
+});
+await esbuild.build({
+  entryPoints: [path.join(root, "src/css/pyogrid.css")],
+  bundle: true,
+  minify: true,
+  banner: { css: banner },
+  outfile: out("pyogrid.min.css"),
+  charset: "utf8",
+});
 
 for (const f of fs.readdirSync(path.join(root, "dist"))) {
   const full = out(f);
