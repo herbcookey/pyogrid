@@ -1095,7 +1095,7 @@ Prettier formats `src/`, `tools/`, and the config files (`printWidth` 160). Test
 
 After changing the demos, refresh the README screenshots with `npm run build` and `node tools/screenshots.mjs` (they are saved to `docs/images/`).
 
-To release, bump the version with `npm version patch` (or `minor`, `major`). It also updates the version in `src/index.js` and this README, then commits and tags. `npm publish` refuses to run if those versions don't match `package.json`, and runs the typecheck, unit tests, and the Chrome e2e tests first.
+To release, bump the version with `npm version patch` (or `minor`, `major`). It also updates the version in `src/index.js` and this README, then commits and tags. Pushing a `v*` tag (`git push origin main --follow-tags`) runs `.github/workflows/release.yml`: it checks that the tag, `package.json`, and the CHANGELOG agree, runs the full test workflow, stages the package on npm with trusted publishing (approve it on npmjs.com to make it public), and creates a GitHub Release from the CHANGELOG section. Setup and details are in [docs/releasing.md](docs/releasing.md) (in Korean). A local `npm publish` still works: it refuses to run if the versions don't match `package.json`, and runs the typecheck, unit tests, and the Chrome e2e tests first.
 
 GitHub Actions runs the lint, typecheck, unit tests, type tests, and e2e tests in Chrome, Firefox, and WebKit on every push and pull request (`.github/workflows/test.yml`). The CDN URLs above (`@0.9`) are changed by hand, only for releases that change the API.
 

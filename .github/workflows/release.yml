@@ -1,0 +1,82 @@
+# v* 태그를 push하면: 버전·CHANGELOG 확인 → 전체 테스트(test.yml) → npm 배포 → GitHub Release.
+#
+# npm 배포는 trusted publishing(OIDC)으로 한다. 저장소에 npm 토큰을 두지 않는다.
+# 기본은 "npm stage publish": npm의 Staged Packages에 올라가고, npmjs.com에서 2FA로 Approve해야 공개된다.
+# 바로 공개하려면 아래 PUBLISH_COMMAND를 "publish"로 바꾸고, npm의 trusted publisher 설정에서 npm publish를 허용한다.
+# 설정 방법은 docs/releasing.md에 있다.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# 같은 태그의 배포는 한 번에 하나만. 진행 중인 배포는 끊지 않는다.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PUBLISH_COMMAND: stage publish
+
+jobs:
+  check:
+    name: Check version and release notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+      - run: node tools/sync-version.mjs --check
+      - name: CHANGELOG has a section for this version
+        run: node tools/changelog-section.mjs "$GITHUB_REF_NAME" > /dev/null
+
+  test:
+    name: Test
+    needs: check
+    uses: ./.github/workflows/test.yml
+
+  publish:
+    name: Publish to npm and create the GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    # GitHub 저장소 Settings → Environments에 만든 환경. npm trusted publisher 설정의 Environment name과 같아야 한다
+    environment: npm
+    permissions:
+      contents: write # GitHub Release 만들기
+      id-token: write # npm trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # trusted publishing은 npm 11.5.1+, stage publish는 11.15.0+가 필요하다 (Node 22에 딸린 npm은 10)
+      - run: npm install -g npm@^11.15.0
+      - run: npm ci
+      - run: npm run build
+      - name: Publish to npm
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag=latest
+          case "$version" in *-*) tag=next ;; esac
+          # 테스트는 앞 작업에서 끝났으므로 prepublishOnly(테스트 다시 돌리기)는 건너뛴다
+          npm_config_ignore_scripts=true npm $PUBLISH_COMMAND --access public --tag "$tag"
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/changelog-section.mjs "$GITHUB_REF_NAME" > release-notes.md
+          prerelease=""
+          case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md $prerelease

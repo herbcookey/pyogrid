@@ -1,4 +1,5 @@
-# push·pull request마다 타입 검사, 단위 테스트, 브라우저 테스트(Chrome·Firefox·WebKit)를 돈다.
+# push·pull request마다 lint, 타입 검사, 단위 테스트(커버리지), 브라우저 테스트(Chrome·Firefox·WebKit)를 돈다.
+# release.yml이 배포 전에 이 워크플로를 그대로 부른다 (workflow_call).
 name: Test
 
 on:
@@ -6,6 +7,7 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
