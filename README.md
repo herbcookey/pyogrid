@@ -1094,6 +1094,7 @@ pyogrid has not reached 1.0 yet. This section says what stays the same from one 
 - Before 1.0, only a minor release (`0.x.0`) can break covered behavior. A patch release (`0.x.y`) doesn't.
 - Before something covered is removed or changed, at least one earlier release deprecates it. The CHANGELOG says so, and where possible the grid logs a `console.warn` once when you use it.
 - Breaking changes are listed first in the [CHANGELOG](https://github.com/herbcookey/pyogrid/blob/main/CHANGELOG.md), under "Breaking changes".
+- Adding a field to an event payload or to an object a method returns is not a breaking change. Only renaming, removing, or changing the type or meaning of an existing field is. Code that compares a whole payload exactly (for example `toEqual` in a test) can therefore start failing after a minor release.
 
 ## Development
 

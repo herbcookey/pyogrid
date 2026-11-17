@@ -31,6 +31,7 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 
 ### Documentation
 
+- README [Stability](README.md#stability) says that adding a field to an event payload or a returned object is not a breaking change; renaming, removing, or changing the type or meaning of an existing field is. README.ko.md has the same rule in its summary.
 - `CONTRIBUTING.md` and GitHub issue forms for bug reports and feature requests.
 - `docs/a11y-manual-check.md`: what to check by hand with NVDA and VoiceOver.
 - `demo/input-log.html` logs the grid input's keyboard, composition, and input events for checking IME input by hand; `docs/ime-manual-check.md` is the checklist for macOS and Windows.
