@@ -22,6 +22,7 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 ### Documentation
 
 - `CONTRIBUTING.md` and GitHub issue forms for bug reports and feature requests.
+- `docs/api.ko.md`: the Grid options, Column options, Methods, and Events sections in Korean. README.ko.md links to it. `npm run docs:check` (also in CI) fails when its sections, table names, row counts, or code blocks no longer match README.md.
 - README has a new [Stability](README.md#stability) section: what is covered between releases (documented options, methods, events, `messages` keys, CSS custom properties, and row marker keys), what is not (`_` members, DOM structure and `pyo-*` classes, undocumented exports, the shape of saved `localStorage` state), and the version rules before 1.0. README.ko.md has a summary.
 - `docs/api-surface.md` lists every export, method, property, option, and event, and whether the README documents it. `docs/roadmap-1.0.md` lists what has to happen before 1.0, including the undocumented exports planned for removal (none are removed yet).
 

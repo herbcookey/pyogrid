@@ -36,13 +36,14 @@ The [Development](README.md#development) section of the README lists every scrip
    npm test
    npm run test:e2e:chrome      # or npm run test:e2e for Chrome, Firefox, and WebKit
    npm run typecheck:types      # after a build, if you changed types
+   npm run docs:check           # if you changed the README reference sections
    ```
 
    CI runs all of these on every pull request, plus coverage (it fails if coverage drops) and a performance check (warning only).
 
 5. **Update the docs.**
    - `CHANGELOG.md`: add a line under "Unreleased". A change that alters existing behavior goes under "Breaking changes".
-   - `README.md` is the English reference. If you change an option, column property, method, or event, update the README.
+   - `README.md` is the English reference. If you change an option, column property, method, or event, update the README. `docs/api.ko.md` is the Korean copy of those sections, and `npm run docs:check` fails if its sections or the names in its tables no longer match the README. If you can't write the Korean, say so in the pull request and the maintainer will.
    - The public API is listed in `test/unit/api-surface.test.js` and `docs/api-surface.md`. Adding or removing a name there is a public API change; see [Stability](README.md#stability).
 
 ## Style

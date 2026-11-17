@@ -12,7 +12,7 @@
 
 ![주간 주문·출고 현황 데모: 다단 헤더, 틀 고정, 행 선택, 합계 행](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/weekly.png)
 
-옵션, 컬럼 정의, 메서드, 이벤트 같은 상세 레퍼런스는 영어 문서([README.md](README.md))에만 있습니다. 아래 [자세한 문서](#자세한-문서)에 절별 링크를 모아 두었습니다.
+옵션, 컬럼 정의, 메서드, 이벤트는 [한국어 API 문서](docs/api.ko.md)에 있습니다. 그 밖의 상세 레퍼런스는 영어 문서([README.md](README.md))에 있습니다. 아래 [자세한 문서](#자세한-문서)에 절별 링크를 모아 두었습니다.
 
 데모는 **[herbcookey.github.io/pyogrid/demo/](https://herbcookey.github.io/pyogrid/demo/)** 에서 바로 써 볼 수 있습니다.
 
@@ -170,18 +170,18 @@ pyogrid는 아직 1.0 전입니다. 버전이 올라가도 그대로 유지하�
 
 ## 자세한 문서
 
-상세 레퍼런스는 영어 문서에 있습니다.
+옵션, 컬럼, 메서드, 이벤트는 한국어 문서([docs/api.ko.md](docs/api.ko.md))에, 나머지는 영어 문서에 있습니다. 둘이 다르면 영어 문서가 기준입니다.
 
-| 내용 | 영어 문서 |
+| 내용 | 문서 |
 |---|---|
 | 행 객체·행 순번·행 목록의 개념 | [Core concepts](README.md#core-concepts) |
-| 그리드 옵션 | [Grid options](README.md#grid-options) |
-| 컬럼 옵션 | [Column options](README.md#column-options) |
+| 그리드 옵션 | [그리드 옵션](docs/api.ko.md#그리드-옵션) (한국어) |
+| 컬럼 옵션 | [컬럼 옵션](docs/api.ko.md#컬럼-옵션) (한국어) |
 | formatter와 셀 서식 | [Formatters](README.md#formatters) |
 | 셀 편집기 | [Cell editors](README.md#cell-editors) |
 | 키보드 | [Keyboard](README.md#keyboard) |
-| 메서드 | [Methods](README.md#methods) |
-| 이벤트 | [Events](README.md#events) |
+| 메서드 | [메서드](docs/api.ko.md#메서드) (한국어) |
+| 이벤트 | [이벤트](docs/api.ko.md#이벤트) (한국어) |
 | 합계 행·그룹 합계 | [Footer totals and group subtotals](README.md#footer-totals-and-group-subtotals) |
 | 트리 | [Tree](README.md#tree) |
 | 헤더 값 필터 | [Header filters](README.md#header-filters) |

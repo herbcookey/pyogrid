@@ -30,6 +30,7 @@ jobs:
       - run: npm ci
       - run: node tools/sync-version.mjs --check
       - run: npm run lint
+      - run: npm run docs:check
       - run: npm run typecheck
       # 단위 테스트를 커버리지와 함께 돌린다. vitest.config.js의 기준보다 낮으면 실패한다
       - run: npm run test:coverage

@@ -1080,6 +1080,7 @@ Building from source requires Node.js 22 or later. `dist/` is not committed, so 
 npm install
 npm run build        # dist/ (js, min.js, esm.js, css, min.css, types)
 npm run lint         # ESLint, and Prettier in check mode
+npm run docs:check   # docs/api.ko.md (Korean) has the same sections and names as this README's reference sections
 npm run format       # rewrite src/, tools/, and config files with Prettier
 npm run typecheck    # type-check the JSDoc types (// @ts-check), plus strictNullChecks for the files in tsconfig.strict.json
 npm test             # unit tests (vitest + jsdom)
@@ -1087,7 +1088,7 @@ npm run test:coverage    # unit tests with coverage of src/ (report in coverage/
 npm run typecheck:types  # after a build: check test/types against the built dist/types
 npm run test:e2e     # build, then run headless browser tests in Chrome, Firefox, and WebKit (Playwright)
 npm run test:e2e:chrome  # build, then e2e in Chrome only
-npm run test:all     # lint, typecheck, unit, e2e, and the type tests
+npm run test:all     # lint, docs check, typecheck, unit, e2e, and the type tests
 npm run demo         # demo server at http://127.0.0.1:5179/demo/
 npm run perf         # after a build: time demo/big.html and compare with tools/perf-baseline.json (warns, never fails)
 ```
