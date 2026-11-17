@@ -29,6 +29,7 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 ### Internal
 
 - `src/grid.js` is split into modules under `src/grid/` (data, selection, values, layout, render). `PyoGrid` keeps every documented method; the class methods now call the module functions.
+- Unit and e2e tests are grouped by feature (`selection`, `editing`, `clipboard-undo`, `filter`, `summary`, ...) instead of by development stage. Tests that were missing for documented methods were added: `getActiveCell`, `selectRowRange`, `clearHistory`, `copy`, `cut`, `getColumns`, `setHeight`, `setPage`, `off`, and `clearDeleted`.
 - Some undocumented internal `_` methods were removed from `PyoGrid` (28 that nothing called from outside their module, such as `_createRow`, `_cellHtml`, and `_trackModified`). Members starting with `_` are not covered by [Stability](README.md#stability).
 - `test/unit/api-surface.test.js` pins the names of the `src/index.js` exports, `PyoGrid` static properties, public `PyoGrid.prototype` methods, default option keys, and emitted events.
 - `deprecate(id, message)` in `src/util.js` logs a `console.warn` once per id. It is not exported and not used yet.

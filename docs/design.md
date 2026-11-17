@@ -18,7 +18,12 @@
 ```
 src/
   index.js / global.js      ES 모듈 / <script> 진입점 (window.PyoGrid)
-  grid.js                   PyoGrid 클래스: DOM 뼈대, 배치, 헤더, 가상 본문, 공개 API
+  grid.js                   PyoGrid 클래스: 옵션·타입, 공개 메서드(설명은 여기), DOM 뼈대, 이벤트. 구현은 grid/ 함수를 부른다
+  grid/data.js              행 넣기·빼기, 헤더 값 필터, 정렬, 트리, 화면 행 만들기
+  grid/selection.js         행 선택, 셀 범위, 선택 합계, 본문 클릭·끌기
+  grid/values.js            값 바꾸기, 수정 표시, 실행 취소, 복사·붙여넣기·잘라내기
+  grid/layout.js            컬럼 바꾸기, 크기·너비 계산, 스크롤 위치, 너비 조절 끌기
+  grid/render.js            헤더, 본문 행·셀, 합계 행, 셀 병합 표시, 아래 바, 잠깐 문구(_flash)
   util.js                   이스케이프, 경로 키(a['b'].c) 읽기/쓰기, 숫자 해석, 깊은 병합
   core/columns.js           컬럼 정의 → 잎 컬럼 + 다단 헤더 칸, 너비 계산
   core/sort.js              정렬 (smart / plain / 함수)
@@ -38,8 +43,25 @@ src/
   features/pagebar.js       아래 바 (선택 합계, 페이지 이동, 상태 문구)
   css/pyogrid.css           테마
 tools/  build.mjs(esbuild + tsc) · vitest.mjs(테스트 실행기) · serve.mjs(데모 서버) · shot.mjs(스크린샷) · screenshots.mjs(README 그림) · probe-*.mjs(성능 측정)
-test/unit (vitest + jsdom) · test/e2e (Playwright + 설치된 Chrome)
+test/unit (vitest + jsdom) · test/e2e (Playwright + 설치된 Chrome). 둘 다 기능별 파일 (selection, editing, clipboard-undo, filter, summary 등)
 ```
+
+### grid.js 나누기
+
+- **왜:** grid.js가 2,800줄이 넘어 한 기능을 고칠 때 관계없는 코드까지 읽어야 했다. 뒤에 할 조건 필터, 행 추가·삭제 실행 취소가 data.js·values.js만 고치게 기능별로 나눴다.
+- **클래스는 그대로:** 공개 메서드는 모두 PyoGrid 클래스 본문에 남기고 본문만 `gData.setData(this, rows, page)`처럼 모듈 함수를 부른다. 프로토타입에 나중에 붙이는 방식은 tsc가 .d.ts에서 메서드를 빼므로 쓰지 않았다. 나눈 뒤에도 기존 .d.ts 19개는 글자까지 같다 (지운 `_` 위임과 아래 필드 선언 위치만 다르다).
+- **모듈 함수:** 첫 인자로 그리드를 받는다. JSDoc 타입은 클래스 메서드와 같다 (분할 전 grid.d.ts의 인자·반환 타입을 그대로 옮겼다). 설명 글은 클래스 쪽에만 둔다.
+- **같은 모듈 안은 직접 부른다:** 그리기 경로(`_render → _createRow → _cellHtml → _cellContent`)처럼 같은 모듈 안의 호출은 그리드를 거치지 않는다. 다른 모듈은 `grid._renderHeader()`처럼 그리드를 거쳐 불러 모듈끼리 서로 import하지 않는다 (순환 import 없음).
+- **`_` 위임:** 모듈 밖에서 부르는 `_` 메서드만 클래스에 위임으로 남겼다 (23개). 아무도 부르지 않게 된 28개는 지웠다. 남은 것은 docs/roadmap-1.0.md의 "`_` 위임 없애기"에 있다.
+- **필드 선언:** 모듈로 간 코드만 쓰는 필드(`_mergeRows`, `_mergeLeaves`, `_mergeDirty`, `_lastStatus`)는 constructor에서 JSDoc 타입과 함께 `undefined`로 선언한다. 선언하지 않으면 tsc가 클래스에서 그 필드를 모른다. `null`이 아니라 `undefined`인 것은 선언 전과 같게 하려는 것이다 (`statusFormat`이 undefined를 돌려줄 때 첫 상태 문구를 쓰지 않던 동작).
+- **내부 접근 함수:** features/editing.js가 `g._headerHeight`, `g._vh`를 직접 읽던 곳은 layout.js의 `headerHeight(g)`, `viewportHeight(g)`로 바꿨다. 클래스 멤버가 아니라 모듈 함수라 .d.ts에 나오지 않는다.
+- **성능:** 같은 PC에서 분할 전 코드와 7번씩 재서 차이가 없었다 (render 중간값 3.2ms → 3.3ms, 프레임 간격 16.7ms 그대로).
+
+### 테스트 파일 정리
+
+- 단계별(stage1~6)·리뷰별(review-fixes1~5) 파일을 기능별 파일로 옮겼다. 테스트 본문과 이름은 그대로다 (옮기기 전후 단위 298개, e2e 141개의 이름 목록이 같다).
+- 원래 파일 맨 위의 공통 준비(beforeEach·afterEach·도우미)는 옮겨 간 describe 본문 맨 앞에 넣었다. 파일 수준 훅은 그 파일의 모든 테스트에 걸리므로, describe 맨 앞에 두면 같은 테스트에 같은 순서로 걸린다. 그래서 한 파일 안의 describe마다 준비 코드가 되풀이된다.
+- e2e는 파일 하나가 한 데모 화면을 쓰는 흐름이라 파일째 이름만 바꿨다 (stage2 → selection 등). 그래서 selection.spec.js에 정렬·페이지 바 테스트가, summary-filter.spec.js에 팝업 위치 테스트가 같이 있다.
 
 ## DOM과 스크롤
 

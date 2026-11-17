@@ -28,7 +28,7 @@
   - 모듈끼리 부르는 것: `_afterRowsChanged`, `_applyView`, `_flash`, `_measure`, `_renderFoot`, `_renderHeader`, `_renderPageNav`, `_rowClassName`, `_scheduleSummary`, `_updateBodySize`, `_updateHeaderSelector`
   - grid.js 클래스 안(이벤트 연결, 생성자)에서 부르는 것: `_checkSize`, `_endResize`, `_onBodyClick`, `_onBodyPointerDown`, `_onHeaderClick`, `_onHeaderPointerDown`, `_placeFilterPopup`, `_setColumnsInternal`
   - features/editing.js가 부르는 것: `_afterCopy`
-  - 테스트·도구가 직접 부르는 것: `_render`·`_renderStatus`(tools/probe-big.mjs, test/unit/stage2.test.js), `_scrollbarWidth`(test/unit/review-fixes5.test.js). 이것을 없애려면 그 테스트와 도구도 바꿔야 한다
+  - 테스트·도구가 직접 부르는 것: `_render`·`_renderStatus`(tools/probe-big.mjs, test/unit/pagebar.test.js), `_scrollbarWidth`(test/unit/performance.test.js). 이것을 없애려면 그 테스트와 도구도 바꿔야 한다
   - 위임을 없애면 .d.ts에서 그 멤버가 빠진다 (`_` 멤버라 Stability 약속 밖)
 
 ### 폐기 절차

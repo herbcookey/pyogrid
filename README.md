@@ -1108,12 +1108,13 @@ Source layout:
 ```
 src/
   index.js / global.js      ES module / <script> entry points
-  grid.js                   PyoGrid class (DOM, layout, virtual scrolling, public API)
+  grid.js                   PyoGrid class: options, public methods and their docs, DOM skeleton, events
+  grid/                     method implementations: data (rows, filters, sort, tree), selection, values (edits, undo, clipboard), layout, render
   core/                     column model and widths, sorting, cell range, formatters, built-in text (locales)
   editors/                  editor types, calendar and select popups
   features/                 editing and keyboard, clipboard, undo, filters, totals, view rows, Excel, saved state, bottom bar
   css/pyogrid.css
-test/unit, test/e2e         unit / browser tests
+test/unit, test/e2e         unit / browser tests, one file per feature (selection, editing, clipboard-undo, filter, ...)
 docs/                       design notes (Korean)
 tools/                      build, test runner, version sync, demo server, performance probes, screenshots
 ```
