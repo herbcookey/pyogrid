@@ -29,6 +29,35 @@ test("axe: 셀을 고르고 편집하는 중에도 위반이 없다", async ({ p
   expect(summarize(result.violations)).toEqual([]);
 });
 
+test("axe: 조건 칸이 있는 필터 팝업에도 위반이 없다", async ({ page }) => {
+  await page.goto("/demo/weekly.html?lang=ko&date=2026-11-12&rows=300");
+  await page.locator(".pyo-row").first().waitFor();
+  const check = async () => {
+    const result = await new AxeBuilder({ page }).withTags(TAGS).disableRules(DISABLED).include(".pyo-filter").analyze();
+    expect(summarize(result.violations)).toEqual([]);
+  };
+  // 글자 컬럼: 연산자 고르기 + 값 칸
+  await page.locator('#gridWrap .pyo-hcell[data-key="OWNER"] .pyo-filter-btn').click();
+  const pop = page.locator(".pyo-filter");
+  await expect(pop.locator(".pyo-f-cond select.pyo-f-op")).toHaveAccessibleName("조건");
+  await pop.locator("select.pyo-f-op").selectOption("contains");
+  await expect(pop.locator(".pyo-f-value")).toBeVisible();
+  await expect(pop.locator(".pyo-f-value")).toHaveAccessibleName("값");
+  await check();
+  await page.keyboard.press("Escape");
+  await expect(pop).toHaveCount(0);
+
+  // 숫자 컬럼: 범위(시작·끝 칸). 둘 다 비운 채 확인을 눌러 aria-invalid가 붙은 상태까지 검사
+  await page.locator('#gridWrap .pyo-hcell[data-key="ORDER_QTY"] .pyo-filter-btn').click();
+  await pop.locator("select.pyo-f-op").selectOption("between");
+  await expect(pop.locator(".pyo-f-from")).toHaveAccessibleName("부터");
+  await expect(pop.locator(".pyo-f-to")).toHaveAccessibleName("까지");
+  await check();
+  await pop.locator(".pyo-f-ok").click();
+  await expect(pop.locator(".pyo-f-from")).toHaveAttribute("aria-invalid", "true");
+  await check();
+});
+
 test("ARIA: 그리드 크기, 행·칸 번호, 활성 칸 가리키기", async ({ page }) => {
   await page.goto("/demo/big.html?lang=ko");
   await page.locator(".pyo-row").first().waitFor();

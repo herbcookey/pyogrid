@@ -81,6 +81,40 @@ test.describe("weekly 데모", () => {
     await expect(head).toHaveAttribute("data-sort", "desc");
     await expect(head.locator(".pyo-sort-mark")).toBeVisible();
   });
+
+  test("조건 필터: 팝업에서 '이상'을 고르고 값을 넣어 Enter → 행·합계가 바뀌고, 초기화로 복구", async ({ page }) => {
+    const all = await page.evaluate(() => window.grid.getRows().length);
+    // 기준값: 데이터의 가운데 값 (데이터가 바뀌어도 일부 행만 남게)
+    const mid = await page.evaluate(() => {
+      const v = window.grid.getRows().map((r) => r.ORDER_QTY).sort((a, b) => a - b);
+      return v[Math.floor(v.length / 2)];
+    });
+    const btn = page.locator('#gridWrap .pyo-hcell[data-key="ORDER_QTY"] .pyo-filter-btn');
+    await btn.click();
+    const pop = page.locator(".pyo-filter");
+    await pop.locator("select.pyo-f-op").selectOption("ge");
+    await pop.locator(".pyo-f-value").fill(mid.toLocaleString("en-US"));
+    await pop.locator(".pyo-f-value").press("Enter");
+    await expect(pop).toHaveCount(0);
+    const info = await page.evaluate(() => ({
+      rows: window.grid.getRows().map((r) => r.ORDER_QTY),
+      conds: window.grid.getFilterConditions(),
+    }));
+    expect(info.conds).toEqual({ ORDER_QTY: { type: "number", op: "ge", value: mid } });
+    expect(info.rows.length).toBeGreaterThan(0);
+    expect(info.rows.length).toBeLessThan(all);
+    expect(info.rows.every((v) => v >= mid)).toBe(true);
+    await expect(btn).toHaveClass(/pyo-filter-on/);
+    const sum = info.rows.reduce((s, v) => s + v, 0);
+    expect(num(await page.locator('#gridWrap .pyo-foot .pyo-sum-cell[data-c="8"]').textContent())).toBe(sum);
+    // 다시 열면 건 조건이 채워져 있다
+    await btn.click();
+    await expect(pop.locator("select.pyo-f-op")).toHaveValue("ge");
+    await expect(pop.locator(".pyo-f-value")).toHaveValue(String(mid));
+    await pop.locator(".pyo-f-clear").click();
+    expect(await page.evaluate(() => [window.grid.getRows().length, window.grid.getFilterConditions()])).toEqual([all, {}]);
+    await expect(btn).not.toHaveClass(/pyo-filter-on/);
+  });
 });
 
 test.describe("summary 데모", () => {
