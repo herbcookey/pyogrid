@@ -66,7 +66,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 
 ## 4. 인스턴스 메서드 (PyoGrid.prototype)
 
-`_`로 시작하지 않는 것은 85개다 (메서드 81개, getter 4개). README의 Methods 절에 80개가 있고, 아래 5개가 없다.
+`_`로 시작하지 않는 것은 87개다 (메서드 83개, getter 4개). README의 Methods 절에 82개가 있고, 아래 5개가 없다. (0.9.0 뒤 `getChanges`, `cleanRow`를 더했다)
 
 | 이름 | 하는 일 | 표시 |
 |---|---|---|
@@ -76,11 +76,11 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 | `emit(name, detail)` | 이벤트 핸들러를 부른다 | 정할 것 |
 | `emitCancelable(name, detail)` | 핸들러 중 하나가 false면 false | 정할 것 |
 
-문서에 있는 80개 (README 절 순서):
+문서에 있는 82개 (README 절 순서):
 
 | README 절 | 메서드 |
 |---|---|
-| Data | `setData`, `getRows`, `getViewRows`, `getAllRows`, `getRow`, `addRow`, `removeRows`, `deleteRows`, `getDeletedRows`, `getAddedRows`, `getModifiedRows`, `clearModified`, `clearDeleted`, `acceptChanges`, `replaceRow`, `setValue`, `setValues` |
+| Data | `setData`, `getRows`, `getViewRows`, `getAllRows`, `getRow`, `addRow`, `removeRows`, `deleteRows`, `getDeletedRows`, `getAddedRows`, `getModifiedRows`, `getChanges`, `cleanRow`, `clearModified`, `clearDeleted`, `acceptChanges`, `replaceRow`, `setValue`, `setValues` |
 | Row selection | `selectRow`, `selectRowRange`, `selectAll`, `clearSelection`, `getSelectedRows`, `getSelectedIndexes`, `isRowSelected`, `isRowSelectable` |
 | Cell range | `setRange`, `clearRange`, `getRange`, `getActiveCell`, `getRangeCells`, `getSelectionSummary`, `getRangeText` |
 | Sorting, filtering, tree | `setSort`, `getSort`, `toggleSort`, `setFilter`, `clearFilters`, `getFilters`, `openFilter`, `isFilterActive`, `toggleNode`, `expandAll`, `collapseAll`, `getTreeInfo` |
