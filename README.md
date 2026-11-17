@@ -871,10 +871,19 @@ grid.deleteRows(grid.getSelectedRows(), { undoable: true });
 
 With `undoable: true`, one call is one step for Ctrl+Z and Ctrl+Y, mixed in order with cell edits.
 
+**Buttons take the focus.** Ctrl+Z only reaches the grid while it has keyboard focus, and clicking a toolbar button moves the focus to the button. Call `grid.focus()` at the end of the button's handler (`addRow` with `focus: true` already does).
+
+```js
+document.getElementById("btnDelete").onclick = function () {
+  grid.deleteRows(grid.getSelectedRows(), { undoable: true });
+  grid.focus(); // so that Ctrl+Z reaches the grid
+};
+```
+
 - **Undoing a delete** puts the rows back where they were, with their marker keys: they leave `getDeletedRows()`, and rows that had been added stay added rows. Tree descendants deleted with them come back under the same parent. Under a sort they go to their sorted place, and rows hidden by a filter stay hidden. The range moves to the first row that came back, and the grid scrolls to it.
 - **Undoing an add** takes the rows out; redo puts them back at the same place.
 - **Events.** Rows coming back fire `rowsadd`, rows taken out fire `rowsremove` (or `rowsdelete` when redoing a delete), all with `source: "undo"` or `"redo"`. **Check `source` in your handlers:** after undoing a delete, `rowsadd` fires for rows that already exist on the server. Selected rows that come back or leave also fire `selectionchange` with the same `source`.
-- **Rows changed by your code in between.** A row that isn't in the expected state is skipped, in both directions: if you removed an added row yourself, undo and redo leave it out; if you put a deleted row back yourself, undo doesn't add it twice. When the row a group was next to is gone, the rows go back to their old index.
+- **Rows changed by your code in between.** A row that isn't in the expected state is skipped, in both directions: if you removed an added row yourself, undo and redo leave it out; if you put a deleted row back yourself, undo doesn't add it twice. When the row a group was next to is gone, the rows go back to their old index. A step with no row left to process is dropped, and Ctrl+Z (or Ctrl+Y) goes on to the next step; when none is left, the bottom bar says there is nothing to undo.
 - **After saving.** The simplest is `acceptChanges()`, which clears undo history, so nothing saved can be undone. If you only call `clearModified()` or `clearDeleted()`, history stays. Undoing then keeps `getChanges()` correct: undoing the add of a saved row turns it into a deleted row, and undoing an already-processed delete brings the row back as an added row. Redo returns to the state right after saving.
 - `setData` also clears history. `replaceRow` isn't recorded.
 
@@ -1138,7 +1147,7 @@ All demo data is made up.
 | Page | Shows |
 |---|---|
 | `weekly.html` | Weekly orders and shipments: multi-level headers, frozen columns, editing, paste, filters with conditions, footer totals, Excel export, saved state |
-| `editors.html` | The six editors, keyboard, IME input, change log |
+| `editors.html` | The six editors, keyboard, IME input, add and delete row buttons that Ctrl+Z can undo, change log |
 | `summary.html` | Group subtotals, tree, merged cells |
 | `paging.html` | Simulated server paging and sorting |
 | `big.html` | Performance check with 50,000 rows × 30 columns |
