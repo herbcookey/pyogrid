@@ -4,7 +4,7 @@ All notable changes to pyogrid. Versions follow [semver](https://semver.org/); b
 
 ## Unreleased
 
-The JavaScript API is the same; the TypeScript declarations are more precise. One input bug is fixed (see Fixed).
+The JavaScript API only gains new options, methods, and fields (see Added and Changed); the TypeScript declarations are more precise. One input bug is fixed (see Fixed).
 
 ### Type changes that can show new compile errors
 
@@ -18,11 +18,14 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 - **Typed rows.** `PyoGrid<Row>` takes the row type (default `any`, so existing code compiles as before). Methods that take or return rows use it: `setData`, `getRows`, `getAllRows`, `getRow`, `getViewRows`, `getSelectedRows`, `getModifiedRows`, `getAddedRows`, `getDeletedRows`, `addRow`, `removeRows`, `deleteRows`, `replaceRow`, `setValue`, `setValues`, `toggleNode`, `getTreeInfo`, and `selectAll`'s filter. `ColumnDef<Row>` types `c.row` in `formatter`, `cellClass`, and `editor.disabled`, and `GridOptions<Row>` types `rowClass`.
 - **Typed events.** `GridEvents<Row>` lists every event and its argument, taken from the grid's own `emit` calls. `grid.on("change", (e) => e.row.SKU)` infers `e`. Event names that aren't in the list are still accepted.
 - **Accessibility.** The grid has `aria-rowcount` and `aria-colcount`; rendered rows have `aria-rowindex` and cells `aria-colindex` counted from the start of the grid, also while virtual scrolling. Automated checks (axe) pass; NVDA and VoiceOver have not been checked on real devices yet. The input box's `aria-activedescendant` points at the focused cell. Header, footer, and subtotal rows use `role="row"` and `role="gridcell"`, and checkboxes have names. See [Accessibility](README.md#accessibility).
+- **Condition filters.** `setFilterCondition(key, condition)` and `getFilterConditions()` filter a column by text (`contains`, `startsWith`, `equals`, `notEquals`), number (`eq`, `ne`, `gt`, `ge`, `lt`, `le`, `between`), or date range. They work together with the value list (both must pass). Dates are compared as `"yyyy-MM-dd"` text, so time zones can't move a value to another day. The `filterConditions` option (default `false`) shows a condition section in the header filter popup; column options `filterType` and `filterConditions` choose the kind of condition or hide the section. `clearFilters()` and the popup's Clear also remove conditions. New `messages` keys: `filterCondition`, `filterNoCondition`, `condContains`, `condStartsWith`, `condEquals`, `condNotEquals`, `condGt`, `condGe`, `condLt`, `condLe`, `condBetween`, `condValue`, `condFrom`, `condTo` (English and Korean). Type export `FilterCondition`. See [Conditions](README.md#conditions).
 - `getChanges()` returns `{added, modified, deleted}` for saving, as shallow copies of the rows without the grid's marker keys (`__selected__`, `__modified__`, `__added__`, `__deleted__`, or the names set in `selectedKey`, `modifiedKey`, `addedKey`, and `deletedKey`). `modified` leaves out added rows. `cleanRow(row)` copies one row the same way (a value that isn't an object is returned as it is). The rows in the grid are not changed, and `getModifiedRows()` and the other getters work as before.
 - Type exports from `pyogrid`: `GridOptions`, `ColumnDef`, `ColumnEditor`, `CellContext`, `GridCellInfo`, `GridEvents`, `GridClickEvent`, `ViewRow`, `GroupingRow`, `AppliedChange`, `RangeInfo`, `SortItem`, `SortCompare`, `PageInfo`. See [TypeScript](README.md#typescript).
 
 ### Changed
 
+- The `filterchange` event has a new `conditions` field (the same as `getFilterConditions()`), so its payload is now `{filters, conditions, count}`. Existing fields are unchanged. Code that compares the whole payload exactly will see the new field.
+- `setFilter(key, null)` removes only that column's value list; a condition set with `setFilterCondition` stays. Without conditions this is the same as before.
 - **`role="grid"` moved from the outer `.pyo` element to `.pyo-canvas`** (the element that holds only the header, body, and footer rows), so the input box and the bottom bar are no longer inside the grid role. Header cells are now wrapped in `div.pyo-hrow` row elements inside the frozen and scrolling header boxes. Layout is unchanged. Code that looked up `[role="grid"]` or walked the header's DOM may need updating; the DOM structure is not covered by Stability.
 
 ### Fixed

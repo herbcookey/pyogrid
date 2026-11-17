@@ -66,7 +66,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 
 ## 4. 인스턴스 메서드 (PyoGrid.prototype)
 
-`_`로 시작하지 않는 것은 87개다 (메서드 83개, getter 4개). README의 Methods 절에 82개가 있고, 아래 5개가 없다. (0.9.0 뒤 `getChanges`, `cleanRow`를 더했다)
+`_`로 시작하지 않는 것은 89개다 (메서드 85개, getter 4개). README의 Methods 절에 84개가 있고, 아래 5개가 없다. (0.9.0 뒤 `getChanges`, `cleanRow`, `setFilterCondition`, `getFilterConditions`를 더했다)
 
 | 이름 | 하는 일 | 표시 |
 |---|---|---|
@@ -76,14 +76,14 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 | `emit(name, detail)` | 이벤트 핸들러를 부른다 | 정할 것 |
 | `emitCancelable(name, detail)` | 핸들러 중 하나가 false면 false | 정할 것 |
 
-문서에 있는 82개 (README 절 순서):
+문서에 있는 84개 (README 절 순서):
 
 | README 절 | 메서드 |
 |---|---|
 | Data | `setData`, `getRows`, `getViewRows`, `getAllRows`, `getRow`, `addRow`, `removeRows`, `deleteRows`, `getDeletedRows`, `getAddedRows`, `getModifiedRows`, `getChanges`, `cleanRow`, `clearModified`, `clearDeleted`, `acceptChanges`, `replaceRow`, `setValue`, `setValues` |
 | Row selection | `selectRow`, `selectRowRange`, `selectAll`, `clearSelection`, `getSelectedRows`, `getSelectedIndexes`, `isRowSelected`, `isRowSelectable` |
 | Cell range | `setRange`, `clearRange`, `getRange`, `getActiveCell`, `getRangeCells`, `getSelectionSummary`, `getRangeText` |
-| Sorting, filtering, tree | `setSort`, `getSort`, `toggleSort`, `setFilter`, `clearFilters`, `getFilters`, `openFilter`, `isFilterActive`, `toggleNode`, `expandAll`, `collapseAll`, `getTreeInfo` |
+| Sorting, filtering, tree | `setSort`, `getSort`, `toggleSort`, `setFilter`, `setFilterCondition`, `getFilterConditions`, `clearFilters`, `getFilters`, `openFilter`, `isFilterActive`, `toggleNode`, `expandAll`, `collapseAll`, `getTreeInfo` |
 | Editing, clipboard, undo | `startEdit`, `commitEdit`, `cancelEdit`, `focus`, `copy`, `paste`, `cut`, `undo`, `redo`, `clearHistory` |
 | Columns and layout | `setColumns`, `getColumns`, `addColumn`, `removeColumn`, `updateColumn`, `setColumnWidth`, `getColumnWidths`, `layout`, `refresh`, `refreshRow`, `scrollToRow`, `scrollToCell`, `setHeight`, `setPage`, `cellContext`, `cellText` |
 | Export, persistence, misc | `exportExcel`, `getExportData`, `resetState`, `on`, `off`, `destroy` |
@@ -102,7 +102,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 | `options` | DEFAULTS와 합친 옵션 객체 | 정할 것 |
 | `messages` | locale과 messages를 합친 화면 문구 | 정할 것 |
 | `source`, `rows`, `dataRows`, `deleted` | 원래 순서 행, 화면 행, 필터·정렬을 거친 데이터 행, 지운 행 | 정할 것 (같은 내용은 `getAllRows`·`getViewRows`·`getRows`·`getDeletedRows`로 읽는다) |
-| `filters`, `sort`, `page`, `range` | 필터 조건(Map), 정렬, 페이지 정보, 셀 범위(CellRange) | 정할 것 (같은 내용은 `getFilters`·`getSort`·`getRange`로 읽는다) |
+| `filters`, `sort`, `page`, `range` | 값 목록 필터(Map), 정렬, 페이지 정보, 셀 범위(CellRange) | 정할 것 (같은 내용은 `getFilters`·`getSort`·`getRange`로 읽는다. 조건 필터는 `_filterConds`이고 `getFilterConditions`로 읽는다) |
 | `leaves`, `headerCells`, `headerDepth` | 컬럼 모델 | 정할 것 |
 | `widths`, `leafX`, `aside`, `frozenCount`, `fzWidth`, `scWidth`, `asideWidth`, `totalWidth` | 배치 계산 결과 | 정할 것 |
 | `history`, `editing` | 실행 취소 기록, 편집·키보드 처리 객체 | 정할 것 |
@@ -112,9 +112,9 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 
 ## 6. 옵션 (DEFAULTS, src/grid.js)
 
-키 51개가 모두 README의 Grid options 절에 있다.
+키 52개가 모두 README의 Grid options 절에 있다. (0.9.0 뒤 `filterConditions`를 더했다)
 
-`columns`, `frozenColumns`, `rowHeight`, `headerRowHeight`, `lineNumber`, `lineNumberWidth`, `rowSelector`, `rowSelectorWidth`, `headerSelector`, `multipleSelect`, `selectedKey`, `disableSelectionKey`, `sortable`, `multiSort`, `sortCompare`, `remoteSort`, `cellSelect`, `editable`, `modifiedKey`, `undo`, `undoLimit`, `clipboard`, `filter`, `footSum`, `grouping`, `tree`, `mergeCells`, `deletedKey`, `addedKey`, `markAddedModified`, `stateKey`, `sheetName`, `pageBar`, `pageHeight`, `statusDisplay`, `pageNavigationCount`, `pageIcons`, `statusFormat`, `selectionSummary`, `defaultColumnWidth`, `minColumnWidth`, `resizable`, `emptyText`, `locale`, `messages`, `overscanRows`, `overscanColumns`, `headerAlign`, `align`, `rowClass`, `height`
+`columns`, `frozenColumns`, `rowHeight`, `headerRowHeight`, `lineNumber`, `lineNumberWidth`, `rowSelector`, `rowSelectorWidth`, `headerSelector`, `multipleSelect`, `selectedKey`, `disableSelectionKey`, `sortable`, `multiSort`, `sortCompare`, `remoteSort`, `cellSelect`, `editable`, `modifiedKey`, `undo`, `undoLimit`, `clipboard`, `filter`, `filterConditions`, `footSum`, `grouping`, `tree`, `mergeCells`, `deletedKey`, `addedKey`, `markAddedModified`, `stateKey`, `sheetName`, `pageBar`, `pageHeight`, `statusDisplay`, `pageNavigationCount`, `pageIcons`, `statusFormat`, `selectionSummary`, `defaultColumnWidth`, `minColumnWidth`, `resizable`, `emptyText`, `locale`, `messages`, `overscanRows`, `overscanColumns`, `headerAlign`, `align`, `rowClass`, `height`
 
 컬럼 옵션, 편집기 정의, 합계 칸, 트리 설정의 하위 키도 README의 각 절에 있다.
 
@@ -129,7 +129,7 @@ ES 모듈과 `<script>` 빌드 모두에서 보인다.
 | `selectionchange` | grid.js `_afterSelection` | `{index, row, selected, source, changed, indexes}` | 있음 |
 | `rangechange` | grid.js `_setRangeInternal` | `{range}` | 있음 |
 | `sortchange` | grid.js `setSort`, `_afterColumnsChanged` | `{sort}` | 있음 |
-| `filterchange` | grid.js `_afterFilter`, `_afterColumnsChanged` | `{filters, count}` | 있음 |
+| `filterchange` | grid.js `_afterFilter`, `_afterColumnsChanged` | `{filters, conditions, count}` | 있음 |
 | `pagechange` | grid.js `_onPageNavClick` | `{page, current, info}` | 있음 |
 | `change` | grid.js `_setRowValue` | `{row, item, rowIndex, dindex, key, value, oldValue, source, batch}` | 있음 |
 | `batchchange` | grid.js `setValues` | `{source, changes}` | 있음 |

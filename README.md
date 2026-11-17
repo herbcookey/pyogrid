@@ -61,7 +61,7 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - **Excel-style clipboard.** Copy and paste ranges as tab-separated text, with fill and repeat rules like Excel. Pasted values go through the same validation as typed ones.
 - **Undo and redo** for edits, deletes, pastes, and cuts.
 - **Change tracking.** Modified, added, and deleted rows are collected for you, and a row stops counting as modified once its values are back to the originals.
-- **Header value filters** like Excel's AutoFilter, with search across all values.
+- **Header value filters** like Excel's AutoFilter, with search across all values, and optional conditions (contains, greater than, date range).
 - **Footer totals, group subtotals, trees, and merged cells.**
 - **Selection summary** (count, sum, average) for the selected cells.
 - **Server-side paging and sorting.**
@@ -384,6 +384,7 @@ const changed: Order[] = grid.getModifiedRows();
 | `grouping` | `null` | `{ by: [keys...], columns: [cells...] }` for group subtotal rows |
 | `tree` | `null` | [Tree](#tree) settings |
 | `filter` | `false` | Header filter buttons |
+| `filterConditions` | `false` | Show a condition section (contains, greater than, between, ...) in the header filter popup. Only shows or hides the section: `setFilterCondition` works either way. See [Header filters](#header-filters) |
 | `mergeCells` | `false` | `true` (all columns) or an array of keys. Merges equal values vertically |
 
 ### Bottom bar
@@ -442,6 +443,8 @@ const changed: Order[] = grid.getModifiedRows();
 | `sortable`, `filter`, `resizable` | See above |
 | `multiLine` | Allow line breaks in the cell (Alt+Enter while editing) |
 | `numeric` | Treat the column as numeric for the selection summary. By default, columns with the money formatter or a number or money editor are numeric |
+| `filterType` | `"text"`, `"number"`, or `"date"`: which conditions the filter popup offers. By default a date editor means `"date"`, a numeric column (see `numeric`) means `"number"`, and anything else `"text"` |
+| `filterConditions` | `false` hides the condition section for this column even when the grid's `filterConditions` is on |
 | `hidden` | If true, the column is not rendered |
 | `columns` | Header group, nested to any depth. A group that spans the frozen edge shows its title on both sides |
 
@@ -612,11 +615,13 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | `setSort([{key, dir}])` | Sort. `dir` is `"asc"` or `"desc"`. An empty array restores the original order |
 | `getSort()` | |
 | `toggleSort(colIndex)` | Same as clicking the header: none → desc → asc → none |
-| `setFilter(key, values \| null)` | Values to show for that column; `null` removes the condition |
-| `clearFilters()` | |
-| `getFilters()` | `{key: [values...]}` |
+| `setFilter(key, values \| null)` | Values to show for that column; `null` removes the value list (a condition on the same column stays) |
+| `setFilterCondition(key, condition \| null)` | Set a condition on that column (see [Conditions](#conditions)); `null` removes it. Throws `TypeError` for an invalid condition and leaves the filters unchanged |
+| `getFilterConditions()` | `{key: condition}`, a copy |
+| `clearFilters()` | Removes value lists and conditions |
+| `getFilters()` | `{key: [values...]}` (value lists only) |
 | `openFilter(colIndex)` | Open the filter popup |
-| `isFilterActive()` | |
+| `isFilterActive()` | True if any value list or condition is set |
 | `toggleNode(rowIndex \| row, collapsed?)` | Collapse or expand a tree node |
 | `expandAll()` / `collapseAll()` | |
 | `getTreeInfo(row)` | `{depth, children, parent}` |
@@ -680,7 +685,7 @@ grid.off("change", handler);               // omit handler to remove all listene
 | `selectionchange` | Row selection changes | `{index, row, selected, source, changed: [rows], indexes: [indexes]}`. `source`: `"click"`, `"range"`, `"all"`, `"api"` |
 | `rangechange` | The cell range changes | `{range}` |
 | `sortchange` | Sort changes | `{sort}` |
-| `filterchange` | Filters change | `{filters, count}` |
+| `filterchange` | Filters change | `{filters, conditions, count}`. `conditions` is the same as `getFilterConditions()` |
 | `pagechange` | A page button is clicked | `{page, current, info}` (`page` is zero-based) |
 | `change` | A cell value changes | `{row, item, rowIndex, dindex, key, value, oldValue, source, batch}`. `rowIndex` is -1 when the row isn't on screen (hidden by a filter, or a collapsed tree child). `source`: `"edit"`, `"clear"`, `"paste"`, `"cut"`, `"undo"`, `"redo"`, `"api"` |
 | `batchchange` | Many cells change at once (Delete, paste, and so on) | `{source, changes: [{rowIndex, row, key, value, oldValue}]}` |
@@ -797,6 +802,32 @@ With `filter: true`, each header gets a ▾ button that opens a value list, like
 - Popups (this one, the calendar, and the select list) stay attached to their cell when the page, a modal, or any other container scrolls, and when the window is resized. A popup that doesn't fit below opens above.
 - Not available in tree mode or with server paging (`setData(rows, page)`).
 - From code: `grid.setFilter("MANAGER", ["Alice", "Bob"])`, `grid.clearFilters()`
+
+### Conditions
+
+With `filterConditions: true`, the popup also has a condition section above the value list: pick an operator and type a value. OK applies the value list and the condition together. On one column both must pass, and filters on different columns must all pass. Clear removes both for that column.
+
+```js
+grid.setFilterCondition("NAME", { type: "text", op: "contains", value: "seoul" });
+grid.setFilterCondition("QTY", { type: "number", op: "ge", value: 100 });
+grid.setFilterCondition("QTY", { type: "number", op: "between", from: 10, to: 20 }); // either end can be left out
+grid.setFilterCondition("DAY", { type: "date", from: "2026-03-01", to: "2026-03-31" });
+grid.setFilterCondition("QTY", null); // remove
+```
+
+| `type` | `op` | Value fields | Compares |
+|---|---|---|---|
+| `"text"` | `contains`, `startsWith`, `equals`, `notEquals` | `value` (string) | The text shown in the filter list (option names for select editors, formatted numbers for money columns), ignoring case |
+| `"number"` | `eq`, `ne`, `gt`, `ge`, `lt`, `le` | `value` (number) | Numbers and number text such as `"1,200"` |
+| `"number"` | `between` | `from`, `to` (numbers, ends included) | Same |
+| `"date"` | `between` (may be omitted) | `from`, `to` (`"yyyy-MM-dd"`, ends included) | The date part as text, see below |
+
+- Empty cells and values that aren't numbers or dates don't pass, except for `notEquals` and `ne`. Those are the exact opposite of `equals` and `eq`, so empty cells pass them, as in Excel.
+- Dates are compared as `"yyyy-MM-dd"` text and never turned into `Date` objects, so a time zone can't move a value to another day. Cell values are read with the date editor's `valueFormat` when it is a format string such as `"dd/MM/yyyy"`, then as `2026-03-01`, `2026.3.1`, `2026/3/1`, or `20260301`. A time after the date is ignored. `Date` objects use their local date. `from` and `to` accept the same forms and are stored as `"yyyy-MM-dd"`.
+- The `filterConditions` option only shows or hides the section in the popup. `setFilterCondition` works when it is off, the header button shows the filter as on, and the popup's Clear still removes the condition.
+- In the popup, number boxes are cleaned up as you type the same way as the number editor, and date boxes the same way as the date editor (typed digits become `yyyy-MM-dd`). There is no calendar. An invalid value marks the box with `aria-invalid` and keeps the popup open.
+- The value list is narrowed by other columns' conditions, but not by the condition on its own column.
+- Measured in Chrome with 200,000 rows, from `setFilterCondition` to the next frame: text contains about 20 ms, number comparisons 17 ms, number text such as `"1,234"` 42 ms, date range 41 ms.
 
 ## Merged cells
 
@@ -1020,6 +1051,10 @@ Numbers passed to message functions are already formatted with thousands separat
 | `blank` | `"(Blank)"` | Empty values in the filter list |
 | `clear` / `ok` / `cancel` | `"Clear"` / `"OK"` / `"Cancel"` | Filter popup buttons |
 | `filterTruncated(shown, total)` | `"Showing the first 2,000 of 50,000. Search to narrow the list."` | Filter list with too many values |
+| `filterCondition` / `filterNoCondition` | `"Condition"` / `"(No condition)"` | Operator list in the filter popup: its label and first item |
+| `condContains` / `condStartsWith` / `condEquals` / `condNotEquals` | `"Contains"` / `"Starts with"` / `"Equals"` / `"Does not equal"` | Operators (`condEquals` and `condNotEquals` also name `eq` and `ne`) |
+| `condGt` / `condGe` / `condLt` / `condLe` / `condBetween` | `"Greater than"` / `"Greater than or equal to"` / `"Less than"` / `"Less than or equal to"` / `"Between"` | Operators |
+| `condValue` / `condFrom` / `condTo` | `"Value"` / `"From"` / `"To"` | Condition input labels |
 | `noOptions` | `"No options"` | Select editor with no options |
 | `cellInput` | `"Cell input"` | Cell input label for screen readers |
 | `weekdays` | `["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]` | Calendar, starting on Sunday |
@@ -1054,7 +1089,7 @@ All demo data is made up.
 
 | Page | Shows |
 |---|---|
-| `weekly.html` | Weekly orders and shipments: multi-level headers, frozen columns, editing, paste, filters, footer totals, Excel export, saved state |
+| `weekly.html` | Weekly orders and shipments: multi-level headers, frozen columns, editing, paste, filters with conditions, footer totals, Excel export, saved state |
 | `editors.html` | The six editors, keyboard, IME input, change log |
 | `summary.html` | Group subtotals, tree, merged cells |
 | `paging.html` | Simulated server paging and sorting |

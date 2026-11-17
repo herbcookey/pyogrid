@@ -17,6 +17,7 @@
 - [ ] README에 없는 색 CSS 변수 6개(`--pyo-head-hover`, `--pyo-aside-bg`, `--pyo-aside-text`, `--pyo-scroll-track`, `--pyo-scroll-thumb`, `--pyo-scroll-thumb-hover`)를 Theming 표에 넣는다. 높이 변수 3개(`--pyo-row-h`, `--pyo-head-row-h`, `--pyo-head-h`)는 내부용으로 둔다.
 - [ ] `dist/types`의 선언 파일이 정리한 공개 API와 맞는지 본다 (빠진 이름이 선언에도 없고, 남긴 이름에 설명이 있는지).
 - [ ] [test/unit/api-surface.test.js](../test/unit/api-surface.test.js)의 목록과 README가 같다.
+- [ ] 조건 필터(`filterConditions` 옵션)를 1.0에서 기본으로 켤지 정한다. 지금 기본은 `false`라 팝업에 조건 칸이 없다. 켜면 기존 화면의 필터 팝업 모양이 바뀐다.
 
 ### 타입
 

@@ -74,6 +74,7 @@
 | `grouping` | `null` | 그룹 합계 행: `{ by: [키...], columns: [칸...] }` |
 | `tree` | `null` | [트리](../README.md#tree) 설정 |
 | `filter` | `false` | 헤더 필터 단추 |
+| `filterConditions` | `false` | 헤더 필터 팝업에 조건 칸(포함, 보다 큼, 범위 등)을 보입니다. 칸을 보이고 숨기기만 하며, `setFilterCondition`은 꺼져 있어도 됩니다. [Header filters](../README.md#conditions) 참고 |
 | `mergeCells` | `false` | `true`(모든 컬럼) 또는 키 배열. 위아래로 같은 값을 합칩니다 |
 
 ### 아래 바
@@ -135,6 +136,8 @@
 | `sortable`, `filter`, `resizable` | 위 참고 |
 | `multiLine` | 셀 안 줄바꿈 허용 (편집 중 Alt+Enter) |
 | `numeric` | 선택 합계에서 숫자 컬럼으로 봅니다. 기본으로 money formatter, number·money 편집기가 있는 컬럼은 숫자 컬럼입니다 |
+| `filterType` | `"text"`, `"number"`, `"date"`: 필터 팝업이 보여 줄 조건의 종류. 기본은 date 편집기면 `"date"`, 숫자 컬럼(`numeric` 참고)이면 `"number"`, 나머지는 `"text"` |
+| `filterConditions` | `false`면 그리드의 `filterConditions`가 켜져 있어도 이 컬럼에는 조건 칸을 보이지 않습니다 |
 | `hidden` | true면 그리지 않습니다 |
 | `columns` | 헤더 묶음. 몇 단이든 됩니다. 고정 경계를 걸치는 묶음은 양쪽에 제목을 보여 줍니다 |
 
@@ -203,11 +206,13 @@
 | `setSort([{key, dir}])` | 정렬. `dir`은 `"asc"` 또는 `"desc"`. 빈 배열이면 원래 순서로 |
 | `getSort()` | |
 | `toggleSort(colIndex)` | 헤더를 누른 것과 같습니다: 없음 → desc → asc → 없음 |
-| `setFilter(key, values \| null)` | 그 컬럼에서 보여 줄 값. `null`이면 조건을 지웁니다 |
-| `clearFilters()` | |
-| `getFilters()` | `{key: [값...]}` |
+| `setFilter(key, values \| null)` | 그 컬럼에서 보여 줄 값. `null`이면 값 목록을 지웁니다 (같은 컬럼의 조건은 남음) |
+| `setFilterCondition(key, condition \| null)` | 그 컬럼에 조건을 겁니다 ([Conditions](../README.md#conditions) 참고). `null`이면 지웁니다. 모양이 틀린 조건이면 `TypeError`를 던지고 필터는 그대로 둡니다 |
+| `getFilterConditions()` | `{key: 조건}` (복사본) |
+| `clearFilters()` | 값 목록과 조건을 모두 지웁니다 |
+| `getFilters()` | `{key: [값...]}` (값 목록만) |
 | `openFilter(colIndex)` | 필터 팝업 열기 |
-| `isFilterActive()` | |
+| `isFilterActive()` | 값 목록이나 조건이 하나라도 있으면 true |
 | `toggleNode(rowIndex \| row, collapsed?)` | 트리 노드 접기·펼치기 |
 | `expandAll()` / `collapseAll()` | |
 | `getTreeInfo(row)` | `{depth, children, parent}` |
@@ -275,7 +280,7 @@ grid.off("change", handler);               // handler를 빼면 그 이벤트의
 | `selectionchange` | 행 선택이 바뀔 때 | `{index, row, selected, source, changed: [행], indexes: [순번]}`. `source`: `"click"`, `"range"`, `"all"`, `"api"` |
 | `rangechange` | 셀 범위가 바뀔 때 | `{range}` |
 | `sortchange` | 정렬이 바뀔 때 | `{sort}` |
-| `filterchange` | 필터가 바뀔 때 | `{filters, count}` |
+| `filterchange` | 필터가 바뀔 때 | `{filters, conditions, count}`. `conditions`는 `getFilterConditions()`와 같습니다 |
 | `pagechange` | 페이지 단추를 눌렀을 때 | `{page, current, info}` (`page`는 0부터) |
 | `change` | 셀 값이 바뀔 때 | `{row, item, rowIndex, dindex, key, value, oldValue, source, batch}`. 행이 화면에 없으면 (필터로 숨었거나 접힌 트리 자식) `rowIndex`는 -1. `source`: `"edit"`, `"clear"`, `"paste"`, `"cut"`, `"undo"`, `"redo"`, `"api"` |
 | `batchchange` | 여러 셀이 한 번에 바뀔 때 (Delete, 붙여넣기 등) | `{source, changes: [{rowIndex, row, key, value, oldValue}]}` |
