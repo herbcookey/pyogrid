@@ -278,6 +278,16 @@ export class PyoGrid {
     this._treeMeta = null;
     /** @type {Map<number, {start: Int32Array, end: Int32Array}>} */
     this._merge = new Map();
+    // 아래 넷은 render.js가 쓰는 기억값. 처음에는 undefined로 둔다 (선언 전에 값이 없던 때와 같게:
+    // statusFormat이 undefined를 돌려줘도 첫 상태 문구를 쓰지 않는다)
+    /** @type {any[]} 셀 병합을 마지막으로 센 화면 행 */
+    this._mergeRows = undefined;
+    /** @type {LeafColumn[]} 셀 병합을 마지막으로 센 잎 컬럼 */
+    this._mergeLeaves = undefined;
+    /** @type {boolean} 병합 컬럼 값이 바뀌어 다시 세야 하는가 */
+    this._mergeDirty = undefined;
+    /** @type {any} 마지막으로 그린 상태 문구 HTML (같으면 다시 쓰지 않는다) */
+    this._lastStatus = undefined;
     /** @type {Int32Array|null} 화면 행 → 줄 번호(데이터 행 순번), 그룹 행은 -1 */
     this._lineNo = null;
     this._footHeight = 0;
@@ -993,11 +1003,6 @@ export class PyoGrid {
 
   /** 보이는 행을 모두 다시 그린다 (데이터 값이 바뀌었을 때). */
   refresh() {
-    // render.js가 쓰는 셀 병합 기억값의 타입을 이 자리에 선언한다 (.d.ts가 분할 전과 같게). 값은 그대로 다시 넣는다
-    const self = /** @type {any} */ (this);
-    this._mergeRows = /** @type {any[]} */ (self._mergeRows);
-    this._mergeLeaves = /** @type {import("./core/columns.js").LeafColumn[]} */ (self._mergeLeaves);
-    this._mergeDirty = /** @type {boolean} */ (self._mergeDirty);
     gRender.refresh(this);
     return this;
   }
@@ -1345,9 +1350,6 @@ export class PyoGrid {
   }
 
   _renderStatus() {
-    // render.js가 쓰는 마지막 상태 문구의 타입을 이 자리에 선언한다 (.d.ts가 분할 전과 같게). 값은 그대로 다시 넣는다
-    const self = /** @type {any} */ (this);
-    this._lastStatus = self._lastStatus;
     gRender._renderStatus(this);
   }
 
