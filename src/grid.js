@@ -14,8 +14,9 @@ import { resolveMessages } from "./core/locales.js";
 import { parseTSV, buildTSV, pastePlan, convertPasteValue } from "./features/clipboard.js";
 import { formatNumber, intlLocale } from "./features/pagebar.js";
 import { editorTypes, selectOptions, isChecked, sameValue } from "./editors/types.js";
-import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMerge, toNumber } from "./util.js";
+import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMerge } from "./util.js";
 import * as gData from "./grid/data.js";
+import * as gSelection from "./grid/selection.js";
 
 /**
  * @template [Row=any]
@@ -626,12 +627,12 @@ export class PyoGrid {
 
   /** @param {any} row 행 객체 (그룹 합계 행·null이면 false) */
   isRowSelected(row) {
-    return !!(row && row[this.options.selectedKey]);
+    return gSelection.isRowSelected(this, row);
   }
 
   /** @param {any} row 행 객체 (그룹 합계 행·null이면 false) */
   isRowSelectable(row) {
-    return !!row && !row.__isGrouping && !row[this.options.disableSelectionKey];
+    return gSelection.isRowSelectable(this, row);
   }
 
   /**
@@ -642,32 +643,7 @@ export class PyoGrid {
    * @returns {boolean} 바뀐 뒤 선택 상태 (선택할 수 없는 행이면 false)
    */
   selectRow(index, selected, opts = {}) {
-    const row = this.rows[index];
-    if (!this.isRowSelectable(row)) return false;
-    const key = this.options.selectedKey;
-    const next = selected === undefined ? !row[key] : !!selected;
-    const changed = [];
-    const changedRows = [];
-    if (next && !this.options.multipleSelect) {
-      // 화면 행이 아니라 전체 행에서 푼다: 접힌 트리 자식·필터로 숨은 행도 선택된 채 남지 않게
-      for (const r of this.source) {
-        if (r !== row && r[key]) {
-          r[key] = false;
-          changedRows.push(r);
-        }
-      }
-      if (changedRows.length) {
-        const set = new Set(changedRows);
-        this.rows.forEach((r, i) => set.has(r) && changed.push(i));
-      }
-    }
-    if (!!row[key] !== next) {
-      changed.push(index);
-      changedRows.push(row);
-    }
-    row[key] = next;
-    this._afterSelection(changed, { index, row, selected: next, source: opts.source || "api" }, changedRows);
-    return next;
+    return gSelection.selectRow(this, index, selected, opts);
   }
 
   /**
@@ -677,17 +653,7 @@ export class PyoGrid {
    * @param {boolean} selected
    */
   selectRowRange(from, to, selected) {
-    if (!this.options.multipleSelect) return this.selectRow(to, selected);
-    const key = this.options.selectedKey;
-    const changed = [];
-    for (let i = Math.min(from, to); i <= Math.max(from, to); i++) {
-      const r = this.rows[i];
-      if (!this.isRowSelectable(r) || !!r[key] === selected) continue;
-      r[key] = selected;
-      changed.push(i);
-    }
-    this._afterSelection(changed, { index: to, row: this.rows[to], selected, source: "range" });
-    return selected;
+    return gSelection.selectRowRange(this, from, to, selected);
   }
 
   /**
@@ -695,39 +661,23 @@ export class PyoGrid {
    * @param {(this: Row, row: Row, index: number) => boolean} [filter]  true를 돌려준 행만
    */
   selectAll(selected = true, filter) {
-    const key = this.options.selectedKey;
-    const changedRows = [];
-    // 데이터 행 전체 (트리의 접힌 자식 포함, 필터로 숨은 행 제외)
-    this.dataRows.forEach((r, i) => {
-      if (!this.isRowSelectable(r)) return;
-      if (filter && filter.call(r, r, i) !== true) return;
-      if (!!r[key] === selected) return;
-      r[key] = selected;
-      changedRows.push(r);
-    });
-    const set = new Set(changedRows);
-    const changed = [];
-    this.rows.forEach((r, i) => set.has(r) && changed.push(i));
-    this._afterSelection(changed, { index: -1, row: null, selected, source: "all" }, changedRows);
+    gSelection.selectAll(this, selected, filter);
     return this;
   }
 
   clearSelection() {
-    return this.selectAll(false);
+    gSelection.clearSelection(this);
+    return this;
   }
 
   /** @returns {Row[]} 선택된 행 (getRows 순서, 행 객체 원본) */
   getSelectedRows() {
-    return this.dataRows.filter((r) => this.isRowSelected(r));
+    return gSelection.getSelectedRows(this);
   }
 
   /** @returns {number[]} 선택된 행의 화면 순번 */
   getSelectedIndexes() {
-    const out = [];
-    this.rows.forEach((r, i) => {
-      if (this.isRowSelected(r)) out.push(i);
-    });
-    return out;
+    return gSelection.getSelectedIndexes(this);
   }
 
   /* ==================================================================
@@ -741,21 +691,18 @@ export class PyoGrid {
    * @param {number} [c1]
    */
   setRange(r0, c0, r1 = r0, c1 = c0) {
-    if (!this.rows.length || !this.leaves.length) return this.clearRange();
-    const rng = new CellRange({ r: r0, c: c0 }, { r: r1, c: c1 }).clamp(this.rows.length, this.leaves.length);
-    this._setRangeInternal(rng);
+    gSelection.setRange(this, r0, c0, r1, c1);
     return this;
   }
 
   clearRange() {
-    this._setRangeInternal(null);
+    gSelection.clearRange(this);
     return this;
   }
 
   /** @returns {RangeInfo|null} */
   getRange() {
-    const g = this.range;
-    return g ? { r0: g.r0, c0: g.c0, r1: g.r1, c1: g.c1, active: { ...g.active } } : null;
+    return gSelection.getRange(this);
   }
 
   /**
@@ -763,11 +710,7 @@ export class PyoGrid {
    * @returns {{rowIndex: number, colIndex: number, row: ViewRow<Row>, column: ColumnDef<Row>, key: string|undefined, value: any}|null}
    */
   getActiveCell() {
-    const g = this.range;
-    if (!g) return null;
-    const leaf = this.leaves[g.active.c];
-    const row = this.rows[g.active.r];
-    return { rowIndex: g.active.r, colIndex: g.active.c, row, column: leaf.def, key: leaf.def.key, value: getValue(row, leaf.def.key) };
+    return gSelection.getActiveCell(this);
   }
 
   /**
@@ -775,17 +718,7 @@ export class PyoGrid {
    * @returns {{rowIndex: number, colIndex: number, row: ViewRow<Row>, key: string|undefined, value: any}[]}
    */
   getRangeCells() {
-    const g = this.range;
-    if (!g) return [];
-    const out = [];
-    for (let r = g.r0; r <= g.r1; r++) {
-      const row = this.rows[r];
-      for (let c = g.c0; c <= g.c1; c++) {
-        const key = this.leaves[c].def.key;
-        out.push({ rowIndex: r, colIndex: c, row, key, value: getValue(row, key) });
-      }
-    }
-    return out;
+    return gSelection.getRangeCells(this);
   }
 
   /**
@@ -794,9 +727,7 @@ export class PyoGrid {
    * @param {ColumnDef} def
    */
   isNumericColumn(def) {
-    if (def.numeric !== undefined) return !!def.numeric;
-    const ed = def.editor && def.editor.type;
-    return def.formatter === "money" || ed === "number" || ed === "money";
+    return gSelection.isNumericColumn(this, def);
   }
 
   /**
@@ -804,38 +735,7 @@ export class PyoGrid {
    * 값이 number이거나 숫자 컬럼의 숫자 글자일 때만 센다 (바코드·품번·"20261113" 같은 코드 글자는 세지 않음).
    */
   getSelectionSummary() {
-    const g = this.range;
-    let count = 0;
-    let numCount = 0;
-    let sum = 0;
-    let dec = 0;
-    if (g) {
-      count = g.size;
-      for (let c = g.c0; c <= g.c1; c++) {
-        const def = this.leaves[c].def;
-        const key = def.key;
-        if (key === undefined || key === null) continue;
-        const numericCol = this.isNumericColumn(def);
-        for (let r = g.r0; r <= g.r1; r++) {
-          const row = this.rows[r];
-          if (!row || row.__isGrouping) continue;
-          const v = getValue(row, key);
-          const n = typeof v === "number" ? (isFinite(v) ? v : null) : numericCol ? toNumber(v) : null;
-          if (n !== null) {
-            sum += n;
-            numCount++;
-            if (dec < 15 && !Number.isInteger(n)) {
-              const s = String(n);
-              const d = s.indexOf(".");
-              dec = Math.max(dec, d < 0 || /e/i.test(s) ? 15 : Math.min(15, s.length - d - 1));
-            }
-          }
-        }
-      }
-    }
-    // 0.1 + 0.2 = 0.30000000000000004 같은 끝자리 오차를 넣은 값의 가장 긴 소수 자리에서 지운다
-    if (dec) sum = Number(sum.toFixed(dec));
-    return { count, numCount, sum, avg: numCount ? sum / numCount : 0 };
+    return gSelection.getSelectionSummary(this);
   }
 
   /* ==================================================================
@@ -2287,15 +2187,7 @@ export class PyoGrid {
    * @param {any[]} [changedRows] 화면에 없는 행(접힌 트리)까지 포함한 바뀐 행
    */
   _afterSelection(changed, info, changedRows) {
-    for (const i of changed) {
-      const el = this._rowEls.get(i);
-      if (!el) continue;
-      el.className = this._rowClassName(i);
-      el.setAttribute("aria-selected", this.isRowSelected(this.rows[i]) ? "true" : "false");
-    }
-    this._updateHeaderSelector();
-    const rowsChanged = changedRows || changed.map((i) => this.rows[i]);
-    if (rowsChanged.length) this.emit("selectionchange", { ...info, changed: rowsChanged, indexes: changed });
+    gSelection._afterSelection(this, changed, info, changedRows);
   }
 
   /* ==================================================================
@@ -2304,31 +2196,12 @@ export class PyoGrid {
 
   /** @param {CellRange|null} rng */
   _setRangeInternal(rng) {
-    const prev = this.range;
-    const same =
-      (!prev && !rng) ||
-      (prev && rng && prev.anchor.r === rng.anchor.r && prev.anchor.c === rng.anchor.c && prev.active.r === rng.active.r && prev.active.c === rng.active.c);
-    this.range = rng;
-    if (same) return;
-    this._paintRange();
-    this._scheduleSummary();
-    this.editing.position();
-    this.emit("rangechange", { range: this.getRange() });
+    gSelection._setRangeInternal(this, rng);
   }
 
   /** 그려진 셀의 범위 표시만 고친다 (행을 다시 만들지 않음) */
   _paintRange() {
-    const g = this.range;
-    for (const [r, el] of this._rowEls) {
-      const cells = el.querySelectorAll(".pyo-cell[data-c]");
-      for (let k = 0; k < cells.length; k++) {
-        const cell = /** @type {HTMLElement} */ (cells[k]);
-        const c = Number(cell.dataset.c);
-        const inR = !!g && g.contains(r, c);
-        cell.classList.toggle("pyo-in-range", inR);
-        cell.classList.toggle("pyo-active", inR && g.active.r === r && g.active.c === c);
-      }
-    }
+    gSelection._paintRange(this);
   }
 
   /**
@@ -2337,68 +2210,12 @@ export class PyoGrid {
    * @param {number} y clientY
    */
   _cellFromPoint(x, y) {
-    const s = this.el.scroll;
-    const sr = s.getBoundingClientRect();
-    const rh = this.options.rowHeight;
-    const contentY = y - sr.top + s.scrollTop - this._headerHeight;
-    const r = clamp(Math.floor(contentY / rh), 0, Math.max(0, this.rows.length - 1));
-    const xIn = x - sr.left;
-    let c;
-    if (xIn < this.fzWidth && this.frozenCount > 0) {
-      c = 0;
-      for (let i = 0; i < this.frozenCount; i++) if (xIn >= this.leafX[i]) c = i;
-    } else {
-      const sx = xIn + s.scrollLeft - this.fzWidth;
-      c = this.frozenCount;
-      for (let i = this.frozenCount; i < this.leaves.length; i++) if (sx >= this.leafX[i]) c = i;
-    }
-    return { r, c: clamp(c, 0, Math.max(0, this.leaves.length - 1)) };
+    return gSelection._cellFromPoint(this, x, y);
   }
 
   /** @param {PointerEvent} e */
   _onBodyPointerDown(e) {
-    if (e.button !== 0) return;
-    const t = /** @type {HTMLElement} */ (e.target);
-    const rowEl = t.closest && /** @type {HTMLElement|null} */ (t.closest(".pyo-row"));
-    if (!rowEl) return;
-    const r = Number(rowEl.dataset.row);
-    if (t.closest("[data-tree-toggle]")) {
-      e.preventDefault();
-      this.toggleNode(r);
-      return;
-    }
-    const special = /** @type {HTMLElement|null} */ (t.closest("[data-special]"));
-    if (special) {
-      if (special.dataset.special === "rowSelector") {
-        e.preventDefault();
-        // 기준 행은 행 객체로 기억한다 (화면 순번은 정렬·필터·행 추가·삭제로 바뀐다)
-        const from = this._lastRowClick ? this.rows.indexOf(this._lastRowClick) : -1;
-        if (e.shiftKey && from >= 0 && this.options.multipleSelect) {
-          // Shift+클릭: 마지막으로 누른 행의 상태로 사이 행을 맞춘다
-          this.selectRowRange(from, r, this.isRowSelected(this._lastRowClick));
-        } else {
-          this.selectRow(r, undefined, { source: "click" });
-        }
-        this._lastRowClick = this.rows[r];
-      }
-      return;
-    }
-    const cellEl = /** @type {HTMLElement|null} */ (t.closest(".pyo-cell[data-c]"));
-    if (!cellEl || !this.options.cellSelect) return;
-    const c = Number(cellEl.dataset.c);
-    // 셀 안의 입력 요소(화면 코드가 formatter로 넣은 것)는 기본 동작을 둔다
-    if (t.closest("input, select, textarea, button, a")) return;
-    e.preventDefault();
-    // 편집 중인 셀을 다시 누른 경우는 그대로 둔다. 다른 셀이면 저장 (잘못된 값이면 이동하지 않음).
-    const ed = this.editing.edit;
-    if (ed) {
-      if (ed.r === r && ed.c === c) return;
-      if (!this.editing.commit()) return;
-    }
-    this.editing.focus();
-    if (e.shiftKey && this.range) this._setRangeInternal(new CellRange(this.range.anchor, { r, c }));
-    else this._setRangeInternal(new CellRange({ r, c }));
-    this._startDrag(e);
+    gSelection._onBodyPointerDown(this, e);
   }
 
   /**
@@ -2408,56 +2225,7 @@ export class PyoGrid {
    * @param {PointerEvent} e
    */
   _startDrag(e) {
-    if (this._dragCleanup) this._dragCleanup();
-    const s = this.el.scroll;
-    let lastX = e.clientX;
-    let lastY = e.clientY;
-    let timer = 0;
-    const update = () => {
-      if (!this.range) return;
-      const p = this._cellFromPoint(lastX, lastY);
-      this._setRangeInternal(new CellRange(this.range.anchor, p));
-    };
-    const autoScroll = () => {
-      timer = 0;
-      const sr = s.getBoundingClientRect();
-      const top = sr.top + this._headerHeight;
-      const bottom = sr.top + s.clientHeight;
-      const left = sr.left + this.fzWidth;
-      const right = sr.left + s.clientWidth;
-      let dy = 0;
-      let dx = 0;
-      if (lastY < top) dy = lastY - top;
-      else if (lastY > bottom) dy = lastY - bottom;
-      if (lastX > right) dx = lastX - right;
-      else if (lastX < left && s.scrollLeft > 0 && this.range && this.range.active.c >= this.frozenCount) dx = lastX - left;
-      if (dx || dy) {
-        s.scrollTop += clamp(dy, -60, 60);
-        s.scrollLeft += clamp(dx, -60, 60);
-        this._render();
-        update();
-        timer = requestAnimationFrame(autoScroll);
-      }
-    };
-    /** @param {PointerEvent} ev */
-    const move = (ev) => {
-      lastX = ev.clientX;
-      lastY = ev.clientY;
-      update();
-      if (!timer) timer = requestAnimationFrame(autoScroll);
-    };
-    const up = () => cleanup();
-    const cleanup = () => {
-      cancelAnimationFrame(timer);
-      document.removeEventListener("pointermove", move);
-      document.removeEventListener("pointerup", up);
-      document.removeEventListener("pointercancel", up);
-      this._dragCleanup = null;
-    };
-    this._dragCleanup = cleanup;
-    document.addEventListener("pointermove", move);
-    document.addEventListener("pointerup", up);
-    document.addEventListener("pointercancel", up);
+    gSelection._startDrag(this, e);
   }
 
   /**
@@ -2466,41 +2234,7 @@ export class PyoGrid {
    * @param {"click"|"dblclick"} type
    */
   _onBodyClick(e, type) {
-    const t = /** @type {HTMLElement} */ (e.target);
-    const rowEl = t.closest && /** @type {HTMLElement|null} */ (t.closest(".pyo-row"));
-    if (!rowEl) return;
-    const r = Number(rowEl.dataset.row);
-    const special = /** @type {HTMLElement|null} */ (t.closest("[data-special]"));
-    const cellEl = /** @type {HTMLElement|null} */ (t.closest(".pyo-cell[data-c]"));
-    const row = this.rows[r];
-    if (special) {
-      this.emit(type, { row, item: row, rowIndex: r, dindex: r, special: special.dataset.special, event: e, grid: this });
-      return;
-    }
-    if (!cellEl) return;
-    const c = Number(cellEl.dataset.c);
-    const def = this.leaves[c].def;
-    const info = this.editing.editable(r, c);
-    if (info && !e.shiftKey) {
-      // 체크박스는 셀을 누르면 바로 바뀐다. 그 밖의 편집기는 더블클릭으로 편집하고 dblclick은 알리지 않는다.
-      if (type === "click" && info.type.kind === "toggle") this.editing.toggle(r, c);
-      if (type === "dblclick" && info.type.kind !== "toggle") {
-        this.editing.start(r, c, { mode: "edit" });
-        return;
-      }
-    }
-    this.emit(type, {
-      row,
-      item: row,
-      rowIndex: r,
-      dindex: r,
-      colIndex: c,
-      column: def,
-      key: def.key,
-      value: getValue(row, def.key),
-      event: e,
-      grid: this,
-    });
+    gSelection._onBodyClick(this, e, type);
   }
 
   /* ==================================================================
