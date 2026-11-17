@@ -1,5 +1,6 @@
 // 5단계: 헤더 값 필터·합계 행·그룹 합계·트리·셀 병합 (실제 Chrome)
 import { test, expect } from "@playwright/test";
+import { rectOf } from "./helpers.js";
 
 test.beforeEach(async ({ page }) => {
   page.__errors = [];
@@ -186,13 +187,9 @@ test("값이 50,000개인 바코드 필터: 확인만 누르면 그대로, 마�
 });
 
 test("200행 병합 덩어리: 화면 안에 글자가 하나 보이고 스크롤을 따라온다", async ({ page }) => {
-  await page.goto("/demo/index.html");
-  await page.setContent(`<!DOCTYPE html><html><head><link rel="stylesheet" href="/dist/pyogrid.css"></head><body>
-    <div id="g" style="width:500px;height:300px"></div>
-    <script src="/dist/pyogrid.js"></script>
-    <script>window.grid = new PyoGrid(document.getElementById("g"), { mergeCells: ["k"], columns: [{ key: "k", label: "K" }, { key: "i", label: "I" }] });
-    grid.setData(Array.from({ length: 200 }, (_, i) => ({ k: "같은 값", i })));</script></body></html>`);
-  await page.waitForFunction(() => window.grid);
+  // setContent 대신 실제 파일로 연다 (CI의 Firefox에서 setContent 뒤 window.grid가 생기지 않은 적이 있다)
+  await page.goto("/test/e2e/fixtures/merge-200.html");
+  await page.waitForFunction(() => window.grid, undefined, { timeout: 10000 });
   const visibleLabels = () =>
     page.locator('.pyo-body .pyo-cell[data-c="0"] .pyo-merge-text').evaluateAll((els) => {
       const sc = document.querySelector(".pyo-scroll").getBoundingClientRect();
@@ -222,23 +219,13 @@ test("병합 셀도 범위 선택 색·포커스 셀 색이 보인다", async ({
 });
 
 test("달력·필터 팝업은 바깥 페이지·모달 스크롤을 따라가고, 아래 자리가 없으면 위로 열린다", async ({ page }) => {
-  await page.goto("/demo/index.html");
-  await page.setContent(`<!DOCTYPE html><html><head><link rel="stylesheet" href="/dist/pyogrid.css"></head><body style="margin:0">
-    <div id="modal" style="height:500px;overflow:auto;border:1px solid #ccc">
-      <div style="height:200px"></div>
-      <div id="g" style="width:500px;height:200px"></div>
-      <div style="height:1500px"></div>
-    </div>
-    <div style="height:2000px"></div>
-    <script src="/dist/pyogrid.js"></script>
-    <script>window.grid = new PyoGrid(document.getElementById("g"), { filter: true,
-      columns: [{ key: "d", label: "D", editor: { type: "date" } }, { key: "t", label: "T" }] });
-    grid.setData([{ d: "2026-11-13", t: "a" }, { d: "", t: "b" }]);</script></body></html>`);
-  await page.waitForFunction(() => window.grid);
+  // setContent 대신 실제 파일로 연다 (CI의 Firefox에서 setContent 뒤 window.grid가 생기지 않은 적이 있다)
+  await page.goto("/test/e2e/fixtures/popup-scroll.html");
+  await page.waitForFunction(() => window.grid, undefined, { timeout: 10000 });
   const cell = page.locator('.pyo-row[data-row="0"] .pyo-cell[data-c="0"]');
   const gap = async (popup) => {
-    const c = await cell.boundingBox();
-    const p = await page.locator(popup).boundingBox();
+    const c = await rectOf(cell);
+    const p = await rectOf(page.locator(popup));
     return Math.round(p.y - (c.y + c.height));
   };
 
@@ -260,7 +247,11 @@ test("달력·필터 팝업은 바깥 페이지·모달 스크롤을 따라가�
   await btn.click();
   const pop = page.locator(".pyo-filter");
   await expect(pop).toBeVisible();
-  const below = async () => Math.round((await pop.boundingBox()).y - ((await btn.boundingBox()).y + (await btn.boundingBox()).height));
+  const below = async () => {
+      const p = await rectOf(pop);
+      const b = await rectOf(btn);
+      return Math.round(p.y - (b.y + b.height));
+    };
   const b0 = await below();
   await page.locator("#modal").evaluate((el) => (el.scrollTop = 0));
   await page.waitForTimeout(50);
@@ -271,7 +262,7 @@ test("달력·필터 팝업은 바깥 페이지·모달 스크롤을 따라가�
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.locator("#modal").evaluate((el) => (el.scrollTop = 0));
   await btn.click();
-  const pb = await pop.boundingBox();
-  const bb = await btn.boundingBox();
+  const pb = await rectOf(pop);
+  const bb = await rectOf(btn);
   expect(pb.y + pb.height).toBeLessThanOrEqual(bb.y);
 });

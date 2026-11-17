@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>popups in a scrolling modal</title>
+<link rel="stylesheet" href="/dist/pyogrid.css">
+</head>
+<body style="margin:0">
+<!-- summary-filter.spec.js: 달력·필터 팝업은 바깥 페이지·모달 스크롤을 따라간다 -->
+<div id="modal" style="height:500px;overflow:auto;border:1px solid #ccc">
+  <div style="height:200px"></div>
+  <div id="g" style="width:500px;height:200px"></div>
+  <div style="height:1500px"></div>
+</div>
+<div style="height:2000px"></div>
+<script src="/dist/pyogrid.js"></script>
+<script>
+  window.grid = new PyoGrid(document.getElementById("g"), { filter: true,
+    columns: [{ key: "d", label: "D", editor: { type: "date" } }, { key: "t", label: "T" }] });
+  grid.setData([{ d: "2026-11-13", t: "a" }, { d: "", t: "b" }]);
+</script>
+</body>
+</html>

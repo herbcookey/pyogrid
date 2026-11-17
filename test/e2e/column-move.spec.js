@@ -1,5 +1,6 @@
 // 헤더를 끌어 컬럼 옮기기 (weekly 데모: columnReorder, 고정 3열, 다단 헤더, 합계 행, stateKey)
 import { test, expect } from "@playwright/test";
+import { rectOf } from "./helpers.js";
 import AxeBuilder from "@axe-core/playwright";
 
 test.beforeEach(async ({ page }) => {
@@ -13,9 +14,8 @@ test.afterEach(async ({ page }) => expect(page.__errors).toEqual([]));
 const order = (page) => page.evaluate(() => window.grid.getColumnOrder());
 const head = (page, key) => page.locator(`#gridWrap .pyo-hcell[data-key="${key}"]`);
 const center = async (loc) => {
-  // 창 크기를 바꾼 직후에는 헤더를 다시 그리는 중일 수 있어, 상자를 얻을 때까지 다시 잰다
-  let b = null;
-  await expect.poll(async () => (b = await loc.boundingBox()) !== null).toBe(true);
+  // 창 크기를 바꾼 직후에는 헤더를 다시 그리는 중일 수 있어, rectOf가 상자를 얻을 때까지 다시 잰다
+  const b = await rectOf(loc);
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 };
 
@@ -36,9 +36,9 @@ test("헤더를 끌어 놓으면 옮기고, 놓은 뒤 정렬되지 않는다. �
   expect(after.slice(3, 8)).toEqual(["VENDOR_CODE", "REGION", "CATEGORY", "CHANNEL", "CATEGORY_GROUP"]);
   expect(await page.evaluate(() => window.grid.getSort())).toEqual([]);
   // 본문 칸도 새 순서 (CHANNEL 헤더 아래 칸의 x가 같다)
-  const hx = (await head(page, "CHANNEL").boundingBox()).x;
+  const hx = (await rectOf(head(page, "CHANNEL"))).x;
   const c = await page.evaluate(() => window.grid.getColumnOrder().indexOf("CHANNEL"));
-  const cx = (await page.locator(`#gridWrap .pyo-row[data-row="0"] .pyo-cell[data-c="${c}"]`).boundingBox()).x;
+  const cx = (await rectOf(page.locator(`#gridWrap .pyo-row[data-row="0"] .pyo-cell[data-c="${c}"]`))).x;
   expect(Math.abs(cx - hx)).toBeLessThanOrEqual(1);
   // 합계 행: "합계" 칸(colspan 8)은 앞 8개 컬럼 안에서 옮겼으므로 모양이 그대로
   await expect(page.locator("#gridWrap .pyo-foot .pyo-sum-cell", { hasText: "합계" })).toHaveCount(1);
@@ -69,7 +69,7 @@ test("고정 경계는 넘지 못하고, 그룹 헤더는 통째로 옮긴다", 
   await expect.poll(() => page.evaluate(() => { const s = document.querySelector("#gridWrap .pyo-scroll"); return s.scrollWidth - s.clientWidth; })).toBeGreaterThan(200);
   const group = page.locator("#gridWrap .pyo-hcell.pyo-hgroup").first();
   const g = await center(group);
-  const box = await page.locator("#gridWrap .pyo-scroll").boundingBox();
+  const box = await rectOf(page.locator("#gridWrap .pyo-scroll"));
   await page.mouse.move(g.x, g.y);
   await page.mouse.down();
   await page.mouse.move(g.x + 20, g.y, { steps: 2 });

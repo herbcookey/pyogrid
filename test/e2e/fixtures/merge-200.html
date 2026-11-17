@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>200-row merge</title>
+<link rel="stylesheet" href="/dist/pyogrid.css">
+</head>
+<body>
+<!-- summary-filter.spec.js: 200행 병합 덩어리 -->
+<div id="g" style="width:500px;height:300px"></div>
+<script src="/dist/pyogrid.js"></script>
+<script>
+  window.grid = new PyoGrid(document.getElementById("g"), { mergeCells: ["k"], columns: [{ key: "k", label: "K" }, { key: "i", label: "I" }] });
+  grid.setData(Array.from({ length: 200 }, (_, i) => ({ k: "같은 값", i })));
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 // 4단계: 복사·붙여넣기·잘라내기·실행 취소 (실제 브라우저, 실제 Ctrl+C·X·V 키)
 import { test, expect } from "@playwright/test";
+import { rectOf } from "./helpers.js";
 
 // 클립보드 권한(clipboard-read)은 Firefox에서 쓸 수 없으므로 쓰지 않는다.
 // - 넣기: 임시 textarea에 글자를 고르고 실제 Ctrl+C를 눌러 시스템 클립보드에 넣는다.
@@ -22,8 +23,8 @@ async function writeClip(page, text) {
 
 async function dragSelect(page, r0, c0, r1, c1) {
   await cell(page, r1, c1).waitFor();
-  const a = await cell(page, r0, c0).boundingBox();
-  const b = await cell(page, r1, c1).boundingBox();
+  const a = await rectOf(cell(page, r0, c0));
+  const b = await rectOf(cell(page, r1, c1));
   await page.mouse.move(a.x + 5, a.y + 5);
   await page.mouse.down();
   await page.mouse.move(b.x + 5, b.y + 5, { steps: 5 });

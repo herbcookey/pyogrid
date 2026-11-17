@@ -1,5 +1,6 @@
 // 6단계: xlsx 내보내기(실제 다운로드 파일을 SheetJS로 다시 읽기)·컬럼 너비/정렬 기억 (실제 Chrome)
 import { test, expect } from "@playwright/test";
+import { rectOf } from "./helpers.js";
 import * as XLSX from "xlsx";
 import fs from "node:fs";
 
@@ -56,13 +57,10 @@ test("너비·정렬 기억: 새로 고쳐도 남고, 초기화하면 사라진�
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   const head = page.locator('#gridWrap .pyo-hcell[data-key="CHANNEL"]');
-  // 새로 고친 뒤 헤더가 그려질 때까지 기다린다 (boundingBox는 기다리지 않고 null을 돌려준다)
-  const width = async () => {
-    await expect(head).toBeVisible();
-    return Math.round((await head.boundingBox()).width);
-  };
+  // 새로 고친 뒤 헤더가 그려질 때까지 기다린다 (rectOf는 요소가 붙어 있고 크기가 있을 때까지 다시 잰다)
+  const width = async () => Math.round((await rectOf(head)).width);
   const w0 = await width();
-  const h = await head.locator(".pyo-resizer").boundingBox();
+  const h = await rectOf(head.locator(".pyo-resizer"));
   await page.mouse.move(h.x + 2, h.y + 5);
   await page.mouse.down();
   await page.mouse.move(h.x + 42, h.y + 5, { steps: 4 });

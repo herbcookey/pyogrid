@@ -193,13 +193,13 @@ test.describe("대량 데이터 (50,000행 × 30열)", () => {
 
 test.describe("크기 변화", () => {
   test('컨테이너 너비가 바뀌면 "*" 컬럼이 다시 계산된다', async ({ page }) => {
-    await page.goto("/demo/index.html");
-    await page.setContent(`<!DOCTYPE html><html><head><link rel="stylesheet" href="/dist/pyogrid.css"></head><body>
-      <div id="g" style="width:600px;height:200px"></div>
-      <script src="/dist/pyogrid.js"></script>
-      <script>window.grid = new PyoGrid(document.getElementById("g"), { columns: [{ key: "a", width: 100 }, { key: "b", width: "*" }] });
-      grid.setData([{ a: 1, b: 2 }]);</script></body></html>`);
-    await page.waitForFunction(() => window.grid);
+    // setContent 대신 실제 파일로 연다 (CI의 Firefox에서 setContent 뒤 window.grid가 생기지 않은 채 60초를 넘긴 적이 있다)
+    const errors = watchErrors(page);
+    await page.goto("/test/e2e/fixtures/star-width.html");
+    await page.waitForFunction(() => window.grid, undefined, { timeout: 10000 }).catch(() => {
+      throw new Error("window.grid가 생기지 않았다. 페이지 오류: " + JSON.stringify(errors));
+    });
+    expect(errors).toEqual([]);
     // 이 브라우저의 스크롤바 너비 (Chrome·WebKit은 ::-webkit-scrollbar 15px, Firefox는 기본값, headless는 0일 수 있다)
     const sb = await page.evaluate(() => {
       const p = document.createElement("div");

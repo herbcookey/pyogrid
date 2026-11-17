@@ -1,5 +1,6 @@
 // 3단계: 셀 편집기·키보드·한글 바로 입력 (실제 Chrome, 실제 키 입력)
 import { test, expect } from "@playwright/test";
+import { rectOf } from "./helpers.js";
 
 const cell = (page, r, c, root = "#grid") => page.locator(`${root} .pyo-row[data-row="${r}"] .pyo-cell[data-c="${c}"]`);
 const row = (page, r) => page.evaluate((i) => ({ ...window.grid.getRow(i) }), r);
@@ -21,8 +22,8 @@ test("셀을 누르고 바로 치면 첫 글자부터 들어가고 Enter로 저�
   await expect(input(page)).toHaveValue("abc 12");
   await expect(input(page)).toBeVisible();
   // 입력칸이 셀 위에 정확히 겹친다
-  const cb = await cell(page, 1, 1).boundingBox();
-  const ib = await input(page).boundingBox();
+  const cb = await rectOf(cell(page, 1, 1));
+  const ib = await rectOf(input(page));
   expect(Math.round(ib.x)).toBe(Math.round(cb.x));
   expect(Math.round(ib.y)).toBe(Math.round(cb.y));
   await page.keyboard.press("Enter");
@@ -91,8 +92,8 @@ test("일자: 숫자만 쳐도 하이픈, 잘못된 날짜는 저장 안 됨, �
   // 달력: 셀 바로 아래에 열리고, 날짜를 누르면 저장
   await cell(page, 2, 4).dblclick();
   const cal = page.locator(".pyo-calendar");
-  const cb = await cell(page, 2, 4).boundingBox();
-  const pb = await cal.boundingBox();
+  const cb = await rectOf(cell(page, 2, 4));
+  const pb = await rectOf(cal);
   expect(pb.y).toBeGreaterThanOrEqual(cb.y + cb.height);
   await cal.locator(".pyo-cal-today").click();
   const today = await page.evaluate(() => {
@@ -155,8 +156,8 @@ test("셀 click·dblclick 이벤트가 실제 브라우저에서도 셀 정보�
 });
 
 test("Delete는 끌어 선택한 범위의 편집 가능한 셀만 비운다, 잠긴 셀은 그대로", async ({ page }) => {
-  const a = await cell(page, 0, 1).boundingBox();
-  const b = await cell(page, 2, 7).boundingBox();
+  const a = await rectOf(cell(page, 0, 1));
+  const b = await rectOf(cell(page, 2, 7));
   await page.mouse.move(a.x + 5, a.y + 5);
   await page.mouse.down();
   await page.mouse.move(b.x + 5, b.y + 5, { steps: 6 });
