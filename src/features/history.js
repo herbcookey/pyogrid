@@ -53,6 +53,16 @@ export class History {
     this.redoStack = [];
   }
 
+  /** popUndo로 다시 실행 목록에 옮긴 기록을 버린다 (처리할 행이 없던 행 작업) */
+  dropRedoTop() {
+    this.redoStack.pop();
+  }
+
+  /** popRedo로 되돌리기 목록에 옮긴 기록을 버린다 */
+  dropUndoTop() {
+    this.undoStack.pop();
+  }
+
   get canUndo() {
     return this.undoStack.length > 0;
   }

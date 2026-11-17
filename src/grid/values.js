@@ -157,16 +157,23 @@ export function setValues(grid, changes, opts = {}) {
  */
 export function undo(grid) {
   if (grid.editing.active) grid.editing.cancel();
-  const entry = grid.history.popUndo();
-  if (!entry) {
-    grid._flash(grid.messages.nothingToUndo);
-    return false;
+  for (;;) {
+    const entry = grid.history.popUndo();
+    if (!entry) {
+      grid._flash(grid.messages.nothingToUndo);
+      return false;
+    }
+    const n = entry.rows ? grid._applyRowHistory(entry, "undo") : _applyHistory(grid, entry, "undo");
+    // 처리할 행이 하나도 없는 행 작업(앱이 기록 없이 그 행들을 바꿈)은 버리고 다음 기록으로
+    if (entry.rows && !n) {
+      grid.history.dropRedoTop();
+      continue;
+    }
+    const action = grid.messages.actions[entry.source] || entry.source;
+    grid._flash(entry.rows ? grid.messages.undoneRows(action, grid._fmt(n)) : grid.messages.undone(action, grid._fmt(n)));
+    grid.emit("undo", { source: entry.source, count: n });
+    return true;
   }
-  const n = entry.rows ? grid._applyRowHistory(entry, "undo") : _applyHistory(grid, entry, "undo");
-  const action = grid.messages.actions[entry.source] || entry.source;
-  grid._flash(entry.rows ? grid.messages.undoneRows(action, grid._fmt(n)) : grid.messages.undone(action, grid._fmt(n)));
-  grid.emit("undo", { source: entry.source, count: n });
-  return true;
 }
 
 /**
@@ -176,16 +183,22 @@ export function undo(grid) {
  */
 export function redo(grid) {
   if (grid.editing.active) grid.editing.cancel();
-  const entry = grid.history.popRedo();
-  if (!entry) {
-    grid._flash(grid.messages.nothingToRedo);
-    return false;
+  for (;;) {
+    const entry = grid.history.popRedo();
+    if (!entry) {
+      grid._flash(grid.messages.nothingToRedo);
+      return false;
+    }
+    const n = entry.rows ? grid._applyRowHistory(entry, "redo") : _applyHistory(grid, entry, "redo");
+    if (entry.rows && !n) {
+      grid.history.dropUndoTop();
+      continue;
+    }
+    const action = grid.messages.actions[entry.source] || entry.source;
+    grid._flash(entry.rows ? grid.messages.redoneRows(action, grid._fmt(n)) : grid.messages.redone(action, grid._fmt(n)));
+    grid.emit("redo", { source: entry.source, count: n });
+    return true;
   }
-  const n = entry.rows ? grid._applyRowHistory(entry, "redo") : _applyHistory(grid, entry, "redo");
-  const action = grid.messages.actions[entry.source] || entry.source;
-  grid._flash(entry.rows ? grid.messages.redoneRows(action, grid._fmt(n)) : grid.messages.redone(action, grid._fmt(n)));
-  grid.emit("redo", { source: entry.source, count: n });
-  return true;
 }
 
 /**

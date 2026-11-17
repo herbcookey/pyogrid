@@ -306,10 +306,12 @@ describe("기록한 작업과 기록하지 않은 작업이 섞일 때: 기대�
     grid.addRow(x, "last", { undoable: true });
     grid.removeRows(x);
     const ev = watch(grid);
-    expect(grid.undo()).toBe(true);
+    // 처리할 행이 없는 기록은 버린다. 남은 기록이 없으면 "되돌릴 것 없음"
+    expect(grid.undo()).toBe(false);
     expect(all(grid)).toEqual(["가", "나", "다", "라"]);
-    expect(flash(grid)).toBe("Undo add rows: 0 rows");
-    expect(grid.redo()).toBe(true);
+    expect(flash(grid)).toBe("Nothing to undo");
+    expect(grid.canRedo).toBe(false);
+    expect(grid.redo()).toBe(false);
     expect(all(grid)).toEqual(["가", "나", "다", "라"]);
     expect(ev).toEqual([]);
   });
@@ -431,5 +433,63 @@ describe("기록 한도와 지우기", () => {
     grid.removeRows(0, { undoable: true });
     grid.undo();
     expect(flash(grid)).toBe("실행 취소: 행 빼기 1행");
+  });
+});
+
+describe("처리할 행이 없는 기록은 버리고 다음 기록으로 넘어간다", () => {
+  it("되돌리기: 버린 기록 다음의 셀 편집을 되돌린다. 버린 기록은 다시 실행 목록에도 남지 않는다", () => {
+    const grid = make();
+    grid.setRange(0, 2);
+    grid.paste("11");
+    const x = { name: "엑스" };
+    grid.addRow(x, "last", { undoable: true });
+    grid.removeRows(x); // 기록 없이 뺐다: 추가 기록에 처리할 행이 없다
+    const undoEv = vi.fn();
+    grid.on("undo", undoEv);
+    expect(grid.undo()).toBe(true);
+    expect(grid.getAllRows()[0].qty).toBe(10);
+    expect(flash(grid)).toBe("Undo paste: 1 cell");
+    expect(undoEv).toHaveBeenCalledTimes(1);
+    expect(undoEv).toHaveBeenCalledWith({ source: "paste", count: 1 });
+    expect(grid.canUndo).toBe(false);
+    expect(grid.redo()).toBe(true);
+    expect(grid.getAllRows()[0].qty).toBe(11);
+    expect(grid.canRedo).toBe(false);
+    expect(all(grid)).toEqual(["가", "나", "다", "라"]);
+  });
+
+  it("다시 실행: 처리할 행이 없는 기록을 버리고 다음 기록을 다시 실행한다", () => {
+    const grid = make();
+    const a = { name: "에이" };
+    const b = { name: "비" };
+    grid.addRow(a, "last", { undoable: true });
+    grid.addRow(b, "last", { undoable: true });
+    grid.undo();
+    grid.undo();
+    expect(all(grid)).toEqual(["가", "나", "다", "라"]);
+    grid.addRow(a, "last"); // 기록 없이 a를 다시 넣었다: a 추가를 다시 실행할 것이 없다
+    const redoEv = vi.fn();
+    grid.on("redo", redoEv);
+    expect(grid.redo()).toBe(true);
+    expect(all(grid)).toEqual(["가", "나", "다", "라", "에이", "비"]);
+    expect(flash(grid)).toBe("Redo add rows: 1 row");
+    expect(redoEv).toHaveBeenCalledWith({ source: "addRow", count: 1 });
+    expect(grid.canRedo).toBe(false);
+    // 버린 a 추가 기록은 되돌리기 목록에도 없다: 되돌리면 b만 빠진다
+    expect(grid.undo()).toBe(true);
+    expect(all(grid)).toEqual(["가", "나", "다", "라", "에이"]);
+    expect(grid.canUndo).toBe(false);
+  });
+
+  it("버릴 기록뿐이면 '되돌릴 것 없음'·'다시 실행할 것 없음'이고 false", () => {
+    const grid = make();
+    const rows = grid.getAllRows();
+    grid.deleteRows(rows[0], { undoable: true });
+    grid.deleteRows(rows[1], { undoable: true });
+    grid.addRow([rows[0], rows[1]], "first"); // 둘 다 기록 없이 되살렸다
+    expect(grid.undo()).toBe(false);
+    expect(flash(grid)).toBe("Nothing to undo");
+    expect(grid.canUndo).toBe(false);
+    expect(grid.canRedo).toBe(false);
   });
 });
