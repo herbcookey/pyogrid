@@ -19,6 +19,7 @@
 
 ### 타입
 
+- [ ] strictNullChecks를 모든 파일에 켠다. 아래 "strictNullChecks 남은 순서"를 따라 `tsconfig.strict.json`의 include를 늘리고, 다 끝나면 `tsconfig.json`에 켜고 `tsconfig.strict.json`을 지운다.
 - [ ] `on`·`off`에서 GridEvents에 없는 이름을 받는 오버로드(`on(name: string, fn: Function | ((e: any) => any))`)를 1.0에서 뺄지 정한다. 빼면 오타 난 이벤트 이름(`"chnage"`)이 컴파일 오류로 잡히지만, 지금 모르는 이름을 넘기는 TypeScript 코드는 컴파일이 깨진다. 런타임은 그대로 아무 이름이나 받는다.
 
 ### 폐기 절차
@@ -81,3 +82,26 @@ README에 없는 내보내기는 Stability 절의 약속 밖이라 예고 없이
 | `isFilterable`, `isSortable`, `isNumericColumn` | 숨긴다. 쓰임이 있으면 README에 적는다 |
 | `options`, `messages` | 읽기 전용으로 남길지 정한다. 바꿔도 다시 그리지 않으므로 쓰기는 약속하지 않는다 |
 | 그 밖의 속성 (`rows`, `source`, `dataRows`, `deleted`, `filters`, `sort`, `page`, `range`, `leaves`, `headerCells`, `headerDepth`, `widths`, `leafX`, `aside`, `frozenCount`, `fzWidth`, `scWidth`, `asideWidth`, `totalWidth`, `history`, `editing`, `el`, `id`, `target`) | 숨긴다. 같은 내용을 읽는 메서드가 있다. 단위 테스트가 많이 읽으므로(`grid.el` 등) 테스트도 같이 고친다 |
+
+## strictNullChecks 남은 순서
+
+`tsconfig.strict.json`(strictNullChecks: true)은 지금 `src/util.js`와 `src/core/*.js`만 검사한다. `npm run typecheck`가 `tsconfig.json`과 이 설정을 둘 다 돌린다.
+include에 넣은 파일이 import하는 파일(JSDoc의 `import("...")` 타입 포함)도 같이 검사되므로, 한 파일을 넣으려면 그 파일이 가져오는 파일이 먼저 통과해야 한다.
+
+오류 수는 그 파일만 include에 넣고 strictNullChecks로 검사했을 때의 수다 (0.9.0 뒤 타입 강화 커밋 기준).
+"함께 검사되는 오류"는 그 파일이 가져오는 다른 파일에서 나는 오류다.
+
+| 순서 | 파일 | 자기 오류 | 함께 검사되는 오류 | 메모 |
+|---|---|---|---|---|
+| 1 | `src/features/history.js`, `src/features/pagebar.js`, `src/features/state.js` | 0 | 0 | 이미 통과한다. include에 넣기만 하면 된다 |
+| 2 | `src/editors/types.js` | 1 | 0 | |
+| 3 | `src/features/clipboard.js` | 0 | 1 (types.js) | 2번 뒤 |
+| 4 | `src/editors/popups.js` | 1 | 1 (types.js) | 2번 뒤 |
+| 5 | `src/features/filter.js` | 4 | 0 | |
+| 6 | `src/features/view.js` | 13 | 0 | |
+| 7 | `src/features/excel.js`, `src/features/summary.js` | 0 | 129 (grid.js 포함 전부) | 인자 `g`의 타입으로 grid.js를 가져온다. grid.js 뒤에 넣거나, 쓰는 속성만 담은 타입으로 바꾼다 |
+| 8 | `src/features/editing.js` | 25 | 104 (grid.js 포함) | grid.js와 서로 가져오므로 grid.js와 같이 끝낸다 |
+| 9 | `src/grid.js` | 85 | 44 | 마지막 |
+| 10 | `src/index.js`, `src/global.js` | 0 | 129 | grid.js 뒤 |
+
+모두 통과하면 `tsconfig.json`에 strictNullChecks를 켜고 `tsconfig.strict.json`을 지운다.

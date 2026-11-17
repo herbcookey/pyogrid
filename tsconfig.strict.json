@@ -1,0 +1,9 @@
+{
+  // strictNullChecks 단계 적용: 통과한 파일만 include에 넣는다. include에 넣은 파일이 import하는 파일도 같이 검사되므로,
+  // 다음 파일을 넣으려면 그 파일이 import하는 파일이 먼저 통과해야 한다. 남은 순서는 docs/roadmap-1.0.md에 있다.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strictNullChecks": true
+  },
+  "include": ["src/util.js", "src/core/*.js"]
+}
