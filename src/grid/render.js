@@ -261,13 +261,14 @@ export function _render(grid) {
   if (grid._destroyed) return;
   const next = _visibleRange(grid);
   const cur = grid._range;
-  if (next.c0 !== cur.c0 || next.c1 !== cur.c1) _clearRows(grid);
   for (const [i, el] of grid._rowEls) {
     if (i < next.r0 || i > next.r1) {
       el.remove();
       grid._rowEls.delete(i);
     }
   }
+  // 보이는 컬럼 범위가 바뀌면 남은 행은 다시 만들지 않고 스크롤 영역 셀만 바꾼다 (고정 쪽은 그대로)
+  if ((next.c0 !== cur.c0 || next.c1 !== cur.c1) && grid._rowEls.size) _shiftColumns(grid, cur, next);
   grid._range = next;
   if (next.r1 < next.r0) return;
   const frag = document.createDocumentFragment();
@@ -280,6 +281,42 @@ export function _render(grid) {
   grid.el.body.append(frag);
   _paintMerge(grid);
   updateActiveDescendant(grid);
+}
+
+/**
+ * 그려 둔 행마다 스크롤 영역 셀을 cur 범위에서 next 범위로 바꾼다: 벗어난 셀만 지우고 새 셀만 넣고 padding-left를 맞춘다.
+ * 셀 범위·병합·활성 칸 표시는 _cellHtml이 지금 상태로 그리고, 병합 글자 자리는 뒤의 _paintMerge가 맞춘다.
+ * 레이아웃 값(크기·위치)은 읽지 않는다. 그룹 합계 행은 가로 가상 스크롤 없이 전부 그리므로 건드리지 않는다.
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
+ * @param {{c0: number, c1: number}} cur
+ * @param {{c0: number, c1: number}} next
+ * @returns {void}
+ */
+export function _shiftColumns(grid, cur, next) {
+  const n = grid.leaves.length;
+  const pad = next.c0 < n ? grid.leafX[next.c0] || 0 : 0;
+  const overlap = cur.c0 >= 0 && next.c0 <= cur.c1 && next.c1 >= cur.c0;
+  /** @param {number} a @param {number} b @param {any} row @param {number} index */
+  const cells = (a, b, row, index) => {
+    let s = "";
+    for (let c = a; c <= b; c++) s += _cellHtml(grid, c, row, index);
+    return s;
+  };
+  for (const [index, el] of grid._rowEls) {
+    const row = grid.rows[index];
+    if (!row || row.__isGrouping) continue;
+    const sc = /** @type {HTMLElement|null} */ (el.lastElementChild);
+    if (!sc) continue;
+    if (!overlap) sc.innerHTML = cells(next.c0, next.c1, row, index);
+    else {
+      for (let k = cur.c0; k < next.c0; k++) if (sc.firstElementChild) sc.firstElementChild.remove();
+      for (let k = cur.c1; k > next.c1; k--) if (sc.lastElementChild) sc.lastElementChild.remove();
+      if (next.c0 < cur.c0) sc.insertAdjacentHTML("afterbegin", cells(next.c0, cur.c0 - 1, row, index));
+      if (next.c1 > cur.c1) sc.insertAdjacentHTML("beforeend", cells(cur.c1 + 1, next.c1, row, index));
+    }
+    sc.style.paddingLeft = pad + "px";
+  }
 }
 
 /**

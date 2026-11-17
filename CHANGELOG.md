@@ -31,6 +31,10 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 - `setFilter(key, null)` removes only that column's value list; a condition set with `setFilterCondition` stays. Without conditions this is the same as before.
 - **`role="grid"` moved from the outer `.pyo` element to `.pyo-canvas`** (the element that holds only the header, body, and footer rows), so the input box and the bottom bar are no longer inside the grid role. Header cells are now wrapped in `div.pyo-hrow` row elements inside the frozen and scrolling header boxes. Layout is unchanged. Code that looked up `[role="grid"]` or walked the header's DOM may need updating; the DOM structure is not covered by Stability.
 
+### Performance
+
+- Horizontal scrolling no longer rebuilds every rendered row when the visible column range changes. Each row drops the cells that left and adds the ones that came in; frozen columns and group subtotal rows are untouched. With 240 columns, rendering a horizontal scroll step went from about 4 ms to 1 ms in Chrome, and the 95th-percentile frame time from 28 ms to 17 ms.
+
 ### Fixed
 
 - With an IME that sends the confirming key again after composition ends (macOS), pressing Enter, Tab, ↑, or ↓ to finish a word could be handled twice when saving was slow (for example, a `change` handler taking 100 ms): the cell was saved and the next cell started editing. The repeat is now detected by the events' `timeStamp`, so the time spent saving no longer counts.

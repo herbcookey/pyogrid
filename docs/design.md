@@ -85,7 +85,8 @@ div.pyo                         (테두리, position:relative)
 
 - 브라우저 스크롤 하나에 `position: sticky`를 써서 헤더·고정 컬럼·합계 행이 같은 프레임에 움직인다. 패널 여러 개의 위치를 스크롤마다 스크립트로 맞추지 않으므로 동기화 지연이 없다.
 - 세로: 행 높이가 고정이므로 `scrollTop / 행 높이`로 범위를 구하고 위아래 6행을 더 그린다. 범위를 벗어난 행만 지우고 새 행만 만든다.
-- 가로: 고정 컬럼은 항상, 스크롤 컬럼은 보이는 범위 ±2열만 그린다. 범위가 바뀌면 보이는 행을 다시 만든다.
+- 가로: 고정 컬럼은 항상, 스크롤 컬럼은 보이는 범위 ±2열만 그린다. 범위가 바뀌면 행은 다시 만들지 않고, 그려 둔 행마다 `.pyo-sc`에서 벗어난 셀만 지우고 새 셀만 넣은 뒤 padding-left를 맞춘다 (render.js `_shiftColumns`). 겹치는 셀이 없으면 `.pyo-sc` 안만 새로 쓴다. 고정 쪽(`.pyo-fz`)과 그룹 합계 행(가로 가상 스크롤 없이 전부 그림)은 건드리지 않는다. 새 셀은 `_cellHtml`이 지금의 셀 범위·병합·활성 칸 상태로 그리고, 병합 글자 자리와 입력칸의 aria-activedescendant는 그 뒤 `_paintMerge`·`updateActiveDescendant`가 맞춘다. 레이아웃 값은 읽지 않는다 (leafX·widths는 계산해 둔 값). 결과 DOM이 처음부터 다시 그린 DOM과 같은지 단위 테스트가 비교한다 (test/unit/hscroll.test.js).
+- 가로 스크롤 시간 (Chrome, big.html 5만 행, 1400×900): 240열에서 스크롤 범위가 바뀌는 프레임의 `_render` 중간값 4.0ms → 0.9ms (프레임마다 90px), 3.8ms → 1.8ms (400px). 프레임 간격 95%는 28.3ms → 16.9ms. CPU를 4배 느리게 하면 프레임 간격 중간값 145.5ms → 60.5ms (90px). 세로 스크롤만 하는 프레임은 그대로다 (같은 측정을 바꾸기 전 묶음과 번갈아 재서 비교).
 - 스크롤바: Chrome·Edge·Safari는 `::-webkit-scrollbar`로 15px. Firefox는 이 선택자가 없어서 브라우저 기본 너비(Windows 17px, 겹쳐 그리는 스크롤바면 0)에 색만 `scrollbar-color`로 맞춘다. Chrome 121+는 `scrollbar-color`가 있으면 `::-webkit-scrollbar`를 무시하므로 `@supports not selector(::-webkit-scrollbar)` 안에만 둔다. 세로 막대는 헤더 아래부터(`::-webkit-scrollbar` 브라우저만).
 - 너비: 그리드 너비에서 보조 컬럼과 스크롤바 너비를 빼고 `"*"`·`%`를 계산한다 (행 수에 따라 너비가 바뀌지 않게). 스크롤바 너비는 상수가 아니라, 스크롤 영역과 같은 class의 숨은 상자를 `overflow:scroll`로 만들어 잰다. 잴 수 없으면(화면에 없음, jsdom) 15px. 한 번 잰 값은 기억하고 창 크기가 바뀌면(확대·축소 포함) 다시 잰다. 컨테이너 크기가 바뀌면 ResizeObserver로 다시 계산하고, 사용자가 조절한 너비는 유지한다.
 - 행 객체는 복사하지 않는다 (화면 코드가 행을 직접 고치고 다시 그리게 하는 방식에 맞춤).
