@@ -387,3 +387,29 @@ describe("getChanges·cleanRow: 저장할 때 내부 표시 키를 뺀 복사본
     expect(row.__modified__).toBe(true);
   });
 });
+describe("getChanges·cleanRow: 더 확인할 것", () => {
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
+  });
+  const cols = [{ key: "id" }, { key: "name", editor: { type: "text" } }];
+
+  it("수정한 뒤 지운 행은 deleted에만 들어가고 modified에는 없다", () => {
+    const grid = new PyoGrid(host, { columns: cols });
+    const rows = [
+      { id: 1, name: "가" },
+      { id: 2, name: "나" },
+    ];
+    grid.setData(rows);
+    grid.setValue(rows[0], "name", "가2");
+    grid.deleteRows(rows[0]);
+    expect(grid.getChanges()).toEqual({ added: [], modified: [], deleted: [{ id: 1, name: "가2" }] });
+  });
+
+});
