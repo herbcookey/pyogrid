@@ -4,7 +4,20 @@ All notable changes to pyogrid. Versions follow [semver](https://semver.org/); b
 
 ## Unreleased
 
-No changes to behavior or the public API.
+No changes to runtime behavior. The JavaScript API is the same; the TypeScript declarations are more precise.
+
+### Type changes that can show new compile errors
+
+TypeScript code that only uses what the README documents keeps compiling. These now fail to compile, because the types used to be `any` or `Function`:
+
+- Reading a property an event doesn't have, such as `e.foo` in a `change` handler.
+- A `formatter`, `cellClass`, `headerClass`, `editor.disabled`, or `rowClass` function whose parameter type doesn't match what the grid passes.
+
+### Added
+
+- **Typed rows.** `PyoGrid<Row>` takes the row type (default `any`, so existing code compiles as before). Methods that take or return rows use it: `setData`, `getRows`, `getAllRows`, `getRow`, `getViewRows`, `getSelectedRows`, `getModifiedRows`, `getAddedRows`, `getDeletedRows`, `addRow`, `removeRows`, `deleteRows`, `replaceRow`, `setValue`, `setValues`, `toggleNode`, `getTreeInfo`, and `selectAll`'s filter. `ColumnDef<Row>` types `c.row` in `formatter`, `cellClass`, and `editor.disabled`, and `GridOptions<Row>` types `rowClass`.
+- **Typed events.** `GridEvents<Row>` lists every event and its argument, taken from the grid's own `emit` calls. `grid.on("change", (e) => e.row.SKU)` infers `e`. Event names that aren't in the list are still accepted.
+- Type exports from `pyogrid`: `GridOptions`, `ColumnDef`, `ColumnEditor`, `CellContext`, `GridCellInfo`, `GridEvents`, `GridClickEvent`, `ViewRow`, `GroupingRow`, `AppliedChange`, `RangeInfo`, `SortItem`, `SortCompare`, `PageInfo`. See [TypeScript](README.md#typescript).
 
 ### Documentation
 
@@ -15,6 +28,8 @@ No changes to behavior or the public API.
 
 - `test/unit/api-surface.test.js` pins the names of the `src/index.js` exports, `PyoGrid` static properties, public `PyoGrid.prototype` methods, default option keys, and emitted events.
 - `deprecate(id, message)` in `src/util.js` logs a `console.warn` once per id. It is not exported and not used yet.
+- `npm run typecheck:types` checks `test/types/usage.test-d.ts` against the built `dist/types` with `strict: true`. It runs in `test:all` and CI.
+- `npm run typecheck` also runs `tsconfig.strict.json`, which turns on `strictNullChecks` for `src/util.js` and `src/core/*.js`. The remaining files are listed in `docs/roadmap-1.0.md`.
 
 ## 0.9.0
 

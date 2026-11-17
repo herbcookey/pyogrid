@@ -22,6 +22,7 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - [Installation](#installation)
 - [Quick start](#quick-start)
 - [Using with React, Vue, and Angular](#using-with-react-vue-and-angular)
+- [TypeScript](#typescript)
 - [Core concepts](#core-concepts)
 - [Grid options](#grid-options)
 - [Column options](#column-options)
@@ -65,7 +66,7 @@ Top: multi-level headers, frozen columns, row selection, a footer totals row, an
 - **Server-side paging and sorting.**
 - **xlsx export** of what is on screen, with merged headers and real number cells.
 - **Remembers column widths and sort** per page in `localStorage`.
-- **Themeable** with CSS custom properties. TypeScript declarations included.
+- **Themeable** with CSS custom properties. TypeScript declarations included, with typed rows and events ([TypeScript](#typescript)).
 - **Localizable.** English by default, Korean built in, and every built-in string can be replaced.
 
 ## Installation
@@ -239,7 +240,7 @@ export class GridComponent implements AfterViewInit, OnDestroy {
       this.grid.setData(this.rows);
     });
     // Re-enter Angular only for handlers that update component state
-    this.grid!.on("change", (e: any) => this.zone.run(() => { /* ... */ }));
+    this.grid!.on("change", (e) => this.zone.run(() => { /* ... */ }));
   }
 
   ngOnDestroy() {
@@ -256,6 +257,42 @@ In Angular, add `node_modules/pyogrid/dist/pyogrid.css` to `styles` in `angular.
 - **In Vue, pass plain objects with `toRaw`.** A reactive proxy makes every edit go through Vue's reactivity and slows the grid down. Don't put the grid instance in `ref()` either.
 - **Cells are strings.** Cell content is the text your `formatter` returns, or HTML with `html: true`. Rendering React or Vue components inside cells is not supported.
 - **`setData` resets selection and undo history.** If the parent hands down a new `rows` array after every edit, the editing state is lost. Change `rows` only when you load new data.
+
+## TypeScript
+
+Type declarations come with the package (`dist/types`). Give the grid your row type, and rows are typed in methods, column callbacks, and event handlers. Without a row type, rows are `any` as before.
+
+```ts
+import { PyoGrid, type ColumnDef } from "pyogrid";
+
+interface Order {
+  SKU: string;
+  NAME: string;
+  QTY: number;
+  LOCKED?: "Y" | "N";
+}
+
+const columns: ColumnDef<Order>[] = [
+  { key: "SKU", label: "SKU", width: 120 },
+  { key: "NAME", label: "Product", cellClass: (c) => (c.row.QTY < 0 ? "minus" : "") }, // c.row is an Order
+  { key: "QTY", label: "Qty", formatter: "money",
+    editor: { type: "number", disabled: (c) => c.row.LOCKED === "Y" } },
+];
+
+const grid = new PyoGrid<Order>("#grid", { columns });
+grid.setData([{ SKU: "SKU-A1001", NAME: "Ballpoint pen", QTY: 12000 }]); // must be Order[]
+
+// The handler's argument is typed from the event name
+grid.on("change", (e) => console.log(e.row.SKU, e.key, e.oldValue, "→", e.value));
+grid.on("beforeedit", (e) => e.row.LOCKED !== "Y");
+
+const changed: Order[] = grid.getModifiedRows();
+```
+
+- `key` is a `string`, because path keys like `"a.b"` are allowed.
+- `getRow()`, `getViewRows()`, `click`, and `dblclick` can give you a group subtotal row, so their row type is `ViewRow<Order>` (`Order | GroupingRow<Order>`).
+- Event arguments are listed in `GridEvents<Row>`, for example `GridEvents<Order>["change"]`. `on` and `off` still accept names that aren't in it, with an untyped argument.
+- Other type exports: `GridOptions`, `ColumnEditor`, `CellContext`, `GridCellInfo`, `GridClickEvent`, `GroupingRow`, `AppliedChange`, `RangeInfo`, `SortItem`, `SortCompare`, and `PageInfo`.
 
 ## Core concepts
 
@@ -1042,11 +1079,12 @@ Building from source requires Node.js 22 or later. `dist/` is not committed, so 
 ```bash
 npm install
 npm run build        # dist/ (js, min.js, esm.js, css, min.css, types)
-npm run typecheck    # type-check the JSDoc types (// @ts-check)
+npm run typecheck    # type-check the JSDoc types (// @ts-check), plus strictNullChecks for the files in tsconfig.strict.json
 npm test             # unit tests (vitest + jsdom)
+npm run typecheck:types  # after a build: check test/types against the built dist/types
 npm run test:e2e     # build, then run headless browser tests in Chrome, Firefox, and WebKit (Playwright)
 npm run test:e2e:chrome  # build, then e2e in Chrome only
-npm run test:all     # typecheck, unit, and e2e
+npm run test:all     # typecheck, unit, e2e, and the type tests
 npm run demo         # demo server at http://127.0.0.1:5179/demo/
 ```
 
@@ -1054,7 +1092,7 @@ After changing the demos, refresh the README screenshots with `npm run build` an
 
 To release, bump the version with `npm version patch` (or `minor`, `major`). It also updates the version in `src/index.js` and this README, then commits and tags. `npm publish` refuses to run if those versions don't match `package.json`, and runs the typecheck, unit tests, and the Chrome e2e tests first.
 
-GitHub Actions runs the typecheck, unit tests, and e2e tests in Chrome, Firefox, and WebKit on every push and pull request (`.github/workflows/test.yml`). The CDN URLs above (`@0.9`) are changed by hand, only for releases that change the API.
+GitHub Actions runs the typecheck, unit tests, type tests, and e2e tests in Chrome, Firefox, and WebKit on every push and pull request (`.github/workflows/test.yml`). The CDN URLs above (`@0.9`) are changed by hand, only for releases that change the API.
 
 The e2e tests use your installed Chrome. Download Firefox and WebKit for Playwright once with `npx playwright install firefox webkit`. To run one browser: `npx playwright test --project=firefox` (`chrome`, `firefox`, or `webkit`).
 

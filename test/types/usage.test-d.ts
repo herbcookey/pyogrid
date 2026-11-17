@@ -196,3 +196,29 @@ ref.destroy();
 ref = null;
 
 void badColumns;
+
+/* ------------------------------------------------------------------
+ * 4. README의 TypeScript 절 예시 (README를 고치면 여기도 고친다)
+ * ---------------------------------------------------------------- */
+
+namespace readmeExample {
+  interface Order {
+    SKU: string;
+    NAME: string;
+    QTY: number;
+    LOCKED?: "Y" | "N";
+  }
+
+  const columns: ColumnDef<Order>[] = [
+    { key: "SKU", label: "SKU", width: 120 },
+    { key: "NAME", label: "Product", cellClass: (c) => (c.row.QTY < 0 ? "minus" : "") },
+    { key: "QTY", label: "Qty", formatter: "money", editor: { type: "number", disabled: (c) => c.row.LOCKED === "Y" } },
+  ];
+
+  const grid = new PyoGrid<Order>("#grid", { columns });
+  grid.setData([{ SKU: "SKU-A1001", NAME: "Ballpoint pen", QTY: 12000 }]);
+  grid.on("change", (e) => console.log(e.row.SKU, e.key, e.oldValue, "→", e.value));
+  grid.on("beforeedit", (e) => e.row.LOCKED !== "Y");
+  const changed: Order[] = grid.getModifiedRows();
+  void changed;
+}
