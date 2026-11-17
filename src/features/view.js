@@ -24,7 +24,7 @@ export function filterRows(list, conds, exceptKey, pass) {
   if (!keys.length) return list;
   return list.filter((row) => {
     if (pass && pass(row)) return true;
-    for (const k of keys) if (!conds.get(k).has(filterKey(getValue(row, k)))) return false;
+    for (const k of keys) if (!/** @type {Set<string>} */ (conds.get(k)).has(filterKey(getValue(row, k)))) return false;
     return true;
   });
 }
@@ -121,7 +121,9 @@ export const collectors = {
  */
 export function insertGroupRows(sorted, by) {
   const out = [];
+  /** @type {any[][]} */
   const lists = by.map(() => []);
+  /** @type {(string|undefined)[]} */
   const prev = by.map(() => undefined);
   const flush = (level, lastRow) => {
     // level 이상(안쪽) 단계의 합계 행을 안쪽부터 넣는다
@@ -176,8 +178,8 @@ export function buildTree(list, cfg, sortSiblings) {
     const p = r[cfg.parentKey];
     const parent = p === undefined || p === null || p === "" || p === "top" ? null : byId.get(String(p));
     if (parent && parent !== r) {
-      meta.get(r).parent = parent;
-      meta.get(parent).children.push(r);
+      /** @type {{depth:number, children:any[], parent:any}} */ (meta.get(r)).parent = parent;
+      /** @type {{depth:number, children:any[], parent:any}} */ (meta.get(parent)).children.push(r);
     } else roots.push(r);
   }
   const rows = [];
@@ -186,7 +188,7 @@ export function buildTree(list, cfg, sortSiblings) {
     for (const n of sortSiblings(nodes)) {
       if (seen.has(n)) continue; // 순환 참조 방지
       seen.add(n);
-      const m = meta.get(n);
+      const m = /** @type {{depth:number, children:any[], parent:any}} */ (meta.get(n));
       m.depth = depth;
       rows.push(n);
       if (!n[cfg.collapseKey] && m.children.length) walk(m.children, depth + 1);
@@ -196,7 +198,7 @@ export function buildTree(list, cfg, sortSiblings) {
   // 접힌 자손의 깊이도 정해 둔다 (펼쳤을 때·합계용)
   const markDepth = (nodes, depth) => {
     for (const n of nodes) {
-      const m = meta.get(n);
+      const m = /** @type {{depth:number, children:any[], parent:any}} */ (meta.get(n));
       if (seen.has(n)) continue;
       m.depth = depth;
       markDepth(m.children, depth + 1);
@@ -246,7 +248,7 @@ export function buildView(o) {
       const user = o.sort.find((s) => s.key === key);
       return { key, dir: user ? user.dir : "asc" };
     });
-    sort = fixed.concat(sort.filter((s) => !o.grouping.by.includes(s.key)));
+    sort = fixed.concat(sort.filter((s) => !/** @type {{by: string[]}} */ (o.grouping).by.includes(s.key)));
   }
   const sorted = sort.length ? sortRows(filtered, sort, o.compare, o.locale) : filtered;
   if (o.grouping && o.grouping.by.length) return { rows: insertGroupRows(sorted, o.grouping.by), dataRows: sorted, treeMeta: null };

@@ -5,5 +5,15 @@
   "compilerOptions": {
     "strictNullChecks": true
   },
-  "include": ["src/util.js", "src/core/*.js"]
+  "include": [
+    "src/util.js",
+    "src/core/*.js",
+    "src/editors/*.js",
+    "src/features/history.js",
+    "src/features/pagebar.js",
+    "src/features/state.js",
+    "src/features/clipboard.js",
+    "src/features/filter.js",
+    "src/features/view.js"
+  ]
 }

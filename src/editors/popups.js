@@ -140,7 +140,7 @@ export class Calendar extends Popup {
       if (act === "prev") this._shift(-1);
       else if (act === "next") this._shift(1);
       else if (act === "today") this.onPick(formatDate(new Date()));
-      else if (act === "day") this.onPick(/** @type {HTMLElement} */ (t).dataset.date);
+      else if (act === "day") this.onPick(/** @type {string} */ (/** @type {HTMLElement} */ (t).dataset.date));
     });
     this.render();
   }

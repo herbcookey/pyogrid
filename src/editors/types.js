@@ -147,7 +147,7 @@ export function formatDateAs(d, fmt) {
 export function parseDateValue(s, cfg) {
   const p = parseDate(s);
   if (!p.ok || p.value === "" || !cfg || !cfg.valueFormat) return p;
-  const [y, m, d] = p.value.split("-").map(Number);
+  const [y, m, d] = /** @type {string} */ (p.value).split("-").map(Number);
   return { ok: true, value: formatDateAs(new Date(y, m - 1, d), cfg.valueFormat) };
 }
 

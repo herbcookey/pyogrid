@@ -85,23 +85,25 @@ README에 없는 내보내기는 Stability 절의 약속 밖이라 예고 없이
 
 ## strictNullChecks 남은 순서
 
-`tsconfig.strict.json`(strictNullChecks: true)은 지금 `src/util.js`와 `src/core/*.js`만 검사한다. `npm run typecheck`가 `tsconfig.json`과 이 설정을 둘 다 돌린다.
+`tsconfig.strict.json`(strictNullChecks: true)이 검사하는 파일은 아래 표에서 "통과"인 것이다. `npm run typecheck`가 `tsconfig.json`과 이 설정을 둘 다 돌린다.
 include에 넣은 파일이 import하는 파일(JSDoc의 `import("...")` 타입 포함)도 같이 검사되므로, 한 파일을 넣으려면 그 파일이 가져오는 파일이 먼저 통과해야 한다.
 
-오류 수는 그 파일만 include에 넣고 strictNullChecks로 검사했을 때의 수다 (0.9.0 뒤 타입 강화 커밋 기준).
+오류 수는 그 파일만 include에 넣고 strictNullChecks로 검사했을 때의 수다.
 "함께 검사되는 오류"는 그 파일이 가져오는 다른 파일에서 나는 오류다.
 
-| 순서 | 파일 | 자기 오류 | 함께 검사되는 오류 | 메모 |
+| 순서 | 파일 | 자기 오류 | 함께 검사되는 오류 | 상태·메모 |
 |---|---|---|---|---|
-| 1 | `src/features/history.js`, `src/features/pagebar.js`, `src/features/state.js` | 0 | 0 | 이미 통과한다. include에 넣기만 하면 된다 |
-| 2 | `src/editors/types.js` | 1 | 0 | |
-| 3 | `src/features/clipboard.js` | 0 | 1 (types.js) | 2번 뒤 |
-| 4 | `src/editors/popups.js` | 1 | 1 (types.js) | 2번 뒤 |
-| 5 | `src/features/filter.js` | 4 | 0 | |
-| 6 | `src/features/view.js` | 13 | 0 | |
-| 7 | `src/features/excel.js`, `src/features/summary.js` | 0 | 129 (grid.js 포함 전부) | 인자 `g`의 타입으로 grid.js를 가져온다. grid.js 뒤에 넣거나, 쓰는 속성만 담은 타입으로 바꾼다 |
-| 8 | `src/features/editing.js` | 25 | 104 (grid.js 포함) | grid.js와 서로 가져오므로 grid.js와 같이 끝낸다 |
-| 9 | `src/grid.js` | 85 | 44 | 마지막 |
-| 10 | `src/index.js`, `src/global.js` | 0 | 129 | grid.js 뒤 |
+| 1 | `src/util.js`, `src/core/*.js` | 0 | 0 | 통과 |
+| 2 | `src/features/history.js`, `src/features/pagebar.js`, `src/features/state.js` | 0 | 0 | 통과 (원래 오류 없음) |
+| 3 | `src/editors/types.js`, `src/features/clipboard.js` | 0 (처음 1) | 0 | 통과 |
+| 4 | `src/editors/popups.js` | 0 (처음 1) | 0 | 통과 |
+| 5 | `src/features/filter.js` | 0 (처음 4) | 0 | 통과 |
+| 6 | `src/features/view.js` | 0 (처음 13) | 0 | 통과 |
+| 7 | `src/features/excel.js`, `src/features/summary.js` | 0 | 110 (grid.js 85, editing.js 25) | 인자 `g`의 타입으로 grid.js를 가져온다. grid.js 뒤에 넣거나, 쓰는 속성만 담은 타입으로 바꾼다 |
+| 8 | `src/features/editing.js` | 25 | 85 (grid.js) | grid.js와 서로 가져오므로 grid.js와 같이 끝낸다 |
+| 9 | `src/grid.js` | 85 | 25 (editing.js) | 마지막 |
+| 10 | `src/index.js`, `src/global.js` | 0 | 110 | grid.js 뒤 |
+
+3~6번은 JSDoc 타입 변환(`/** @type {...} */ (식)`)과 지역 변수 타입 주석만 넣어 통과시켰다. 빌드 결과(압축한 js)와 dist/types는 바뀌지 않았다.
 
 모두 통과하면 `tsconfig.json`에 strictNullChecks를 켜고 `tsconfig.strict.json`을 지운다.

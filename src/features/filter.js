@@ -40,7 +40,7 @@ export class FilterPopup {
     this.search_ = this.values.map((v, i) => (this.labels[i] + "\u0000" + v).toLowerCase());
     /** @type {Set<number>} 체크를 푼 값의 순번 */
     this.unchecked = new Set();
-    if (o.current) this.values.forEach((v, i) => !o.current.has(v) && this.unchecked.add(i));
+    if (o.current) this.values.forEach((v, i) => !/** @type {Set<string>} */ (o.current).has(v) && this.unchecked.add(i));
     /** @type {number[]} 지금 검색에 걸린 값의 순번 (전체) */
     this.matching = this.values.map((_, i) => i);
 
@@ -87,12 +87,12 @@ export class FilterPopup {
       for (let i = 0; i < this.values.length; i++) if (!q || this.search_[i].includes(q)) this.matching.push(i);
       this._render();
     });
-    el.querySelector(".pyo-f-cancel").addEventListener("click", () => this.close());
-    el.querySelector(".pyo-f-clear").addEventListener("click", () => {
+    /** @type {HTMLElement} */ (el.querySelector(".pyo-f-cancel")).addEventListener("click", () => this.close());
+    /** @type {HTMLElement} */ (el.querySelector(".pyo-f-clear")).addEventListener("click", () => {
       this.o.onApply(null);
       this.close();
     });
-    el.querySelector(".pyo-f-ok").addEventListener("click", () => this.apply());
+    /** @type {HTMLElement} */ (el.querySelector(".pyo-f-ok")).addEventListener("click", () => this.apply());
     el.addEventListener("keydown", (e) => {
       // 한글 등 조합 중의 Enter·Esc는 조합을 확정·취소하는 키다 (macOS는 isComposing, Windows Chrome은 keyCode 229)
       if (e.isComposing || e.keyCode === 229) return;
