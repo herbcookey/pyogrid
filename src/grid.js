@@ -9,14 +9,14 @@ import { sumRowHtml } from "./features/summary.js";
 import { FilterPopup } from "./features/filter.js";
 import { exportXlsx, buildExportData } from "./features/excel.js";
 import { storageKey, loadState, saveState, removeState } from "./features/state.js";
-import { History, RECORDED_SOURCES } from "./features/history.js";
+import { History } from "./features/history.js";
 import { resolveMessages } from "./core/locales.js";
-import { parseTSV, buildTSV, pastePlan, convertPasteValue } from "./features/clipboard.js";
 import { formatNumber, intlLocale } from "./features/pagebar.js";
-import { editorTypes, selectOptions, isChecked, sameValue } from "./editors/types.js";
-import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMerge } from "./util.js";
+import { editorTypes, selectOptions, isChecked } from "./editors/types.js";
+import { escapeHtml, getValue, h, isFn, clamp, deepMerge } from "./util.js";
 import * as gData from "./grid/data.js";
 import * as gSelection from "./grid/selection.js";
+import * as gValues from "./grid/values.js";
 
 /**
  * @template [Row=any]
@@ -754,8 +754,7 @@ export class PyoGrid {
    * @returns {boolean} 바뀌었으면 true
    */
   setValue(target, key, value, opts = {}) {
-    const hit = this._resolveRow(target);
-    return hit ? this._setRowValue(hit.row, hit.index, key, value, opts) : false;
+    return gValues.setValue(this, target, key, value, opts);
   }
 
   /**
@@ -767,15 +766,7 @@ export class PyoGrid {
    * @returns {{row:any, index:number}|null}
    */
   _resolveRow(target, viewIndex, sourceSet) {
-    if (typeof target === "number") {
-      const row = this.rows[target];
-      return row && !row.__isGrouping ? { row, index: target } : null;
-    }
-    if (!target || typeof target !== "object" || target.__isGrouping) return null;
-    const vi = viewIndex ? viewIndex.get(target) : this.rows.indexOf(target);
-    const index = vi === undefined ? -1 : vi;
-    if (index < 0 && !(sourceSet ? sourceSet.has(target) : this.source.includes(target))) return null;
-    return { row: target, index };
+    return gValues._resolveRow(this, target, viewIndex, sourceSet);
   }
 
   /**
@@ -786,31 +777,7 @@ export class PyoGrid {
    * @param {{source?: string, refresh?: boolean, batch?: boolean}} opts
    */
   _setRowValue(row, rowIndex, key, value, opts) {
-    const old = getValue(row, key);
-    const empty = (v) => v === null || v === undefined || v === "";
-    if (old === value || (empty(old) && empty(value))) return false;
-    if (!setPathValue(row, key, value)) return false;
-    this._trackModified(row, key, old, value);
-    const source = opts.source || "api";
-    if (!opts.batch && this.options.undo && RECORDED_SOURCES[source]) {
-      this.history.push({ source, changes: [{ row, key, oldValue: old, value }] });
-    }
-    if (opts.refresh !== false) {
-      this._redrawAfterValues([key], rowIndex);
-      this._scheduleSummary();
-    }
-    this.emit("change", {
-      row,
-      item: row,
-      rowIndex,
-      dindex: rowIndex,
-      key,
-      value,
-      oldValue: old,
-      source,
-      batch: !!opts.batch,
-    });
-    return true;
+    return gValues._setRowValue(this, row, rowIndex, key, value, opts);
   }
 
   /**
@@ -821,41 +788,7 @@ export class PyoGrid {
    * @returns {AppliedChange<Row>[]} 실제로 바뀐 것 (화면에 없는 행은 rowIndex -1)
    */
   setValues(changes, opts = {}) {
-    const source = opts.source || "api";
-    const applied = [];
-    /** @type {Map<any, number>|undefined} */
-    let viewIndex;
-    /** @type {Set<any>|undefined} */
-    let sourceSet;
-    for (const ch of changes) {
-      let hit;
-      if (ch.row && typeof ch.row === "object") {
-        if (typeof ch.rowIndex === "number" && this.rows[ch.rowIndex] === ch.row) hit = { row: ch.row, index: ch.rowIndex };
-        else {
-          // 행 객체로 여러 개를 찾을 때 indexOf를 반복하지 않게 표를 한 번만 만든다
-          if (!viewIndex) {
-            viewIndex = new Map();
-            this.rows.forEach((r, i) => viewIndex.set(r, i));
-            sourceSet = new Set(this.source);
-          }
-          hit = this._resolveRow(ch.row, viewIndex, sourceSet);
-        }
-      } else hit = this._resolveRow(ch.rowIndex);
-      if (!hit) continue;
-      const old = getValue(hit.row, ch.key);
-      if (this._setRowValue(hit.row, hit.index, ch.key, ch.value, { source, refresh: false, batch: true })) {
-        applied.push({ rowIndex: hit.index, row: hit.row, key: ch.key, value: ch.value, oldValue: old });
-      }
-    }
-    if (applied.length) {
-      if (this.options.undo && RECORDED_SOURCES[source]) {
-        this.history.push({ source, changes: applied.map((a) => ({ row: a.row, key: a.key, oldValue: a.oldValue, value: a.value })) });
-      }
-      this._redrawAfterValues(new Set(applied.map((a) => a.key)));
-      this._scheduleSummary();
-      this.emit("batchchange", { source, changes: applied });
-    }
-    return applied;
+    return gValues.setValues(this, changes, opts);
   }
 
   /* ==================================================================
@@ -864,30 +797,12 @@ export class PyoGrid {
 
   /** 마지막 사용자 변경(셀 편집·붙여넣기·지우기·잘라내기)을 되돌린다. Ctrl+Z */
   undo() {
-    if (this.editing.active) this.editing.cancel();
-    const entry = this.history.popUndo();
-    if (!entry) {
-      this._flash(this.messages.nothingToUndo);
-      return false;
-    }
-    const n = this._applyHistory(entry, "undo");
-    this._flash(this.messages.undone(this.messages.actions[entry.source] || entry.source, this._fmt(n)));
-    this.emit("undo", { source: entry.source, count: n });
-    return true;
+    return gValues.undo(this);
   }
 
   /** 되돌린 것을 다시 적용한다. Ctrl+Y, Ctrl+Shift+Z */
   redo() {
-    if (this.editing.active) this.editing.cancel();
-    const entry = this.history.popRedo();
-    if (!entry) {
-      this._flash(this.messages.nothingToRedo);
-      return false;
-    }
-    const n = this._applyHistory(entry, "redo");
-    this._flash(this.messages.redone(this.messages.actions[entry.source] || entry.source, this._fmt(n)));
-    this.emit("redo", { source: entry.source, count: n });
-    return true;
+    return gValues.redo(this);
   }
 
   get canUndo() {
@@ -899,7 +814,7 @@ export class PyoGrid {
   }
 
   clearHistory() {
-    this.history.clear();
+    gValues.clearHistory(this);
     return this;
   }
 
@@ -913,22 +828,7 @@ export class PyoGrid {
    * @param {any} value 바꾼 값
    */
   _trackModified(row, key, old, value) {
-    const mk = this.options.modifiedKey;
-    let t = this._orig.get(row);
-    if (!t) {
-      t = { was: !!row[mk], keys: new Map() };
-      this._orig.set(row, t);
-    }
-    if (!t.keys.has(key)) t.keys.set(key, old);
-    const empty = (v) => v === null || v === undefined || v === "";
-    const first = t.keys.get(key);
-    if (first === value || (empty(first) && empty(value))) t.keys.delete(key);
-    if (t.keys.size) row[mk] = true;
-    else {
-      if (t.was) row[mk] = true;
-      else delete row[mk];
-      this._orig.delete(row);
-    }
+    gValues._trackModified(this, row, key, old, value);
   }
 
   /**
@@ -937,35 +837,20 @@ export class PyoGrid {
    * @param {Row[]} [rows] 없으면 모든 행 (지운 행 포함)
    */
   clearModified(rows) {
-    const mk = this.options.modifiedKey;
-    const ak = this.options.addedKey;
-    const list = /** @type {any[]} */ (rows || this.source.concat(this.deleted));
-    let wasAdded = false;
-    for (const r of list) {
-      if (!r) continue;
-      delete r[mk];
-      if (r[ak]) {
-        delete r[ak];
-        wasAdded = true;
-      }
-      this._orig.delete(r);
-    }
-    if (wasAdded && this.isFilterActive()) this._afterRowsChanged();
-    else this.refresh();
+    gValues.clearModified(this, rows);
     return this;
   }
 
   /** 지운 행 기록(getDeletedRows)을 비운다. 저장한 뒤 부른다. */
   clearDeleted() {
-    this.deleted = [];
+    gValues.clearDeleted(this);
     return this;
   }
 
   /** 저장한 뒤: 수정 표시·지운 행 기록·실행 취소 기록을 모두 비운다 */
   acceptChanges() {
-    this.history.clear();
-    this.clearDeleted();
-    return this.clearModified();
+    gValues.acceptChanges(this);
+    return this;
   }
 
   /**
@@ -974,49 +859,7 @@ export class PyoGrid {
    * @returns {number} 바꾼 셀 수
    */
   _applyHistory(entry, source) {
-    const index = new Map();
-    this.rows.forEach((r, i) => index.set(r, i));
-    const inSource = new Set(this.source);
-    const list = source === "undo" ? entry.changes.slice().reverse() : entry.changes;
-    const changes = [];
-    let gone = 0;
-    for (const ch of list) {
-      const v = source === "undo" ? ch.oldValue : ch.value;
-      if (!inSource.has(ch.row)) {
-        // 그 뒤에 지운 행: 값만 되돌린다 (화면·합계에 없으므로 알릴 곳이 없다)
-        const old = getValue(ch.row, ch.key);
-        setPathValue(ch.row, ch.key, v);
-        this._trackModified(ch.row, ch.key, old, v);
-        gone++;
-        continue;
-      }
-      // 필터로 숨은 행·접힌 트리 자식도 행 객체로 바꿔서 change·batchchange·합계 행이 빠지지 않게 한다
-      const i = index.get(ch.row);
-      changes.push({ row: ch.row, rowIndex: i === undefined ? -1 : i, key: ch.key, value: v });
-    }
-    // 같은 셀이 여러 번 나오면 마지막에 적용한 값이 남도록 그대로 순서대로 적용한다
-    const applied = this.setValues(changes, { source });
-    if (applied.length) {
-      // 바뀐 셀을 감싸는 범위 (Math.min(...)은 셀이 수십만이면 스택 초과라 반복문으로). 화면에 있는 행만
-      let r0 = Infinity,
-        r1 = -Infinity,
-        c0 = Infinity,
-        c1 = -Infinity;
-      const colOf = new Map(this.leaves.map((l, i) => [l.def.key, i]));
-      for (const a of applied) {
-        const c = colOf.get(a.key);
-        if (c === undefined || a.rowIndex < 0) continue;
-        if (a.rowIndex < r0) r0 = a.rowIndex;
-        if (a.rowIndex > r1) r1 = a.rowIndex;
-        if (c < c0) c0 = c;
-        if (c > c1) c1 = c;
-      }
-      if (c0 !== Infinity) {
-        this.setRange(r0, c0, r1, c1);
-        this.scrollToCell(r0, c0);
-      }
-    }
-    return applied.length + gone;
+    return gValues._applyHistory(this, entry, source);
   }
 
   /**
@@ -1024,35 +867,17 @@ export class PyoGrid {
    * @returns {string}
    */
   getRangeText() {
-    const g = this.range;
-    if (!g) return "";
-    const out = [];
-    for (let r = g.r0; r <= g.r1; r++) {
-      const line = [];
-      for (let c = g.c0; c <= g.c1; c++) line.push(getValue(this.rows[r], this.leaves[c].def.key));
-      out.push(line);
-    }
-    return buildTSV(out);
+    return gValues.getRangeText(this);
   }
 
   /** 선택 범위를 클립보드에 복사한다 (Ctrl+C는 브라우저 copy 이벤트로 처리) */
-  async copy() {
-    const text = this.getRangeText();
-    if (!text) return false;
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (e) {
-      return false;
-    }
-    this._afterCopy(text);
-    return true;
+  copy() {
+    return gValues.copy(this);
   }
 
   /** @param {string} [text] 이미 만든 범위 글자 (없으면 만든다) */
   _afterCopy(text) {
-    const g = this.range;
-    if (g) this._flash(this.messages.copied(this._fmt(g.size)));
-    this.emit("copy", { range: this.getRange(), text: text === undefined ? this.getRangeText() : text });
+    gValues._afterCopy(this, text);
   }
 
   /**
@@ -1062,44 +887,12 @@ export class PyoGrid {
    * @returns {{applied: number, skipped: number, rows?: number}} rows: 붙여넣은 글자의 줄 수 (범위가 없거나 편집 중이면 없음)
    */
   paste(text) {
-    const g = this.range;
-    if (!g || this.editing.active) return { applied: 0, skipped: 0 };
-    const data = parseTSV(text);
-    const plan = pastePlan(data, g);
-    const changes = [];
-    let skipped = 0;
-    let rMax = g.r0;
-    let cMax = g.c0;
-    for (const p of plan) {
-      const info = p.r < this.rows.length && p.c < this.leaves.length ? this.editing.editable(p.r, p.c) : null;
-      if (!info) {
-        skipped++;
-        continue;
-      }
-      const conv = convertPasteValue(info.def.editor, p.text);
-      if (!conv.ok) {
-        skipped++;
-        continue;
-      }
-      rMax = Math.max(rMax, p.r);
-      cMax = Math.max(cMax, p.c);
-      // 같은 뜻의 값(text 칸의 0과 "0" 등)은 바꾸지 않는다: 수정 표시·실행 취소 기록이 생기지 않게
-      if (sameValue(info.type, info.cfg, getValue(info.row, info.key), conv.value)) continue;
-      changes.push({ rowIndex: p.r, key: info.key, value: conv.value });
-    }
-    const applied = this.setValues(changes, { source: "paste" });
-    if (changes.length || plan.length > skipped) this.setRange(g.r0, g.c0, rMax, cMax);
-    const info = { applied: applied.length, skipped, rows: data.length };
-    this._flash(this.messages.pasted(this._fmt(applied.length), this._fmt(skipped)));
-    this.emit("paste", info);
-    return info;
+    return gValues.paste(this, text);
   }
 
   /** 선택 범위를 복사하고 지운다. Ctrl+X */
   cut() {
-    const text = this.getRangeText();
-    this.editing.clearRange("cut");
-    return text;
+    return gValues.cut(this);
   }
 
   /**
@@ -1121,8 +914,7 @@ export class PyoGrid {
 
   /** @returns {Row[]} 값이 바뀐 행 (setData 순서) */
   getModifiedRows() {
-    const k = this.options.modifiedKey;
-    return this.source.filter((r) => r && r[k]);
+    return gValues.getModifiedRows(this);
   }
 
   /**
@@ -1358,20 +1150,12 @@ export class PyoGrid {
    * @param {string} key
    */
   _isMergeKey(key) {
-    const mc = this.options.mergeCells;
-    if (!mc) return false;
-    for (const l of this.leaves) {
-      const def = l.def;
-      if (def.key !== key || def.editor) continue;
-      if (mc === true || (Array.isArray(mc) && mc.includes(key))) return true;
-    }
-    return false;
+    return gValues._isMergeKey(this, key);
   }
 
   /** @param {string} key 그룹 합계 기준 키인가 (값이 바뀌면 그룹을 다시 나눠야 한다) */
   _isGroupKey(key) {
-    const gr = this.options.grouping;
-    return !!(gr && Array.isArray(gr.by) && gr.by.includes(key));
+    return gValues._isGroupKey(this, key);
   }
 
   /**
@@ -1380,24 +1164,7 @@ export class PyoGrid {
    * @param {number} [rowIndex] 한 셀만 바뀌었을 때 그 화면 순번 (-1이면 화면에 없는 행)
    */
   _redrawAfterValues(keys, rowIndex) {
-    let regroup = false;
-    let remerge = false;
-    for (const k of keys) {
-      if (this._isGroupKey(k)) regroup = true;
-      if (this._isMergeKey(k)) remerge = true;
-    }
-    if (regroup) {
-      // 행이 다른 그룹으로 옮겨 가야 하므로 화면 행을 다시 만든다
-      this._afterRowsChanged();
-      return;
-    }
-    if (remerge) this._mergeDirty = true;
-    if (this.options.grouping || remerge || rowIndex === undefined)
-      this.refresh(); // 소계 행은 다른 행에 걸린다
-    else {
-      if (rowIndex >= 0) this.refreshRow(rowIndex);
-      this._renderFoot();
-    }
+    gValues._redrawAfterValues(this, keys, rowIndex);
   }
 
   /**
