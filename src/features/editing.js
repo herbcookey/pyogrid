@@ -615,6 +615,14 @@ export class Editing {
       return;
     }
 
+    // Alt+Shift+←/→: 활성 칸의 컬럼을 한 자리 옮긴다 (columnReorder). 옮길 수 없는 자리면 아무것도 하지 않는다
+    if (g.options.columnReorder && e.altKey && e.shiftKey && !mod && (key === "ArrowLeft" || key === "ArrowRight")) {
+      e.preventDefault();
+      if (g._moveColumnStep(a.c, key === "ArrowLeft" ? -1 : 1) && g.range) g.scrollToCell(g.range.active.r, g.range.active.c);
+      this.position();
+      return;
+    }
+
     /** @param {number} r @param {number} c @param {boolean} [extend] */
     const go = (r, c, extend = e.shiftKey) => {
       e.preventDefault();

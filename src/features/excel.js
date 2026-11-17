@@ -1,6 +1,6 @@
 // @ts-check
 import { getValue, isFn, escapeHtml } from "../util.js";
-import { sumCellValue } from "./summary.js";
+import { sumCellValue, sumPieces } from "./summary.js";
 
 /**
  * xlsx 내보내기. SheetJS(window.XLSX)가 있을 때만 쓴다 (그리드 자체는 의존하지 않음).
@@ -85,13 +85,12 @@ export function buildExportData(g) {
   const sumLine = (cells, list, groupBy) => {
     const line = new Array(n).fill(null);
     const R = rows.length;
-    let c = 0;
-    for (const cell of cells || []) {
-      if (c >= n) break;
-      const span = Math.max(1, Math.min(cell.colspan || 1, n - c));
-      line[c] = toXlsxCell(sumCellValue(cell, list, groupBy), undefined, cell, "sum");
-      if (span > 1) merges.push({ s: { r: R, c }, e: { r: R, c: c + span - 1 } });
-      c += span;
+    // 화면과 같은 조각 (지금 컬럼 순서, 글자는 첫 조각에만)
+    for (const piece of sumPieces(g, cells)) {
+      const { from, to, cell } = piece;
+      if (!cell) continue;
+      if (piece.text) line[from] = toXlsxCell(sumCellValue(cell, list, groupBy), undefined, cell, "sum");
+      if (to - from > 1) merges.push({ s: { r: R, c: from }, e: { r: R, c: to - 1 } });
     }
     rows.push(line);
   };

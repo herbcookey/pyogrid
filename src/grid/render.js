@@ -106,12 +106,12 @@ export function _renderHeader(grid) {
     ax += a.width;
   });
   const frozen = grid.frozenCount;
-  for (const cell of grid.headerCells) {
+  grid.headerCells.forEach((cell, hi) => {
     const end = cell.colStart + cell.colSpan; // 미포함
     // 고정 경계를 걸치는 묶음 헤더는 두 조각으로 나눠 양쪽에 같은 제목을 보여 준다
-    if (cell.colStart < frozen) fz[cell.row].push(_headerCellHtml(grid, cell, cell.colStart, Math.min(end, frozen), rh));
-    if (end > frozen) sc[cell.row].push(_headerCellHtml(grid, cell, Math.max(cell.colStart, frozen), end, rh));
-  }
+    if (cell.colStart < frozen) fz[cell.row].push(_headerCellHtml(grid, cell, cell.colStart, Math.min(end, frozen), rh, hi));
+    if (end > frozen) sc[cell.row].push(_headerCellHtml(grid, cell, Math.max(cell.colStart, frozen), end, rh, hi));
+  });
   // 칸이 없는 줄은 만들지 않는다 (빈 상자는 :empty로 그림자를 끈다)
   const rows = (/** @type {string[][]} */ levels) =>
     levels.map((cells, level) => (cells.length ? `<div class="pyo-hrow" role="row" aria-rowindex="${level + 1}">${cells.join("")}</div>` : "")).join("");
@@ -128,9 +128,10 @@ export function _renderHeader(grid) {
  * @param {number} from
  * @param {number} to
  * @param {number} rh
+ * @param {number} [hi] grid.headerCells 안의 순번 (묶음 헤더 끌기에서 정의를 찾는다)
  * @returns {string}
  */
-export function _headerCellHtml(grid, cell, from, to, rh) {
+export function _headerCellHtml(grid, cell, from, to, rh, hi) {
   const left = grid.leafX[from];
   let width = 0;
   for (let i = from; i < to; i++) width += grid.widths[i];
@@ -140,7 +141,7 @@ export function _headerCellHtml(grid, cell, from, to, rh) {
   const align = def.headerAlign || o.headerAlign || (isLeaf ? null : "center");
   let cls = "pyo-hcell" + (align ? " pyo-al-" + align : "") + (isLeaf ? "" : " pyo-hgroup");
   if (def.headerClass) cls += " " + escapeHtml((isFn(def.headerClass) ? def.headerClass.call(def, def) : def.headerClass) || "");
-  let attrs = "";
+  let attrs = isLeaf || hi === undefined ? "" : ` data-h="${hi}"`;
   let sortMark = "";
   if (isLeaf) {
     attrs = ` data-leaf="${cell.leafIndex}"` + (def.key !== undefined ? ` data-key="${escapeHtml(def.key)}"` : "");
@@ -197,7 +198,7 @@ export function _updateHeaderSelector(grid) {
 export function _onHeaderClick(grid, e) {
   const t = /** @type {HTMLElement} */ (e.target);
   if (!t || !t.closest) return;
-  if (t.closest(".pyo-resizer") || Date.now() - grid._justResized < 300) return;
+  if (t.closest(".pyo-resizer") || Date.now() - grid._justResized < 300 || Date.now() - grid._justDragged < 300) return;
   if (grid.editing.active && !grid.editing.commit()) grid.editing.cancel();
   const fb = /** @type {HTMLElement|null} */ (t.closest("[data-filter]"));
   if (fb) {

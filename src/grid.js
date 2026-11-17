@@ -107,6 +107,9 @@ import * as gRender from "./grid/render.js";
  * @property {{rows: Row[]}} rowsdelete
  * @property {{row: Row, collapsed: boolean}} treetoggle
  * @property {{index: number, column: ColumnDef<Row>, width: number}} columnresize  index: 잎 컬럼 순번
+ * @property {{column: ColumnDef<Row>|null, from: number, to: number, order: string[]}} columnmove
+ *   컬럼 순서가 바뀐 뒤. column: 옮긴 정의(그룹이면 그룹 정의), from·to: 그 컬럼(그룹이면 첫 잎)의 잎 번호, order: getColumnOrder().
+ *   setColumnOrder로 바꾸면 column은 null, from·to는 -1
  * @property {{top: number, left: number}} scroll
  * @property {{rows: ViewRow<Row>[]}} datachange  rows: setData 뒤의 화면 행 (필터·정렬 적용, 그룹 합계 행 포함)
  */
@@ -177,6 +180,7 @@ import * as gRender from "./grid/render.js";
  * @property {number} [defaultColumnWidth=100]
  * @property {number} [minColumnWidth=10]   너비 조절 최소값
  * @property {boolean} [resizable=true]
+ * @property {boolean} [columnReorder=false]  헤더를 끌거나 Alt+Shift+←/→로 컬럼 순서를 바꾼다. 꺼져 있어도 moveColumn·setColumnOrder는 동작한다
  * @property {string|null} [emptyText]  데이터가 없을 때 문구. 주지 않으면 locale 문구, null이면 표시 안 함
  * @property {string} [locale="en"]  화면 문구 언어 ("en", "ko", 또는 PyoGrid.locales에 넣은 이름)
  * @property {Partial<import("./core/locales.js").Messages>|null} [messages]  화면 문구 일부를 바꾼다
@@ -233,6 +237,7 @@ const DEFAULTS = {
   defaultColumnWidth: 100,
   minColumnWidth: 10,
   resizable: true,
+  columnReorder: false,
   emptyText: undefined,
   locale: "en",
   messages: null,
@@ -343,6 +348,12 @@ export class PyoGrid {
     this._lastRowClick = null;
     this._summaryTimer = 0;
     this._justResized = 0;
+    /** 헤더 끌기로 컬럼을 옮긴 시각 (이어지는 click이 정렬하지 않게) */
+    this._justDragged = 0;
+    /** @type {null | (() => void)} 헤더 끌기 정리 */
+    this._colDragCleanup = null;
+    /** @type {string[]|null} 컬럼 화면 순서 (잎 key, 숨긴 컬럼 포함). null이면 정의 순서 */
+    this._order = null;
 
     this._buildDom();
     /** 실행 취소 기록 */
@@ -379,7 +390,7 @@ export class PyoGrid {
     return buildExportData(this);
   }
 
-  /** 저장해 둔 컬럼 너비·정렬을 지운다 (화면은 그대로) */
+  /** 저장해 둔 컬럼 너비·정렬·순서를 지운다 (화면은 그대로) */
   resetState() {
     removeState(storageKey(this.options.stateKey));
     return this;
@@ -395,13 +406,22 @@ export class PyoGrid {
     });
     const prev = loadState(key);
     // 지금 컬럼에 없는 키의 너비는 남겨 둔다 (주차별로 컬럼이 바뀌는 화면)
-    saveState(key, { widths: { ...(prev ? prev.widths : {}), ...widths }, sort: this.options.tree ? [] : this.getSort() });
+    saveState(key, {
+      widths: { ...(prev ? prev.widths : {}), ...widths },
+      sort: this.options.tree ? [] : this.getSort(),
+      ...(this._order ? { order: this._order } : {}),
+    });
   }
 
-  /** 컬럼을 정한 직후: 저장된 너비·정렬을 지금 컬럼에 맞춰 되살린다 */
+  /** 컬럼을 정한 직후: 저장된 순서·너비·정렬을 지금 컬럼에 맞춰 되살린다 (순서가 없는 예전 저장값은 너비·정렬만) */
   _restoreState() {
     const st = loadState(storageKey(this.options.stateKey));
     if (!st) return;
+    // 순서를 먼저: 너비는 잎 번호로 들기 때문이다. 고정 경계를 넘는 순서(고정 수가 바뀐 경우 등)는 쓰지 않는다
+    if (st.order && gLayout._canRestoreOrder(this, st.order)) {
+      this._order = st.order;
+      this._setColumnsInternal(this.options.columns);
+    }
     this.leaves.forEach((leaf, i) => {
       const w = st.widths[leaf.def.key];
       if (typeof w === "number" && w > 10) this._userWidths[i] = w;
@@ -1038,6 +1058,31 @@ export class PyoGrid {
     return gLayout.getColumnWidths(this);
   }
 
+  /**
+   * 컬럼(잎 또는 그룹)을 같은 부모 안에서 옮긴다. 정의(getColumns())는 바꾸지 않는다.
+   * 고정 경계는 넘지 못하고, key가 없는 컬럼과 reorderable: false인 컬럼은 옮기지 않는다. columnReorder가 꺼져 있어도 동작한다.
+   * @param {number|string|ColumnDef<Row>} column 잎 번호, key, 또는 getColumns()의 정의 객체(그룹 포함)
+   * @param {number} toIndex 옮긴 뒤 그 컬럼(그룹이면 첫 잎)이 놓일 잎 번호
+   * @returns {boolean} 옮겼으면 true, 옮길 수 없는 자리거나 지금 자리면 false
+   */
+  moveColumn(column, toIndex) {
+    return gLayout.moveColumn(this, column, toIndex);
+  }
+
+  /** @returns {string[]} 화면 순서의 잎 key (key가 없는 컬럼은 빠진다) */
+  getColumnOrder() {
+    return gLayout.getColumnOrder(this);
+  }
+
+  /**
+   * 순서를 한 번에 정한다. 목록에 없는 컬럼은 원래(정의) 자리에 둔다. null이면 정의 순서로 돌아간다.
+   * @param {string[]|null} keys 잎 key 목록
+   * @returns {boolean} 고정 경계를 넘는 순서면 false (바꾸지 않는다)
+   */
+  setColumnOrder(keys) {
+    return gLayout.setColumnOrder(this, keys);
+  }
+
   /* ==================================================================
    * 공개 API: 화면
    * ================================================================ */
@@ -1193,6 +1238,7 @@ export class PyoGrid {
     this.editing.cancel();
     this._endResize();
     if (this._dragCleanup) this._dragCleanup();
+    if (this._colDragCleanup) this._colDragCleanup();
     this._destroyed = true;
     cancelAnimationFrame(this._raf);
     clearTimeout(this._summaryTimer);
@@ -1426,6 +1472,15 @@ export class PyoGrid {
 
   _endResize() {
     gLayout._endResize(this);
+  }
+
+  /**
+   * features/editing.js의 Alt+Shift+←/→
+   * @param {number} c
+   * @param {number} dir
+   */
+  _moveColumnStep(c, dir) {
+    return gLayout._moveColumnStep(this, c, dir);
   }
 }
 

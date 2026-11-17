@@ -1,7 +1,7 @@
 // @ts-check
 /**
- * 컬럼 너비·정렬 기억 (localStorage). 화면 경로 + stateKey 기준.
- * 저장 모양: { widths: { 컬럼키: px }, sort: [{key, dir}] }
+ * 컬럼 너비·정렬·순서 기억 (localStorage). 화면 경로 + stateKey 기준.
+ * 저장 모양: { widths: { 컬럼키: px }, sort: [{key, dir}], order?: [잎 key...] } (order가 없는 예전 값도 읽는다)
  */
 
 /** @param {string|null|undefined} stateKey */
@@ -13,14 +13,18 @@ export function storageKey(stateKey) {
 
 /**
  * @param {string|null} key
- * @returns {{widths: Record<string, number>, sort: {key: string, dir: "asc"|"desc"}[]}|null}
+ * @returns {{widths: Record<string, number>, sort: {key: string, dir: "asc"|"desc"}[], order: string[]|null}|null}
  */
 export function loadState(key) {
   if (!key) return null;
   try {
     const s = JSON.parse(window.localStorage.getItem(key) || "null");
     if (!s || typeof s !== "object") return null;
-    return { widths: s.widths && typeof s.widths === "object" ? s.widths : {}, sort: Array.isArray(s.sort) ? s.sort : [] };
+    return {
+      widths: s.widths && typeof s.widths === "object" ? s.widths : {},
+      sort: Array.isArray(s.sort) ? s.sort : [],
+      order: Array.isArray(s.order) ? s.order.filter((/** @type {any} */ k) => typeof k === "string") : null,
+    };
   } catch (e) {
     return null;
   }

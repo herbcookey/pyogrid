@@ -2,6 +2,8 @@
 // 컬럼 바꾸기, 크기·너비 계산, 스크롤 위치, 너비 조절 끌기
 // PyoGrid의 메서드 구현. 공개 메서드와 JSDoc 설명은 grid.js의 클래스에 있고, 클래스는 여기 함수를 부르기만 한다.
 import { buildColumnModel, computeWidths } from "../core/columns.js";
+import { displayKeys, moveCandidates, sameFrozen } from "../features/column-order.js";
+import { startColumnDrag } from "../features/column-drag.js";
 import { h, clamp } from "../util.js";
 
 /**
@@ -25,6 +27,7 @@ const SCROLLBAR = 15;
 export function setColumns(grid, columns) {
   grid.editing.cancel();
   grid._userWidths = {};
+  grid._order = null; // 순서는 지우고, stateKey 저장값이 있으면 _restoreState가 되살린다
   _setColumnsInternal(grid, columns);
   _afterColumnsChanged(grid, true);
   return grid;
@@ -123,6 +126,166 @@ export function updateColumn(grid, column, index) {
   cols[index] = column;
   _replaceColumns(grid, cols);
   return grid;
+}
+
+/* ------------------------------------------------------------------
+ * 컬럼 순서. 정의는 그대로 두고 grid._order(잎 key 목록)로 화면 순서를 정한다 (features/column-order.js)
+ * ---------------------------------------------------------------- */
+
+/**
+ * 고정 잎 수. 레이아웃 전(생성자의 저장값 되살리기)에도 쓸 수 있게 옵션에서 바로 센다
+ * @param {Grid} grid
+ * @param {number} [n]
+ */
+function frozenOf(grid, n = grid.leaves.length) {
+  return clamp(grid.options.frozenColumns | 0, 0, n);
+}
+
+/**
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
+ * @returns {string[]}
+ */
+export function getColumnOrder(grid) {
+  return grid.leaves.filter((l) => l.def.key !== undefined && l.def.key !== null).map((l) => String(l.def.key));
+}
+
+/**
+ * 잎 번호, key, 정의 객체(그룹 포함) → 화면에 있는 정의 객체
+ * @param {Grid} grid
+ * @param {any} column
+ * @returns {ColumnDef|null}
+ */
+function resolveColumn(grid, column) {
+  if (typeof column === "number") {
+    const leaf = grid.leaves[column];
+    return leaf ? leaf.def : null;
+  }
+  if (typeof column === "string") {
+    const leaf = grid.leaves.find((l) => l.def.key !== undefined && l.def.key !== null && String(l.def.key) === column);
+    return leaf ? leaf.def : null;
+  }
+  if (column && typeof column === "object" && (grid.leaves.some((l) => l.def === column) || grid.headerCells.some((c) => c.def === column))) return column;
+  return null;
+}
+
+/**
+ * 컬럼 하나를 놓을 수 있는 자리들 (지금 자리 포함, 고정 경계를 넘는 자리 제외)
+ * @param {Grid} grid
+ * @param {ColumnDef} def
+ * @returns {import("../features/column-order.js").MoveCandidate[]}
+ */
+export function _columnMoveTargets(grid, def) {
+  return moveCandidates(grid.options.columns, grid._order, def, grid.leaves, frozenOf(grid));
+}
+
+/**
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
+ * @param {number|string|ColumnDef} column
+ * @param {number} toIndex
+ * @returns {boolean}
+ */
+export function moveColumn(grid, column, toIndex) {
+  const def = resolveColumn(grid, column);
+  if (!def || !Number.isInteger(toIndex)) return false;
+  const cands = _columnMoveTargets(grid, def);
+  const cur = cands.find((c) => c.same);
+  if (!cur || toIndex === cur.index) return false;
+  const pick = cands.find((c) => !c.same && c.index === toIndex);
+  if (!pick) return false;
+  return _applyColumnOrder(grid, pick.keys, { column: def, from: cur.index, to: pick.index });
+}
+
+/**
+ * 키보드(Alt+Shift+←/→): 잎 c를 같은 부모 안에서 한 자리 옮긴다
+ * @param {Grid} grid
+ * @param {number} c
+ * @param {number} dir -1 또는 1
+ * @returns {boolean}
+ */
+export function _moveColumnStep(grid, c, dir) {
+  const leaf = grid.leaves[c];
+  if (!leaf) return false;
+  const cands = _columnMoveTargets(grid, leaf.def);
+  const cur = cands.find((x) => x.same);
+  if (!cur) return false;
+  let pick = null;
+  for (const x of cands) {
+    if (x.same) continue;
+    if (dir > 0 ? x.index > cur.index && (!pick || x.index < pick.index) : x.index < cur.index && (!pick || x.index > pick.index)) pick = x;
+  }
+  if (!pick) return false;
+  return _applyColumnOrder(grid, pick.keys, { column: leaf.def, from: cur.index, to: pick.index });
+}
+
+/**
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
+ * @param {string[]|null} keys
+ * @returns {boolean}
+ */
+export function setColumnOrder(grid, keys) {
+  if (keys !== null && keys !== undefined && !Array.isArray(keys)) return false;
+  const next = Array.isArray(keys) ? keys.filter((k) => typeof k === "string") : null;
+  const model = buildColumnModel(grid.options.columns, next);
+  if (next && !sameFrozen(grid.leaves, model.leaves, frozenOf(grid))) return false;
+  const changed = model.leaves.length !== grid.leaves.length || model.leaves.some((l, i) => l.def !== grid.leaves[i].def);
+  if (!changed) {
+    grid._order = next;
+    grid._saveState();
+    return true;
+  }
+  return _applyColumnOrder(grid, next, { column: null, from: -1, to: -1 });
+}
+
+/**
+ * 순서를 바꾸고 다시 그린다. 너비·활성 칸은 컬럼을 따라가고, 범위는 활성 칸 하나로 줄인다.
+ * 정렬·필터는 key로 들고 있어 그대로다. 편집 중이면 확정하고, 확정할 수 없으면 바꾸지 않는다.
+ * @param {Grid} grid
+ * @param {string[]|null} keys
+ * @param {{column: ColumnDef|null, from: number, to: number}} ev
+ * @returns {boolean}
+ */
+export function _applyColumnOrder(grid, keys, ev) {
+  if (grid.editing.active && !grid.editing.commit()) return false;
+  if (grid._filterPopup) grid._filterPopup.close();
+  /** @type {Map<ColumnDef, number>} */
+  const widthOf = new Map();
+  grid.leaves.forEach((l) => {
+    if (grid._userWidths[l.index] !== undefined) widthOf.set(l.def, grid._userWidths[l.index]);
+  });
+  const rng = grid.range;
+  const activeLeaf = rng ? grid.leaves[rng.active.c] : null;
+  grid._order = keys;
+  _setColumnsInternal(grid, grid.options.columns);
+  /** @type {Record<number, number>} */
+  const keep = {};
+  grid.leaves.forEach((l) => {
+    const w = widthOf.get(l.def);
+    if (w !== undefined) keep[l.index] = w;
+  });
+  grid._userWidths = keep;
+  layout(grid);
+  if (rng) {
+    const c = activeLeaf ? grid.leaves.findIndex((l) => l.def === activeLeaf.def) : -1;
+    if (c >= 0) grid.setRange(rng.active.r, c);
+    else grid.clearRange();
+  }
+  grid._saveState();
+  grid.emit("columnmove", { column: ev.column, from: ev.from, to: ev.to, order: getColumnOrder(grid) });
+  return true;
+}
+
+/**
+ * 저장된 순서를 쓸 수 있는가 (고정 경계를 넘지 않는가). 생성자·setColumns의 되살리기에서 부른다
+ * @param {Grid} grid
+ * @param {string[]} order
+ * @returns {boolean}
+ */
+export function _canRestoreOrder(grid, order) {
+  const model = buildColumnModel(grid.options.columns, order);
+  return sameFrozen(grid.leaves, model.leaves, frozenOf(grid));
 }
 
 /**
@@ -252,7 +415,7 @@ export function _checkSize(grid) {
  */
 export function _setColumnsInternal(grid, columns) {
   grid.options.columns = Array.isArray(columns) ? columns : [];
-  const model = buildColumnModel(grid.options.columns);
+  const model = buildColumnModel(grid.options.columns, grid._order);
   grid.leaves = model.leaves;
   grid.headerCells = model.header;
   grid.headerDepth = model.depth;
@@ -271,6 +434,8 @@ export function _replaceColumns(grid, cols) {
     if (grid._userWidths[leaf.index] !== undefined) byDef.set(leaf.def, grid._userWidths[leaf.index]);
   });
   _setColumnsInternal(grid, cols);
+  // 순서는 유지한다. 새 컬럼은 정의 자리에 놓인 그대로 순서에 넣어, 뒤에 다른 컬럼을 빼거나 바꿔도 제자리에 있게 한다
+  if (grid._order) grid._order = displayKeys(grid.options.columns, grid._order);
   /** @type {Record<number, number>} */
   const keep = {};
   grid.leaves.forEach((leaf) => {
@@ -384,7 +549,19 @@ export function _updateBodySize(grid) {
  */
 export function _onHeaderPointerDown(grid, e) {
   const t = /** @type {HTMLElement} */ (e.target);
-  if (!t || !t.matches || !t.matches(".pyo-resizer")) return;
+  if (!t || !t.matches) return;
+  if (!t.matches(".pyo-resizer")) {
+    if (grid.options.columnReorder) {
+      if (grid._colDragCleanup) grid._colDragCleanup();
+      startColumnDrag(grid, e, {
+        targets: (def) => _columnMoveTargets(grid, def),
+        apply: (keys, ev) => _applyColumnOrder(grid, keys, ev),
+        dragged: () => (grid._justDragged = Date.now()),
+        setCleanup: (fn) => (grid._colDragCleanup = fn),
+      });
+    }
+    return;
+  }
   e.preventDefault();
   e.stopPropagation();
   const leafIndex = Number(t.dataset.resize);

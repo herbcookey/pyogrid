@@ -250,3 +250,26 @@ namespace readmeExample {
     void c, f, n;
   });
 }
+
+/* ------------------------------------------------------------------
+ * 컬럼 순서
+ * ---------------------------------------------------------------- */
+{
+  const cols: ColumnDef<Order>[] = [{ key: "SKU", reorderable: false }, { label: "G", columns: [{ key: "QTY" }] }];
+  const g = new PyoGrid<Order>(el, { columnReorder: true, columns: cols });
+  const moved: boolean = g.moveColumn("QTY", 0);
+  g.moveColumn(1, 0);
+  g.moveColumn(cols[1], 0);
+  const order: string[] = g.getColumnOrder();
+  const ok: boolean = g.setColumnOrder(["QTY", "SKU"]);
+  g.setColumnOrder(null);
+  // @ts-expect-error 순서는 key 글자 목록이다
+  g.setColumnOrder([1, 2]);
+  g.on("columnmove", (e) => {
+    const c: ColumnDef<Order> | null = e.column;
+    const n: number = e.from + e.to;
+    const o: string[] = e.order;
+    void c, n, o;
+  });
+  void moved, order, ok;
+}

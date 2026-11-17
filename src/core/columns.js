@@ -52,6 +52,7 @@
  * @property {boolean} [hidden]
  * @property {boolean} [multiLine]
  * @property {boolean} [resizable]
+ * @property {boolean} [reorderable]  false면 끌기·moveColumn으로 옮기지 않고 제자리에 둔다 (그룹이면 그룹 전체)
  * @property {boolean} [sortable]  false면 정렬 안 함, true면 그리드 sortable과 관계없이 정렬
  * @property {ColumnEditor<Row>} [editor]
  * @property {string|((this: CellContext<Row>, c: CellContext<Row>) => any)} [formatter]  이름(PyoGrid.formatters) 또는 함수
@@ -63,10 +64,11 @@
 /**
  * @typedef {Object} LeafColumn
  * @property {ColumnDef} def
- * @property {number} index     잎 컬럼 순번 (보조 컬럼 제외)
+ * @property {number} index     잎 컬럼 순번 (보조 컬럼 제외, 화면 순서)
  * @property {number} level     헤더 깊이 (0부터)
  * @property {string} [key]
  * @property {string} [special] "lineNumber" | "rowSelector"
+ * @property {number} [defIndex] 정의 순서의 순번 (보이는 잎만 센다). 합계 칸이 덮는 컬럼을 정할 때 쓴다
  */
 
 /**
@@ -81,19 +83,38 @@
  */
 
 /**
+ * 잎 컬럼·헤더 칸을 만든다. order(잎 key 목록)가 있으면 같은 부모 안의 형제를 그 순서로 놓는다 (orderSiblings).
+ * 정의(defs)는 바꾸지 않는다.
  * @param {ColumnDef[]} defs
+ * @param {string[]|null} [order]
  * @returns {{leaves: LeafColumn[], header: HeaderCell[], depth: number}}
  */
-export function buildColumnModel(defs) {
+export function buildColumnModel(defs, order) {
   /** @type {LeafColumn[]} */
   const leaves = [];
   /** @type {HeaderCell[]} */
   const header = [];
   let depth = 1;
+  const rank = order ? rankOf(order) : null;
+  /** @type {Map<ColumnDef, number>} 정의 순서의 보이는 잎 순번 */
+  const defIndex = new Map();
+  if (rank) {
+    let n = 0;
+    /** @param {any} list */
+    const count = (list) => {
+      if (!Array.isArray(list)) return;
+      for (const def of list) {
+        if (!def || def.hidden) continue;
+        if (Array.isArray(def.columns)) count(def.columns);
+        else if (!defIndex.has(def)) defIndex.set(def, n++);
+      }
+    };
+    count(defs);
+  }
 
   const walk = (list, level) => {
     if (!Array.isArray(list)) return;
-    for (const def of list) {
+    for (const def of rank ? orderSiblings(list, rank) : list) {
       if (!def || def.hidden) continue;
       if (Array.isArray(def.columns)) {
         const colStart = leaves.length;
@@ -104,7 +125,8 @@ export function buildColumnModel(defs) {
         if (cell.colSpan === 0) header.splice(header.indexOf(cell), 1);
       } else {
         const index = leaves.length;
-        leaves.push({ def, index, level, key: def.key });
+        const di = rank ? /** @type {number} */ (defIndex.get(def)) : index;
+        leaves.push({ def, index, level, key: def.key, defIndex: di });
         header.push({ label: labelOf(def), row: level, rowSpan: 1, colStart: index, colSpan: 1, def, leafIndex: index });
         depth = Math.max(depth, level + 1);
       }
@@ -116,6 +138,73 @@ export function buildColumnModel(defs) {
     if (cell.leafIndex !== undefined) cell.rowSpan = depth - cell.row;
   }
   return { leaves, header, depth };
+}
+
+/**
+ * 잎 key 목록 → key별 순위 (처음 나온 자리)
+ * @param {string[]} order
+ * @returns {Map<string, number>}
+ */
+export function rankOf(order) {
+  const rank = new Map();
+  order.forEach((k, i) => {
+    if (typeof k === "string" && !rank.has(k)) rank.set(k, i);
+  });
+  return rank;
+}
+
+/**
+ * 형제 하나의 순위. 잎은 key의 순위, 그룹은 안의 잎(숨긴 잎 포함) 중 가장 앞선 순위.
+ * 옮길 수 없는 것(key가 없는 잎, reorderable: false, 순위가 없는 것)은 undefined
+ * @param {ColumnDef} def
+ * @param {Map<string, number>} rank
+ * @returns {number|undefined}
+ */
+export function siblingRank(def, rank) {
+  if (!def || def.reorderable === false) return undefined;
+  if (Array.isArray(def.columns)) {
+    let best;
+    /** @param {any[]} list */
+    const scan = (list) => {
+      for (const d of list) {
+        if (!d) continue;
+        if (Array.isArray(d.columns)) scan(d.columns);
+        else if (d.key !== undefined && d.key !== null) {
+          const r = rank.get(String(d.key));
+          if (r !== undefined && (best === undefined || r < best)) best = r;
+        }
+      }
+    };
+    scan(def.columns);
+    return best;
+  }
+  return def.key === undefined || def.key === null ? undefined : rank.get(String(def.key));
+}
+
+/**
+ * 형제 목록을 순서대로 놓는다 (숨긴 것 포함, 원래 배열은 그대로).
+ * 순위가 없는 것은 정의 자리에 그대로 두고, 순위가 있는 것은 남은 자리를 순위 차례로 채운다.
+ * @param {ColumnDef[]} list
+ * @param {Map<string, number>} rank
+ * @returns {ColumnDef[]}
+ */
+export function orderSiblings(list, rank) {
+  const out = new Array(list.length);
+  /** @type {{def: ColumnDef, r: number, i: number}[]} */
+  const ranked = [];
+  /** @type {number[]} */
+  const free = [];
+  list.forEach((def, i) => {
+    const r = siblingRank(def, rank);
+    if (r === undefined) out[i] = def;
+    else {
+      ranked.push({ def, r, i });
+      free.push(i);
+    }
+  });
+  ranked.sort((x, y) => x.r - y.r || x.i - y.i);
+  ranked.forEach((x, k) => (out[free[k]] = x.def));
+  return out;
 }
 
 function labelOf(def) {

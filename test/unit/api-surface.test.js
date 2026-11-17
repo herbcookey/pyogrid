@@ -78,6 +78,7 @@ describe("공개 API 이름 고정", () => {
       "startEdit", "commitEdit", "cancelEdit", "focus", "copy", "paste", "cut", "undo", "redo", "clearHistory",
       // Columns and layout
       "setColumns", "getColumns", "addColumn", "removeColumn", "updateColumn", "setColumnWidth", "getColumnWidths",
+      "moveColumn", "getColumnOrder", "setColumnOrder",
       "layout", "refresh", "refreshRow", "scrollToRow", "scrollToCell", "setHeight", "setPage", "cellContext", "cellText",
       // Export, persistence, misc
       "exportExcel", "getExportData", "resetState", "on", "off", "destroy",
@@ -103,7 +104,7 @@ describe("공개 API 이름 고정", () => {
           "undo", "undoLimit", "clipboard", "filter", "filterConditions", "footSum", "grouping", "tree", "mergeCells",
           "deletedKey", "addedKey", "markAddedModified", "stateKey", "sheetName",
           "pageBar", "pageHeight", "statusDisplay", "pageNavigationCount", "pageIcons", "statusFormat",
-          "selectionSummary", "defaultColumnWidth", "minColumnWidth", "resizable", "emptyText",
+          "selectionSummary", "defaultColumnWidth", "minColumnWidth", "resizable", "columnReorder", "emptyText",
           "locale", "messages", "overscanRows", "overscanColumns", "headerAlign", "align", "rowClass", "height",
         ]));
       } finally {
@@ -136,7 +137,7 @@ describe("공개 API 이름 고정", () => {
       "beforeedit", "editstart", "editend", "keydown",
       "copy", "paste", "undo", "redo",
       "rowsadd", "rowsremove", "rowsdelete",
-      "treetoggle", "columnresize", "scroll", "datachange",
+      "treetoggle", "columnresize", "columnmove", "scroll", "datachange",
     ]));
   });
 });
