@@ -1,5 +1,5 @@
 // @ts-check
-import { buildColumnModel, computeWidths, parseWidth } from "./core/columns.js";
+import { parseWidth } from "./core/columns.js";
 import { formatters } from "./core/formatters.js";
 import { CellRange } from "./core/range.js";
 import { navigationHtml, targetPage, statusData, defaultStatusHtml, summaryText } from "./features/pagebar.js";
@@ -17,6 +17,7 @@ import { escapeHtml, getValue, h, isFn, clamp, deepMerge } from "./util.js";
 import * as gData from "./grid/data.js";
 import * as gSelection from "./grid/selection.js";
 import * as gValues from "./grid/values.js";
+import * as gLayout from "./grid/layout.js";
 
 /**
  * @template [Row=any]
@@ -241,9 +242,6 @@ const DEFAULTS = {
   rowClass: null,
   height: null,
 };
-
-/** 스크롤바 너비를 잴 수 없을 때(화면에 붙지 않음, jsdom) 쓰는 값. CSS ::-webkit-scrollbar 너비와 같다 */
-const SCROLLBAR = 15;
 
 let uid = 0;
 
@@ -570,7 +568,7 @@ export class PyoGrid {
    */
   _onPageMove(e) {
     // 창 크기 변화(확대·축소 포함)는 스크롤바 너비를 바꿀 수 있다
-    if (e && e.type === "resize") this._sbw = undefined;
+    if (e && e.type === "resize") this._sbw = /** @type {number} */ (undefined);
     if (!this.editing.edit || !this.editing.edit.popup) {
       if (!this._filterPopup) return;
     }
@@ -1009,10 +1007,7 @@ export class PyoGrid {
 
   /** @param {ColumnDef[]} columns */
   setColumns(columns) {
-    this.editing.cancel();
-    this._userWidths = {};
-    this._setColumnsInternal(columns);
-    this._afterColumnsChanged(true);
+    gLayout.setColumns(this, columns);
     return this;
   }
 
@@ -1022,35 +1017,12 @@ export class PyoGrid {
    * @param {boolean} restore stateKey 저장값을 되살릴지 (setColumns)
    */
   _afterColumnsChanged(restore) {
-    const leafOf = new Map(this.leaves.map((l) => [l.def.key, l]));
-    let filterPruned = false;
-    for (const k of [...this.filters.keys()]) {
-      const leaf = leafOf.get(k);
-      if (!leaf || !this.isFilterable(leaf)) {
-        this.filters.delete(k);
-        filterPruned = true;
-      }
-    }
-    const sortBefore = JSON.stringify(this.sort);
-    this.sort = this.sort.filter((s) => {
-      const leaf = leafOf.get(s.key);
-      return leaf && this.isSortable(leaf);
-    });
-    const sortPruned = JSON.stringify(this.sort) !== sortBefore;
-    if (restore) this._restoreState();
-    const sortChanged = JSON.stringify(this.sort) !== sortBefore;
-    if (filterPruned || sortChanged) {
-      this._applyView();
-      this.range = null;
-    }
-    this.layout();
-    if (filterPruned) this.emit("filterchange", { filters: this.getFilters(), count: this.dataRows.length });
-    if (sortPruned) this.emit("sortchange", { sort: this.getSort() });
+    gLayout._afterColumnsChanged(this, restore);
   }
 
   /** @returns {ColumnDef[]} 현재 컬럼 정의 */
   getColumns() {
-    return this.options.columns;
+    return gLayout.getColumns(this);
   }
 
   /**
@@ -1059,21 +1031,13 @@ export class PyoGrid {
    * @param {number} [index] 없으면 맨 끝
    */
   addColumn(column, index) {
-    const cols = this.options.columns.slice();
-    const at = index === undefined || index === null || index < 0 || index > cols.length ? cols.length : index;
-    cols.splice(at, 0, column);
-    this._replaceColumns(cols);
+    gLayout.addColumn(this, column, index);
     return this;
   }
 
   /** @param {number} [index] 없으면 마지막 컬럼 */
   removeColumn(index) {
-    const cols = this.options.columns.slice();
-    if (!cols.length) return this;
-    const at = index === undefined || index === null ? cols.length - 1 : index;
-    if (at < 0 || at >= cols.length) return this;
-    cols.splice(at, 1);
-    this._replaceColumns(cols);
+    gLayout.removeColumn(this, index);
     return this;
   }
 
@@ -1082,10 +1046,7 @@ export class PyoGrid {
    * @param {number} index
    */
   updateColumn(column, index) {
-    const cols = this.options.columns.slice();
-    if (index < 0 || index >= cols.length) return this;
-    cols[index] = column;
-    this._replaceColumns(cols);
+    gLayout.updateColumn(this, column, index);
     return this;
   }
 
@@ -1095,17 +1056,13 @@ export class PyoGrid {
    * @param {number} width
    */
   setColumnWidth(leafIndex, width) {
-    if (!this.leaves[leafIndex]) return this;
-    this._userWidths[leafIndex] = Math.max(this.options.minColumnWidth, Math.round(width));
-    this.layout();
-    this._saveState();
-    this.emit("columnresize", { index: leafIndex, column: this.leaves[leafIndex].def, width: this._userWidths[leafIndex] });
+    gLayout.setColumnWidth(this, leafIndex, width);
     return this;
   }
 
   /** @returns {number[]} 잎 컬럼 너비(px) */
   getColumnWidths() {
-    return this.widths.slice();
+    return gLayout.getColumnWidths(this);
   }
 
   /* ==================================================================
@@ -1114,14 +1071,7 @@ export class PyoGrid {
 
   /** 크기·컬럼이 바뀐 뒤 다시 배치한다. */
   layout() {
-    if (this._destroyed) return this;
-    if (this.range) this.range = this.range.clamp(this.rows.length, this.leaves.length);
-    this._computeLayout();
-    this._renderHeader();
-    this._updateBodySize();
-    this.refresh();
-    this._renderPageNav();
-    this.editing.position();
+    gLayout.layout(this);
     return this;
   }
 
@@ -1173,9 +1123,7 @@ export class PyoGrid {
    * (크기는 컨테이너 크기·행 수·컬럼 너비가 바뀔 때만 바뀌고, 그때마다 refresh가 불린다)
    */
   _measure() {
-    const s = this.el.scroll;
-    this._vw = s.clientWidth;
-    this._vh = s.clientHeight;
+    gLayout._measure(this);
   }
 
   /**
@@ -1197,13 +1145,7 @@ export class PyoGrid {
    * @param {"nearest"|"top"} [align]
    */
   scrollToRow(index, align = "nearest") {
-    const s = this.el.scroll;
-    const rh = this.options.rowHeight;
-    const top = index * rh;
-    const viewH = this._vh - this._headerHeight - this._footHeight;
-    if (align === "top" || top < s.scrollTop) s.scrollTop = top;
-    else if (top + rh > s.scrollTop + viewH) s.scrollTop = top + rh - viewH;
-    this._render();
+    gLayout.scrollToRow(this, index, align);
     return this;
   }
 
@@ -1213,25 +1155,13 @@ export class PyoGrid {
    * @param {number} c
    */
   scrollToCell(r, c) {
-    this.scrollToRow(r);
-    if (c >= this.frozenCount && this.leaves[c]) {
-      const s = this.el.scroll;
-      const viewW = this._vw - this.fzWidth;
-      const x0 = this.leafX[c];
-      const x1 = x0 + this.widths[c];
-      if (x0 < s.scrollLeft) s.scrollLeft = x0;
-      else if (x1 > s.scrollLeft + viewW) s.scrollLeft = x1 - viewW;
-      this._render();
-    }
+    gLayout.scrollToCell(this, r, c);
     return this;
   }
 
   /** 높이를 정한다. null이면 대상 요소 높이를 채운다. @param {number|string|null} height */
   setHeight(height) {
-    this.options.height = typeof height === "number" ? height : null;
-    if (height === null || height === undefined) this.el.root.style.height = "";
-    else this.el.root.style.height = typeof height === "number" ? height + "px" : height;
-    this.layout();
+    gLayout.setHeight(this, height);
     return this;
   }
 
@@ -1397,7 +1327,7 @@ export class PyoGrid {
     document.addEventListener("scroll", this._onAnyMove, { capture: true, passive: true });
     window.addEventListener("resize", this._onAnyMove);
 
-    this._lastSize = "";
+    this._lastSize = /** @type {any} */ ("");
     this._onWindowResize = () => this._checkSize();
     if (typeof ResizeObserver !== "undefined") {
       this._ro = new ResizeObserver(() => this._checkSize());
@@ -1415,11 +1345,7 @@ export class PyoGrid {
   }
 
   _checkSize() {
-    const r = this.el.root;
-    const size = r.clientWidth + "x" + r.clientHeight;
-    if (size === this._lastSize) return;
-    this._lastSize = size;
-    this.layout();
+    gLayout._checkSize(this);
   }
 
   /* ==================================================================
@@ -1428,11 +1354,7 @@ export class PyoGrid {
 
   /** @param {ColumnDef[]} columns */
   _setColumnsInternal(columns) {
-    this.options.columns = Array.isArray(columns) ? columns : [];
-    const model = buildColumnModel(this.options.columns);
-    this.leaves = model.leaves;
-    this.headerCells = model.header;
-    this.headerDepth = model.depth;
+    gLayout._setColumnsInternal(this, columns);
   }
 
   /**
@@ -1440,19 +1362,7 @@ export class PyoGrid {
    * @param {ColumnDef[]} cols
    */
   _replaceColumns(cols) {
-    this.editing.cancel();
-    const byDef = new Map();
-    this.leaves.forEach((leaf) => {
-      if (this._userWidths[leaf.index] !== undefined) byDef.set(leaf.def, this._userWidths[leaf.index]);
-    });
-    this._setColumnsInternal(cols);
-    /** @type {Record<number, number>} */
-    const keep = {};
-    this.leaves.forEach((leaf) => {
-      if (byDef.has(leaf.def)) keep[leaf.index] = byDef.get(leaf.def);
-    });
-    this._userWidths = keep;
-    this._afterColumnsChanged(false);
+    gLayout._replaceColumns(this, cols);
   }
 
   /**
@@ -1471,74 +1381,11 @@ export class PyoGrid {
   }
 
   _scrollbarWidth() {
-    if (this._sbw !== undefined) return this._sbw;
-    const probe = h("div", "pyo-scroll");
-    probe.style.cssText = "position:absolute;visibility:hidden;overflow:scroll;width:100px;height:100px;top:0;left:0";
-    this.el.root.append(probe);
-    const measured = probe.offsetWidth > 0;
-    const w = measured ? probe.offsetWidth - probe.clientWidth : SCROLLBAR;
-    probe.remove();
-    const out = w >= 0 && w < 100 ? w : SCROLLBAR;
-    // 화면에 붙기 전이라 잴 수 없었던 값은 기억하지 않는다
-    if (measured) this._sbw = out;
-    return out;
+    return gLayout._scrollbarWidth(this);
   }
 
   _computeLayout() {
-    const o = this.options;
-    const aside = [];
-    if (o.lineNumber) aside.push({ special: "lineNumber", width: o.lineNumberWidth });
-    if (o.rowSelector) aside.push({ special: "rowSelector", width: o.rowSelectorWidth });
-    this.aside = aside;
-    const asideW = aside.reduce((s, a) => s + a.width, 0);
-
-    // 스크롤바 너비를 항상 빼고 계산해서, 행 수에 따라 "*" 너비가 바뀌지 않게 한다
-    const available = this.el.root.clientWidth - asideW - this._scrollbarWidth();
-    this.widths = computeWidths(this.leaves, available, { defaultWidth: o.defaultColumnWidth, override: this._userWidths });
-
-    const frozen = clamp(o.frozenColumns | 0, 0, this.leaves.length);
-    this.frozenCount = frozen;
-
-    // x 좌표: 고정 영역은 보조 컬럼 다음부터, 스크롤 영역은 0부터
-    const leafX = new Array(this.leaves.length);
-    let x = asideW;
-    for (let i = 0; i < frozen; i++) {
-      leafX[i] = x;
-      x += this.widths[i];
-    }
-    this.fzWidth = x;
-    let sx = 0;
-    for (let i = frozen; i < this.leaves.length; i++) {
-      leafX[i] = sx;
-      sx += this.widths[i];
-    }
-    this.leafX = leafX;
-    this.scWidth = sx;
-    this.asideWidth = asideW;
-    this.totalWidth = this.fzWidth + this.scWidth;
-    // 헤더 바깥 높이 = 줄 수 × 줄 높이 + 아래 테두리 1px
-    this._headerHeight = this.headerDepth * o.headerRowHeight + 1;
-    // 합계 행 높이 = 줄 수 × 행 높이 + 위 테두리 1px
-    const footRows = Array.isArray(o.footSum) ? o.footSum.length : 0;
-    this._footHeight = footRows ? footRows * o.rowHeight + 1 : 0;
-    const pageH = o.pageBar ? o.pageHeight : 0;
-
-    const e = this.el;
-    e.canvas.style.width = this.totalWidth + "px";
-    e.root.classList.toggle("pyo-has-frozen", frozen > 0);
-    e.root.classList.toggle("pyo-cell-select", !!o.cellSelect);
-    e.head.style.height = this._headerHeight + "px";
-    e.headFz.style.width = this.fzWidth + "px";
-    e.headSc.style.width = this.scWidth + "px";
-    e.scroll.style.setProperty("--pyo-head-h", this._headerHeight + "px");
-    e.scroll.style.bottom = pageH + "px";
-    e.pagebar.hidden = !o.pageBar;
-    e.pagebar.style.height = pageH + "px";
-    e.root.style.setProperty("--pyo-row-h", o.rowHeight + "px");
-    e.root.style.setProperty("--pyo-head-row-h", o.headerRowHeight + "px");
-    e.empty.style.top = this._headerHeight + "px";
-    e.empty.style.bottom = pageH + this._footHeight + "px";
-    e.foot.style.height = this._footHeight + "px";
+    gLayout._computeLayout(this);
   }
 
   _applyView() {
@@ -1551,13 +1398,7 @@ export class PyoGrid {
   }
 
   _updateBodySize() {
-    this.el.body.style.height = this.rows.length * this.options.rowHeight + "px";
-    const emptyText = this.options.emptyText === undefined ? this.messages.empty : this.options.emptyText;
-    const msg = this.isFilterActive() ? this.messages.noFilterMatch : emptyText;
-    const showEmpty = !this.rows.length && !!msg;
-    this.el.empty.textContent = showEmpty ? msg : "";
-    this.el.empty.hidden = !showEmpty;
-    this._renderStatus();
+    gLayout._updateBodySize(this);
   }
 
   /** 아래 합계 행(footSum) */
@@ -2058,58 +1899,11 @@ export class PyoGrid {
 
   /** @param {PointerEvent} e */
   _onHeaderPointerDown(e) {
-    const t = /** @type {HTMLElement} */ (e.target);
-    if (!t || !t.matches || !t.matches(".pyo-resizer")) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const leafIndex = Number(t.dataset.resize);
-    const startX = e.clientX;
-    const startW = this.widths[leafIndex];
-    const min = this.options.minColumnWidth;
-    const rootRect = this.el.root.getBoundingClientRect();
-    const cellRect = /** @type {HTMLElement} */ (t.parentElement).getBoundingClientRect();
-    const cellLeft = cellRect.right - startW;
-    const guide = this.el.guide;
-    guide.style.display = "block";
-    /** @param {number} dx */
-    const place = (dx) => {
-      const w = Math.max(min, startW + dx);
-      guide.style.left = cellLeft - rootRect.left + w - 1 + "px";
-      return w;
-    };
-    place(0);
-    this.el.root.classList.add("pyo-resizing");
-    try {
-      t.setPointerCapture(e.pointerId);
-    } catch (err) {
-      /* jsdom 등 */
-    }
-    /** @param {PointerEvent} ev */
-    const move = (ev) => place(ev.clientX - startX);
-    /** @param {PointerEvent} ev */
-    const up = (ev) => {
-      const w = place(ev.clientX - startX);
-      this._endResize();
-      this._justResized = Date.now();
-      if (w !== startW) this.setColumnWidth(leafIndex, w);
-    };
-    this._resizeCleanup = () => {
-      t.removeEventListener("pointermove", move);
-      t.removeEventListener("pointerup", up);
-      t.removeEventListener("pointercancel", up);
-    };
-    t.addEventListener("pointermove", move);
-    t.addEventListener("pointerup", up);
-    t.addEventListener("pointercancel", up);
+    gLayout._onHeaderPointerDown(this, e);
   }
 
   _endResize() {
-    if (this._resizeCleanup) this._resizeCleanup();
-    this._resizeCleanup = null;
-    if (this.el && !this._destroyed) {
-      this.el.guide.style.display = "none";
-      this.el.root.classList.remove("pyo-resizing");
-    }
+    gLayout._endResize(this);
   }
 }
 

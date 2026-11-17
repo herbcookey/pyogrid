@@ -2,6 +2,7 @@
 import { editorTypes, selectOptions, isChecked, checkboxValue, sameValue } from "../editors/types.js";
 import { Dropdown, Calendar } from "../editors/popups.js";
 import { getValue, isFn, clamp } from "../util.js";
+import { headerHeight, viewportHeight } from "../grid/layout.js";
 
 /**
  * 셀 편집과 키보드.
@@ -322,7 +323,7 @@ export class Editing {
   cellRect(r, c) {
     const g = this.grid;
     const s = g.el.scroll;
-    const top = g._headerHeight + r * g.options.rowHeight - s.scrollTop;
+    const top = headerHeight(g) + r * g.options.rowHeight - s.scrollTop;
     const left = c < g.frozenCount ? g.leafX[c] : g.fzWidth + g.leafX[c] - s.scrollLeft;
     return { left, top, width: g.widths[c], height: g.options.rowHeight };
   }
@@ -334,7 +335,7 @@ export class Editing {
     const a = this.edit ? { r: this.edit.r, c: this.edit.c } : g.range ? g.range.active : null;
     if (!a || !g.leaves[a.c]) {
       input.style.left = "0px";
-      input.style.top = g._headerHeight + "px";
+      input.style.top = headerHeight(g) + "px";
       return;
     }
     const rc = this.cellRect(a.r, a.c);
@@ -342,7 +343,7 @@ export class Editing {
     let { left, top } = rc;
     if (!this.edit) {
       left = clamp(left, 0, Math.max(0, root.clientWidth - 20));
-      top = clamp(top, g._headerHeight, Math.max(g._headerHeight, root.clientHeight - rc.height));
+      top = clamp(top, headerHeight(g), Math.max(headerHeight(g), root.clientHeight - rc.height));
     }
     input.style.left = left + "px";
     input.style.top = top + "px";
@@ -591,7 +592,7 @@ export class Editing {
     if (!n || last < 0) return;
     const rng = g.range;
     const a = rng ? rng.active : { r: 0, c: 0 };
-    const page = Math.max(1, Math.floor((g._vh - g._headerHeight) / g.options.rowHeight) - 1);
+    const page = Math.max(1, Math.floor((viewportHeight(g) - headerHeight(g)) / g.options.rowHeight) - 1);
     const NAV = { ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, Home: 1, End: 1, PageUp: 1, PageDown: 1, Tab: 1 };
     if (!rng && NAV[key]) {
       // Shift+Tab으로 들어온 그리드에서 다시 Shift+Tab: 막지 않아 앞 입력 요소로 나간다
