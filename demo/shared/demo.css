@@ -36,7 +36,8 @@ code { font: 12.5px var(--d-mono); background: #f1f4f8; border-radius: 4px; padd
 .d-nav { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
 .d-nav a { padding: 6px 10px; border-radius: 6px; color: var(--d-muted); font-size: 13px; white-space: nowrap; }
 .d-nav a:hover { color: var(--d-text); background: #f1f4f8; text-decoration: none; }
-.d-nav a[aria-current="page"] { color: var(--d-accent); background: var(--d-accent-soft); font-weight: 600; }
+/* 글자 대비 4.5:1 이상 (accent는 accent-soft 위에서 4.26:1) */
+.d-nav a[aria-current="page"] { color: var(--d-accent-dark); background: var(--d-accent-soft); font-weight: 600; }
 .d-links { margin-left: auto; display: flex; gap: 14px; font-size: 13px; white-space: nowrap; }
 .d-links a { color: var(--d-muted); }
 .d-links a:hover { color: var(--d-text); }
