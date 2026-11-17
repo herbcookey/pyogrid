@@ -441,6 +441,7 @@ export function getModifiedRows(grid) {
  * @returns {Row}
  */
 export function cleanRow(grid, row) {
+  if (row === null || typeof row !== "object") return row;
   const o = grid.options;
   const copy = /** @type {any} */ ({ ...row });
   delete copy[o.selectedKey];

@@ -161,7 +161,7 @@
 | `getAddedRows()` | 마지막 저장 뒤 `addRow`로 넣은 행 (추가로 보낼 행). `getModifiedRows()`에도 들어 있습니다 |
 | `getModifiedRows()` | 바뀌었거나 추가된 행. 모든 셀이 처음 값으로 돌아오면 (예: 실행 취소 뒤) 빠집니다 |
 | `getChanges()` | 저장할 때 보낼 것: `{added, modified, deleted}`. 각 배열은 행의 얕은 복사본이고, 그리드가 붙인 표시 키(`selectedKey`, `modifiedKey`, `addedKey`, `deletedKey`에 적힌 속성 이름)가 빠져 있습니다. `modified`에는 추가한 행을 넣지 않습니다. 편집 중인 값은 확정해야 들어갑니다: 먼저 `commitEdit()`을 부르고, `false`(값이 잘못됨)가 나오면 저장하지 않습니다. 원본 행 객체는 바꾸지 않습니다. 얕은 복사이므로 중첩 객체와 배열은 원본 행과 같은 객체입니다 |
-| `cleanRow(row)` | 행 하나를 같은 표시 키를 뺀 얕은 복사본으로 돌려줍니다. 그리드에 없는 행도 됩니다 |
+| `cleanRow(row)` | 행 하나를 같은 표시 키를 뺀 얕은 복사본으로 돌려줍니다. 그리드에 없는 행도 됩니다. 객체가 아닌 값(`null`, `undefined`, 숫자, 글자)은 받은 그대로 돌려줍니다 |
 | `clearModified(rows?)` | 수정 표시와 추가 표시를 지웁니다 (`rows`가 없으면 모든 행). 저장한 뒤 부릅니다. 추가 표시가 빠진 행은 다시 헤더 필터를 따릅니다 |
 | `clearDeleted()` | 지운 행 목록을 비웁니다 |
 | `acceptChanges()` | 저장한 뒤: 수정·추가 표시, 지운 행 목록, 실행 취소 기록을 모두 비웁니다 |

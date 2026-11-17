@@ -863,6 +863,7 @@ export class PyoGrid {
 
   /**
    * 행 하나를 getChanges와 같은 방식으로 복사한다 (얕은 복사, 표시 키 4개를 뺀다). 그리드에 없는 행도 된다.
+   * 객체가 아닌 값(null, undefined, 숫자, 글자 등)은 받은 그대로 돌려준다.
    * @param {Row} row
    * @returns {Row}
    */

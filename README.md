@@ -561,7 +561,7 @@ Most methods return the grid, so calls can be chained (`grid.setData(rows).scrol
 | `getAddedRows()` | Rows added with `addRow` since the last save (send these as inserts). They are also in `getModifiedRows()` |
 | `getModifiedRows()` | Rows that changed or were added. A row drops out once every cell is back to its original value (for example, after undo) |
 | `getChanges()` | What to send when saving: `{added, modified, deleted}`. Each array holds shallow copies of the rows with the grid's marker keys removed (the property names in `selectedKey`, `modifiedKey`, `addedKey`, and `deletedKey`). `modified` leaves out added rows. A value still being edited is not included; call `commitEdit()` first. The row objects themselves are not changed. Because the copies are shallow, nested objects and arrays are shared with the original rows |
-| `cleanRow(row)` | A shallow copy of one row with the same marker keys removed. Works for rows that aren't in the grid |
+| `cleanRow(row)` | A shallow copy of one row with the same marker keys removed. Works for rows that aren't in the grid. A value that isn't an object (`null`, `undefined`, a number, a string) is returned as it is |
 | `clearModified(rows?)` | Clear the modified and added flags (all rows if `rows` is omitted). Call after saving. Rows that lose the added flag follow header filters again |
 | `clearDeleted()` | Clear the deleted-row list |
 | `acceptChanges()` | After saving: clear modified and added flags, the deleted-row list, and undo history |

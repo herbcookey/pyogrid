@@ -412,4 +412,9 @@ describe("getChanges·cleanRow: 더 확인할 것", () => {
     expect(grid.getChanges()).toEqual({ added: [], modified: [], deleted: [{ id: 1, name: "가2" }] });
   });
 
+  it("cleanRow에 객체가 아닌 값을 주면 받은 그대로 돌려준다", () => {
+    const grid = new PyoGrid(host, { columns: cols });
+    for (const v of [null, undefined, 0, 42, "", "text", true, false]) expect(grid.cleanRow(v)).toBe(v);
+  });
+
 });
