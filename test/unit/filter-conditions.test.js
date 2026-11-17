@@ -459,3 +459,68 @@ describe("filterConditions 옵션을 켠 팝업", () => {
     expect(locales.ko.condContains).not.toBe(locales.en.condContains);
   });
 });
+
+describe("추가 확인: 범위 필드 이름, 시간대, valueFormat 왕복, 날짜 칸 이름", () => {
+  it("범위는 from·to만 쓴다: between에 value만 주면 예외, value를 같이 주면 버린다. 비교 연산자에 from·to만 주면 예외", () => {
+    const grid = new PyoGrid(host, { columns: [{ key: "id" }, { key: "q", editor: { type: "number" } }, { key: "d", editor: { type: "date" } }] });
+    grid.setData([{ id: 1, q: 5, d: "2026-03-01" }]);
+    grid.setFilterCondition("q", { type: "number", op: "ge", value: 1 });
+    const bad = [
+      { type: "number", op: "between", value: 5 },
+      { type: "number", op: "ge", from: 1 },
+      { type: "date", value: "2026-03-01" },
+      { type: "date", op: "between", value: "2026-03-01" },
+    ];
+    for (const c of bad) expect(() => grid.setFilterCondition("d", c), JSON.stringify(c)).toThrow(TypeError);
+    // 예외가 나도 앞서 건 조건은 그대로
+    expect(grid.getFilterConditions()).toEqual({ q: { type: "number", op: "ge", value: 1 } });
+    grid.setFilterCondition("q", { type: "number", op: "between", from: 1, to: 9, value: 100 });
+    expect(grid.getFilterConditions().q).toEqual({ type: "number", op: "between", from: 1, to: 9 });
+    grid.setFilterCondition("d", { type: "date", from: "2026-03-01", value: "x" });
+    expect(grid.getFilterConditions().d).toEqual({ type: "date", op: "between", from: "2026-03-01" });
+  });
+
+  it("시간이 붙은 값은 어느 시간대에서 돌려도 적힌 날짜로 걸린다 (Date로 바꾸면 하루가 밀리는 값)", () => {
+    // -05:00의 3월 31일 밤은 UTC로 4월 1일, +14:00의 4월 1일 새벽은 UTC로 3월 31일이다.
+    // Date로 바꿔 지역 날짜를 읽으면, 시험 기계의 시간대가 어디든 둘 중 적어도 하나는 날짜가 바뀐다.
+    const grid = new PyoGrid(host, { columns: [{ key: "id" }, { key: "d", editor: { type: "date" } }] });
+    grid.setData([
+      { id: 1, d: "2026-03-31T23:30:00-05:00" },
+      { id: 2, d: "2026-04-01T00:30:00+14:00" },
+      { id: 3, d: "2026-03-31T23:59:59.999Z" },
+      { id: 4, d: "2026-04-01 00:00" },
+    ]);
+    grid.setFilterCondition("d", { type: "date", to: "2026-03-31" });
+    expect(ids(grid)).toEqual([1, 3]);
+    grid.setFilterCondition("d", { type: "date", from: "2026-04-01" });
+    expect(ids(grid)).toEqual([2, 4]);
+    // 조건의 from·to에 시간을 붙여도 날짜 부분만 쓴다
+    grid.setFilterCondition("d", { type: "date", from: "2026-04-01T23:00:00-05:00", to: "2026-04-01" });
+    expect(grid.getFilterConditions().d).toEqual({ type: "date", op: "between", from: "2026-04-01", to: "2026-04-01" });
+  });
+
+  it("valueFormat 형식 글자: 편집기로 저장한 값도 같은 형식으로 읽는다", () => {
+    const grid = new PyoGrid(host, { columns: [{ key: "id" }, { key: "d", editor: { type: "date", config: { valueFormat: "dd/MM/yyyy" } } }] });
+    grid.setData([
+      { id: 1, d: "05/03/2026" },
+      { id: 2, d: "05/04/2026" },
+    ]);
+    grid.setRange(1, 1);
+    grid.paste("2026-03-20");
+    expect(grid.getAllRows()[1].d).toBe("20/03/2026");
+    grid.setFilterCondition("d", { type: "date", from: "2026-03-01", to: "2026-03-31" });
+    expect(ids(grid)).toEqual([1, 2]);
+    grid.setFilterCondition("d", { type: "date", from: "2026-03-10" });
+    expect(ids(grid)).toEqual([2]);
+  });
+
+  it("날짜 컬럼의 범위 입력칸에도 이름이 있다 (ko 문구)", () => {
+    const grid = new PyoGrid(host, { filter: true, filterConditions: true, locale: "ko", columns: [{ key: "d", label: "일자", editor: { type: "date" } }] });
+    grid.setData([{ d: "2026-03-01" }]);
+    grid.openFilter(0);
+    const box = popup().querySelector(".pyo-f-cond");
+    expect(box.querySelector(".pyo-f-op").getAttribute("aria-label")).toBe("조건");
+    expect(box.querySelector(".pyo-f-from").getAttribute("aria-label")).toBe("부터");
+    expect(box.querySelector(".pyo-f-to").getAttribute("aria-label")).toBe("까지");
+  });
+});
