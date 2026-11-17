@@ -18,15 +18,68 @@ import { editorTypes, selectOptions, isChecked, sameValue } from "./editors/type
 import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMerge, toNumber } from "./util.js";
 
 /**
- * @typedef {import("./core/columns.js").ColumnDef} ColumnDef
+ * @template [Row=any]
+ * @typedef {import("./core/columns.js").ColumnDef<Row>} ColumnDef
+ */
+/**
+ * @template [Row=any]
+ * @typedef {import("./core/columns.js").CellContext<Row>} CellContext
+ */
+/**
  * @typedef {import("./core/columns.js").LeafColumn} LeafColumn
  * @typedef {import("./core/columns.js").HeaderCell} HeaderCell
  * @typedef {import("./core/sort.js").SortItem} SortItem
  * @typedef {import("./core/sort.js").SortCompare} SortCompare
  * @typedef {import("./features/pagebar.js").PageInfo} PageInfo
- *
+ */
+
+/**
+ * 그룹 합계 행. getViewRows()·getRow()와 click 등의 row로 데이터 행 대신 나올 수 있다.
+ * @template [Row=any]
+ * @typedef {Object} GroupingRow
+ * @property {true} __isGrouping
+ * @property {Row[]} __groupingList  이 그룹의 데이터 행
+ * @property {{keys: string[], labels: any[]}} __groupingBy
+ * @property {number} __depth  그룹 단계 (0부터)
+ */
+
+/**
+ * 화면 행: 데이터 행 또는 그룹 합계 행
+ * @template [Row=any]
+ * @typedef {Row | GroupingRow<Row>} ViewRow
+ */
+
+/**
+ * getRange()가 돌려주는 셀 범위
+ * @typedef {{r0: number, c0: number, r1: number, c1: number, active: {r: number, c: number}}} RangeInfo
+ */
+
+/**
+ * cellContext()가 돌려주는 셀 정보. beforeedit·editstart·editend의 인자와 editor.disabled의 인자도 이 모양이다.
+ * @template [Row=any]
+ * @typedef {Object} GridCellInfo
+ * @property {Row} row
+ * @property {Row} item  row와 같다
+ * @property {number} rowIndex  화면 순번
+ * @property {number} dindex    rowIndex와 같다
+ * @property {number} colIndex  잎 컬럼 순번
+ * @property {ColumnDef<Row>} column
+ * @property {string|undefined} key
+ * @property {any} value
+ * @property {PyoGrid<Row>} grid
+ * @property {ViewRow<Row>[]} list  화면 행 전체
+ */
+
+/**
+ * setValues()가 돌려주는 바뀐 셀, batchchange의 changes 한 칸
+ * @template [Row=any]
+ * @typedef {{rowIndex: number, row: Row, key: string, value: any, oldValue: any}} AppliedChange
+ */
+
+/**
+ * @template [Row=any]
  * @typedef {Object} GridOptions
- * @property {ColumnDef[]} [columns]
+ * @property {ColumnDef<Row>[]} [columns]
  * @property {number} [frozenColumns=0]      왼쪽에 고정할 잎 컬럼 수
  * @property {number} [rowHeight=26]
  * @property {number} [headerRowHeight=26]
@@ -78,7 +131,7 @@ import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMer
  * @property {number} [overscanColumns=2]
  * @property {"left"|"center"|"right"|null} [headerAlign]
  * @property {"left"|"center"|"right"|null} [align]  본문 기본 정렬
- * @property {((row: any, index: number) => string)|string|null} [rowClass]
+ * @property {((this: PyoGrid<Row>, row: Row, index: number) => string)|string|null} [rowClass]
  * @property {number|null} [height]  null이면 대상 요소 높이를 채운다
  */
 
@@ -142,10 +195,14 @@ const SCROLLBAR = 15;
 
 let uid = 0;
 
+/**
+ * 데이터 그리드. Row는 행 객체의 타입이다 (주지 않으면 any).
+ * @template [Row=any]
+ */
 export class PyoGrid {
   /**
    * @param {HTMLElement|string} target 요소 또는 CSS 선택자
-   * @param {GridOptions} [options]
+   * @param {GridOptions<Row>} [options]
    */
   constructor(target, options = {}) {
     const el = typeof target === "string" ? document.querySelector(target) : target;
@@ -301,7 +358,7 @@ export class PyoGrid {
 
   /**
    * 데이터를 바꾼다. 행 객체는 복사하지 않는다.
-   * @param {any[]} rows
+   * @param {Row[]} rows
    * @param {PageInfo|null} [page] 서버 페이징 정보 (currentPage는 0부터)
    */
   setData(rows, page) {
@@ -325,24 +382,27 @@ export class PyoGrid {
   }
 
   /**
-   * @returns {any[]} 필터·정렬을 거친 데이터 행 (배열은 복사본, 행 객체는 원본).
+   * @returns {Row[]} 필터·정렬을 거친 데이터 행 (배열은 복사본, 행 객체는 원본).
    * 그룹 합계 행은 빠지고, 트리는 접힌 자식도 들어간다.
    */
   getRows() {
     return this.dataRows.slice();
   }
 
-  /** @returns {any[]} 화면에 그리는 순서의 행 (그룹 합계 행 포함, 트리는 펼친 행만) */
+  /** @returns {ViewRow<Row>[]} 화면에 그리는 순서의 행 (그룹 합계 행 포함, 트리는 펼친 행만) */
   getViewRows() {
     return this.rows.slice();
   }
 
-  /** @returns {any[]} setData로 받은 행 전체 (필터로 숨은 행 포함, 지운 행 제외) */
+  /** @returns {Row[]} setData로 받은 행 전체 (필터로 숨은 행 포함, 지운 행 제외) */
   getAllRows() {
     return this.source.slice();
   }
 
-  /** @param {number} index 화면 순번 */
+  /**
+   * @param {number} index 화면 순번
+   * @returns {ViewRow<Row>|undefined} 그룹 합계 행일 수 있다
+   */
   getRow(index) {
     return this.rows[index];
   }
@@ -359,12 +419,12 @@ export class PyoGrid {
   /**
    * 행을 넣는다. 넣은 행에는 addedKey(__added__)가 붙고, 저장(acceptChanges·clearModified) 전까지는
    * 헤더 필터 조건에 맞지 않아도 보인다.
-   * @param {any|any[]} rows
+   * @param {Row|Row[]} rows
    * @param {"first"|"last"|number} [at="last"]  숫자면 그 화면 순번의 행 앞
    * @param {{focus?: boolean}} [opts] focus: 넣은 첫 행의 첫 셀로 이동
    */
   addRow(rows, at = "last", opts = {}) {
-    const list = Array.isArray(rows) ? rows : [rows];
+    const list = /** @type {any[]} */ (Array.isArray(rows) ? rows : [rows]);
     if (!list.length) return this;
     this.editing.cancel();
     for (const r of list) r[this.options.addedKey] = true;
@@ -394,7 +454,7 @@ export class PyoGrid {
 
   /**
    * 행을 목록에서 뺀다 (지운 행 기록에 남기지 않음).
-   * @param {any|any[]|number|number[]} targets 행 객체 또는 화면 순번
+   * @param {Row|number|(Row|number)[]} targets 행 객체 또는 화면 순번
    */
   removeRows(targets) {
     const set = this._targetRows(targets);
@@ -410,7 +470,7 @@ export class PyoGrid {
    * 행을 지운다. 목록에서 빠지고 getDeletedRows()에 남는다 (서버에 삭제를 보낼 때).
    * 저장 전에 addRow로 넣은 행(addedKey)은 서버에 없으므로 기록에 남기지 않는다.
    * 트리면 자손도 같이 지운다.
-   * @param {any|any[]|number|number[]} targets 행 객체 또는 화면 순번
+   * @param {Row|number|(Row|number)[]} targets 행 객체 또는 화면 순번
    */
   deleteRows(targets) {
     const set = this._targetRows(targets);
@@ -436,12 +496,12 @@ export class PyoGrid {
     return this;
   }
 
-  /** @returns {any[]} deleteRows로 지운 행 (저장 전에 넣었다 지운 행은 빠진다) */
+  /** @returns {Row[]} deleteRows로 지운 행 (저장 전에 넣었다 지운 행은 빠진다) */
   getDeletedRows() {
     return this.deleted.slice();
   }
 
-  /** @returns {any[]} 저장 전에 addRow로 넣은 행 (setData 순서). getModifiedRows()에도 들어 있다 */
+  /** @returns {Row[]} 저장 전에 addRow로 넣은 행 (setData 순서). getModifiedRows()에도 들어 있다 */
   getAddedRows() {
     const k = this.options.addedKey;
     return this.source.filter((r) => r && r[k]);
@@ -450,7 +510,7 @@ export class PyoGrid {
   /**
    * 화면 순번의 행을 다른 행 객체로 바꾼다.
    * @param {number} index
-   * @param {any} row
+   * @param {Row} row
    */
   replaceRow(index, row) {
     const old = this.rows[index];
@@ -607,14 +667,17 @@ export class PyoGrid {
    * 공개 API: 트리
    * ================================================================ */
 
-  /** @param {any} row */
+  /**
+   * @param {Row} row
+   * @returns {{depth: number, children: Row[], parent: Row|null}|null} 트리가 아니거나 모르는 행이면 null
+   */
   getTreeInfo(row) {
     const m = this._treeMeta && this._treeMeta.get(row);
     return m ? { depth: m.depth, children: m.children.slice(), parent: m.parent } : null;
   }
 
   /**
-   * @param {any|number} target 행 또는 화면 순번
+   * @param {Row|number} target 행 또는 화면 순번
    * @param {boolean} [collapsed] 없으면 반전
    */
   toggleNode(target, collapsed) {
@@ -656,12 +719,12 @@ export class PyoGrid {
    * 공개 API: 행 선택
    * ================================================================ */
 
-  /** @param {any} row */
+  /** @param {any} row 행 객체 (그룹 합계 행·null이면 false) */
   isRowSelected(row) {
     return !!(row && row[this.options.selectedKey]);
   }
 
-  /** @param {any} row */
+  /** @param {any} row 행 객체 (그룹 합계 행·null이면 false) */
   isRowSelectable(row) {
     return !!row && !row.__isGrouping && !row[this.options.disableSelectionKey];
   }
@@ -724,7 +787,7 @@ export class PyoGrid {
 
   /**
    * @param {boolean} [selected=true]
-   * @param {(row: any, index: number) => boolean} [filter]
+   * @param {(this: Row, row: Row, index: number) => boolean} [filter]  true를 돌려준 행만
    */
   selectAll(selected = true, filter) {
     const key = this.options.selectedKey;
@@ -748,7 +811,7 @@ export class PyoGrid {
     return this.selectAll(false);
   }
 
-  /** @returns {any[]} 선택된 행 (getRows 순서, 행 객체 원본) */
+  /** @returns {Row[]} 선택된 행 (getRows 순서, 행 객체 원본) */
   getSelectedRows() {
     return this.dataRows.filter((r) => this.isRowSelected(r));
   }
@@ -784,13 +847,16 @@ export class PyoGrid {
     return this;
   }
 
-  /** @returns {{r0:number,c0:number,r1:number,c1:number,active:{r:number,c:number}}|null} */
+  /** @returns {RangeInfo|null} */
   getRange() {
     const g = this.range;
     return g ? { r0: g.r0, c0: g.c0, r1: g.r1, c1: g.c1, active: { ...g.active } } : null;
   }
 
-  /** 포커스된 셀 (범위의 active) */
+  /**
+   * 포커스된 셀 (범위의 active)
+   * @returns {{rowIndex: number, colIndex: number, row: ViewRow<Row>, column: ColumnDef<Row>, key: string|undefined, value: any}|null}
+   */
   getActiveCell() {
     const g = this.range;
     if (!g) return null;
@@ -801,7 +867,7 @@ export class PyoGrid {
 
   /**
    * 선택 범위 안의 셀을 왼쪽 위부터 차례로 돌려준다.
-   * @returns {{rowIndex:number, colIndex:number, row:any, key:any, value:any}[]}
+   * @returns {{rowIndex: number, colIndex: number, row: ViewRow<Row>, key: string|undefined, value: any}[]}
    */
   getRangeCells() {
     const g = this.range;
@@ -876,7 +942,7 @@ export class PyoGrid {
    * null·undefined·""는 서로 같은 값으로 본다.
    * 행은 화면 순번 또는 행 객체로 준다. 행 객체면 필터로 숨은 행이나 접힌 트리 자식도 바꿀 수 있고,
    * 이때 change의 rowIndex는 -1이다.
-   * @param {number|any} target 화면 순번 또는 행 객체
+   * @param {number|Row} target 화면 순번 또는 행 객체
    * @param {string} key
    * @param {any} value
    * @param {{source?: string, refresh?: boolean, batch?: boolean}} [opts]
@@ -937,9 +1003,9 @@ export class PyoGrid {
   /**
    * 여러 셀을 한 번에 바꾼다. 다 바꾼 뒤 한 번만 다시 그리고 batchchange를 알린다.
    * 셀마다 change도 알리며, 이때 batch:true가 붙는다. 행은 rowIndex(화면 순번) 또는 row(행 객체)로 준다.
-   * @param {{rowIndex?:number, row?:any, key:string, value:any}[]} changes
+   * @param {{rowIndex?: number, row?: Row, key: string, value: any}[]} changes
    * @param {{source?: string}} [opts]
-   * @returns {{rowIndex:number, row:any, key:string, value:any, oldValue:any}[]} 실제로 바뀐 것 (화면에 없는 행은 rowIndex -1)
+   * @returns {AppliedChange<Row>[]} 실제로 바뀐 것 (화면에 없는 행은 rowIndex -1)
    */
   setValues(changes, opts = {}) {
     const source = opts.source || "api";
@@ -1055,12 +1121,12 @@ export class PyoGrid {
   /**
    * 수정 표시(__modified__)와 추가 표시(__added__)를 지운다. 저장한 뒤 부른다.
    * 추가 표시가 빠진 행은 다시 헤더 필터 조건을 따른다.
-   * @param {any[]} [rows] 없으면 모든 행 (지운 행 포함)
+   * @param {Row[]} [rows] 없으면 모든 행 (지운 행 포함)
    */
   clearModified(rows) {
     const mk = this.options.modifiedKey;
     const ak = this.options.addedKey;
-    const list = rows || this.source.concat(this.deleted);
+    const list = /** @type {any[]} */ (rows || this.source.concat(this.deleted));
     let wasAdded = false;
     for (const r of list) {
       if (!r) continue;
@@ -1177,7 +1243,7 @@ export class PyoGrid {
    * Excel 등에서 복사한 글자를 선택 범위 왼쪽 위부터 붙여넣는다.
    * 편집기가 없거나 막힌 셀, 종류에 맞지 않는 값(숫자 칸의 글자 등), 표 밖의 칸은 건너뛴다.
    * @param {string} text
-   * @returns {{applied: number, skipped: number}}
+   * @returns {{applied: number, skipped: number, rows?: number}} rows: 붙여넣은 글자의 줄 수 (범위가 없거나 편집 중이면 없음)
    */
   paste(text) {
     const g = this.range;
@@ -1237,7 +1303,7 @@ export class PyoGrid {
     }, 2500);
   }
 
-  /** @returns {any[]} 값이 바뀐 행 (setData 순서) */
+  /** @returns {Row[]} 값이 바뀐 행 (setData 순서) */
   getModifiedRows() {
     const k = this.options.modifiedKey;
     return this.source.filter((r) => r && r[k]);
@@ -1277,7 +1343,7 @@ export class PyoGrid {
    * formatter·editor.disabled 등에 넘기는 셀 정보
    * @param {number} r
    * @param {number} c
-   * @returns {{row: any, item: any, rowIndex: number, dindex: number, colIndex: number, column: ColumnDef, key: any, value: any, grid: PyoGrid, list: any[]}}
+   * @returns {GridCellInfo<Row>}
    */
   cellContext(r, c) {
     const row = this.rows[r];

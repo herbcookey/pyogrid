@@ -2,8 +2,43 @@
 /**
  * 컬럼 정의(묶음 컬럼 포함)를 잎 컬럼 목록과 다단 헤더 칸 목록으로 바꾼다.
  *
+ * 타입 메모: core는 grid.js를 가져오지 않는다 (strictNullChecks 단계 적용 범위를 core에 묶어 두려고).
+ * 그래서 셀 정보의 grid는 여기서 any이고, grid.js의 cellContext()가 PyoGrid<Row>로 좁혀 돌려준다.
+ */
+
+/**
+ * formatter·cellClass에 넘기는 셀 정보. 함수의 this도 같은 객체다.
+ * @template [Row=any]
+ * @typedef {Object} CellContext
+ * @property {any} value  셀 값 (formatter를 거치기 전)
+ * @property {Row} row
+ * @property {Row} item   row와 같다
+ * @property {string|undefined} key
+ * @property {number} rowIndex  화면 순번
+ * @property {number} dindex    rowIndex와 같다
+ * @property {ColumnDef<Row>} column
+ * @property {any} grid  그리드 (PyoGrid)
+ */
+
+/**
+ * editor.disabled에 넘기는 셀 정보 (grid.cellContext()가 돌려주는 것). 함수의 this도 같은 객체다.
+ * @template [Row=any]
+ * @typedef {CellContext<Row> & {colIndex: number, list: any[]}} CellInfo
+ */
+
+/**
+ * @template [Row=any]
+ * @typedef {Object} ColumnEditor
+ * @property {string} type  text, number, money, date, select, checkbox 또는 PyoGrid.editors에 넣은 이름
+ * @property {any} [config]
+ * @property {boolean|((this: CellInfo<Row>, c: CellInfo<Row>) => any)} [disabled]  true(또는 참인 값을 돌려주면) 편집 막기
+ * @property {Record<string, any>} [attributes]  입력칸에 붙일 속성
+ */
+
+/**
+ * @template [Row=any]
  * @typedef {Object} ColumnDef
- * @property {string} [key]
+ * @property {string} [key]  "a.b", "a['키']", "list[0].name" 같은 경로 키도 된다
  * @property {string} [label]
  * @property {number|string} [width]  숫자, "120", "50px", "*", "30%"
  * @property {"left"|"center"|"right"} [align]
@@ -11,25 +46,28 @@
  * @property {boolean} [filter]  false면 헤더 값 필터 안 함, true면 그리드 filter 옵션과 관계없이 필터
  * @property {boolean} [treeControl]  트리 펼침 단추를 그릴 컬럼
  * @property {boolean} [numeric]  선택 합계에서 숫자 컬럼으로 볼지 (없으면 money formatter·number/money 편집기면 숫자)
- * @property {ColumnDef[]} [columns]  묶음 헤더의 하위 컬럼
+ * @property {ColumnDef<Row>[]} [columns]  묶음 헤더의 하위 컬럼
  * @property {boolean} [hidden]
  * @property {boolean} [multiLine]
  * @property {boolean} [resizable]
  * @property {boolean} [sortable]  false면 정렬 안 함, true면 그리드 sortable과 관계없이 정렬
- * @property {{type: string, config?: any, disabled?: boolean|Function, attributes?: Record<string, any>}} [editor]
- *   type: text, number, money, date, select, checkbox
- * @property {string|Function} [formatter]
+ * @property {ColumnEditor<Row>} [editor]
+ * @property {string|((this: CellContext<Row>, c: CellContext<Row>) => any)} [formatter]  이름(PyoGrid.formatters) 또는 함수
  * @property {boolean} [html]  true면 label과 formatter 결과를 HTML로 넣는다 (기본은 글자로 이스케이프)
- * @property {string|Function} [cellClass]
- * @property {string|Function} [headerClass]
- *
+ * @property {string|((this: CellContext<Row>, c: CellContext<Row>) => any)} [cellClass]
+ * @property {string|((this: ColumnDef<Row>, column: ColumnDef<Row>) => any)} [headerClass]
+ */
+
+/**
  * @typedef {Object} LeafColumn
  * @property {ColumnDef} def
  * @property {number} index     잎 컬럼 순번 (보조 컬럼 제외)
  * @property {number} level     헤더 깊이 (0부터)
  * @property {string} [key]
  * @property {string} [special] "lineNumber" | "rowSelector"
- *
+ */
+
+/**
  * @typedef {Object} HeaderCell
  * @property {string} label
  * @property {number} row
