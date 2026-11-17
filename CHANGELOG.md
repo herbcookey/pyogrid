@@ -4,7 +4,7 @@ All notable changes to pyogrid. Versions follow [semver](https://semver.org/); b
 
 ## Unreleased
 
-No changes to runtime behavior. The JavaScript API is the same; the TypeScript declarations are more precise.
+The JavaScript API is the same; the TypeScript declarations are more precise. One input bug is fixed (see Fixed).
 
 ### Type changes that can show new compile errors
 
@@ -19,9 +19,14 @@ TypeScript code that only uses what the README documents keeps compiling. These 
 - **Typed events.** `GridEvents<Row>` lists every event and its argument, taken from the grid's own `emit` calls. `grid.on("change", (e) => e.row.SKU)` infers `e`. Event names that aren't in the list are still accepted.
 - Type exports from `pyogrid`: `GridOptions`, `ColumnDef`, `ColumnEditor`, `CellContext`, `GridCellInfo`, `GridEvents`, `GridClickEvent`, `ViewRow`, `GroupingRow`, `AppliedChange`, `RangeInfo`, `SortItem`, `SortCompare`, `PageInfo`. See [TypeScript](README.md#typescript).
 
+### Fixed
+
+- With an IME that sends the confirming key again after composition ends (macOS), pressing Enter, Tab, ↑, or ↓ to finish a word could be handled twice when saving was slow (for example, a `change` handler taking 100 ms): the cell was saved and the next cell started editing. The repeat is now detected by the events' `timeStamp`, so the time spent saving no longer counts.
+
 ### Documentation
 
 - `CONTRIBUTING.md` and GitHub issue forms for bug reports and feature requests.
+- `demo/input-log.html` logs the grid input's keyboard, composition, and input events for checking IME input by hand; `docs/ime-manual-check.md` is the checklist for macOS and Windows.
 - `docs/api.ko.md`: the Grid options, Column options, Methods, and Events sections in Korean. README.ko.md links to it. `npm run docs:check` (also in CI) fails when its sections, table names, row counts, or code blocks no longer match README.md.
 - README has a new [Stability](README.md#stability) section: what is covered between releases (documented options, methods, events, `messages` keys, CSS custom properties, and row marker keys), what is not (`_` members, DOM structure and `pyo-*` classes, undocumented exports, the shape of saved `localStorage` state), and the version rules before 1.0. README.ko.md has a summary.
 - `docs/api-surface.md` lists every export, method, property, option, and event, and whether the README documents it. `docs/roadmap-1.0.md` lists what has to happen before 1.0, including the undocumented exports planned for removal (none are removed yet).
