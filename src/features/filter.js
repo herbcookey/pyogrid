@@ -3,10 +3,15 @@ import { escapeHtml } from "../util.js";
 import { compareSmart } from "../core/sort.js";
 import { locales } from "../core/locales.js";
 import { formatNumber } from "./pagebar.js";
+import { sanitizeNumber, sanitizeDate, parseNumber } from "../editors/types.js";
+import { dateKey, TEXT_OPS, NUMBER_OPS } from "./conditions.js";
+
+/** @typedef {import("./conditions.js").FilterCondition} FilterCondition */
 
 /**
  * 헤더 값 필터 팝업 (Excel 자동 필터와 같은 방식: 값 목록에서 고르기).
- * 확인을 누르면 onApply(허용 값 Set | null). null은 "조건 없음"(모두 선택).
+ * 확인을 누르면 onApply(허용 값 Set | null, 조건). null은 "조건 없음"(모두 선택).
+ * condition을 주면 목록 위에 조건 칸(연산자 고르기와 입력칸)을 보인다. 조건 칸이 없으면 onApply의 조건은 undefined다.
  *
  * 체크 상태는 화면의 체크박스가 아니라 전체 값 목록 기준으로 들고 있다 (unchecked).
  * 검색은 전체 값에서 하고, 그리는 것만 앞의 MAX개로 자른다. 그래서 값이 많아도
@@ -22,8 +27,11 @@ export class FilterPopup {
    * @param {string[]} o.values      filterKey 값 (중복 없음)
    * @param {(v: string) => string} o.label
    * @param {Set<string>|null} o.current
-   * @param {(allowed: Set<string>|null) => void} o.onApply
+   * @param {(allowed: Set<string>|null, condition?: FilterCondition|null) => void} o.onApply
+   *   condition: 조건 칸에서 고른 조건 (조건 없음이면 null, 조건 칸이 없으면 undefined)
    * @param {() => void} o.onClose
+   * @param {() => void} [o.onClear]  초기화 단추 (없으면 onApply(null))
+   * @param {{type: "text"|"number"|"date", current: FilterCondition|null}|null} [o.condition]  조건 칸
    * @param {number} [o.renderMax]
    * @param {import("../core/locales.js").Messages} [o.messages]
    * @param {string} [o.locale]  숫자 서식 언어 (Intl 이름)
@@ -50,6 +58,7 @@ export class FilterPopup {
     el.setAttribute("aria-label", m.filterDialog(o.title));
     el.innerHTML =
       `<div class="pyo-f-title">${escapeHtml(o.title)}</div>` +
+      (o.condition ? conditionHtml(o.condition.type, m) : "") +
       `<input type="text" class="pyo-f-search" placeholder="${escapeHtml(m.filterSearch)}" aria-label="${escapeHtml(m.filterSearch)}">` +
       `<label class="pyo-f-all"><input type="checkbox"> ${escapeHtml(m.selectAll)}</label>` +
       `<div class="pyo-f-list"></div>` +
@@ -64,6 +73,7 @@ export class FilterPopup {
     this.note = /** @type {HTMLElement} */ (el.querySelector(".pyo-f-note"));
     this.ok = /** @type {HTMLButtonElement} */ (el.querySelector(".pyo-f-ok"));
     this._render();
+    if (o.condition) this._initCondition(o.condition);
 
     // 전체 선택: 그리지 않은 값까지 검색에 걸린 값 전부
     this.all.addEventListener("change", () => {
@@ -91,7 +101,8 @@ export class FilterPopup {
     });
     /** @type {HTMLElement} */ (el.querySelector(".pyo-f-cancel")).addEventListener("click", () => this.close());
     /** @type {HTMLElement} */ (el.querySelector(".pyo-f-clear")).addEventListener("click", () => {
-      this.o.onApply(null);
+      if (this.o.onClear) this.o.onClear();
+      else this.o.onApply(null);
       this.close();
     });
     /** @type {HTMLElement} */ (el.querySelector(".pyo-f-ok")).addEventListener("click", () => this.apply());
@@ -148,11 +159,99 @@ export class FilterPopup {
    * 결과가 모든 값을 허용하면 조건 없음(null). 고른 값이 없으면 아무것도 하지 않는다.
    */
   apply() {
+    /** @type {FilterCondition|null|undefined} */
+    let cond;
+    if (this.cond) {
+      const read = this._readCondition();
+      if (read === false) return; // 잘못된 값: 팝업을 닫지 않는다
+      cond = read;
+    }
     const allowed = new Set();
     for (const i of this.matching) if (!this.unchecked.has(i)) allowed.add(this.values[i]);
     if (!allowed.size) return;
-    this.o.onApply(allowed.size === this.values.length ? null : allowed);
+    this.o.onApply(allowed.size === this.values.length ? null : allowed, cond);
     this.close();
+  }
+
+  /**
+   * 조건 칸: 고른 연산자에 맞는 입력칸만 보이고, 이미 건 조건을 채운다
+   * @param {{type: "text"|"number"|"date", current: FilterCondition|null}} c
+   */
+  _initCondition(c) {
+    const box = /** @type {HTMLElement} */ (this.el.querySelector(".pyo-f-cond"));
+    const q = (/** @type {string} */ sel) => /** @type {HTMLInputElement} */ (box.querySelector(sel));
+    this.cond = {
+      type: c.type,
+      op: /** @type {HTMLSelectElement} */ (box.querySelector(".pyo-f-op")),
+      value: q(".pyo-f-value"),
+      from: q(".pyo-f-from"),
+      to: q(".pyo-f-to"),
+    };
+    const k = this.cond;
+    const cur = /** @type {any} */ (c.current);
+    if (cur) {
+      k.op.value = cur.op || "between";
+      if (cur.value !== undefined) k.value.value = String(cur.value);
+      if (cur.from !== undefined) k.from.value = String(cur.from);
+      if (cur.to !== undefined) k.to.value = String(cur.to);
+    }
+    const show = () => {
+      const op = k.op.value;
+      k.value.hidden = !op || op === "between";
+      k.from.hidden = k.to.hidden = op !== "between";
+    };
+    show();
+    k.op.addEventListener("change", show);
+    for (const input of [k.value, k.from, k.to]) {
+      input.addEventListener("input", (e) => {
+        input.removeAttribute("aria-invalid");
+        // 한글 조합 중에는 건드리지 않는다 (숫자·날짜 칸은 조합할 일이 없지만 입력기가 켜져 있을 수 있다)
+        if (/** @type {InputEvent} */ (e).isComposing) return;
+        if (k.type === "number") input.value = sanitizeNumber(input.value);
+        else if (k.type === "date") input.value = sanitizeDate(input.value);
+      });
+    }
+  }
+
+  /**
+   * 조건 칸의 값을 읽는다. 조건 없음이면 null, 잘못된 값이면 그 칸에 aria-invalid를 붙이고 false
+   * @returns {FilterCondition|null|false}
+   */
+  _readCondition() {
+    const k = /** @type {NonNullable<typeof this.cond>} */ (this.cond);
+    const op = k.op.value;
+    if (!op) return null;
+    const bad = (/** @type {HTMLInputElement} */ input) => {
+      input.setAttribute("aria-invalid", "true");
+      input.focus();
+      return /** @type {false} */ (false);
+    };
+    if (k.type === "text") return /** @type {FilterCondition} */ ({ type: "text", op, value: k.value.value });
+    /** @param {HTMLInputElement} input @returns {any} 빈 칸이면 undefined, 잘못되면 false */
+    const read = (input) => {
+      const s = input.value.trim();
+      if (!s) return undefined;
+      if (k.type === "number") {
+        const p = parseNumber(s);
+        return p.ok && typeof p.value === "number" ? p.value : false;
+      }
+      return dateKey(s) || false;
+    };
+    if (op === "between") {
+      const from = read(k.from);
+      if (from === false) return bad(k.from);
+      const to = read(k.to);
+      if (to === false) return bad(k.to);
+      if (from === undefined && to === undefined) return bad(k.from);
+      /** @type {any} */
+      const out = { type: k.type, op: "between" };
+      if (from !== undefined) out.from = from;
+      if (to !== undefined) out.to = to;
+      return out;
+    }
+    const v = read(k.value);
+    if (v === false || v === undefined) return bad(k.value);
+    return /** @type {FilterCondition} */ ({ type: "number", op, value: v });
   }
 
   /**
@@ -182,4 +281,43 @@ export class FilterPopup {
     this.el.remove();
     this.o.onClose();
   }
+}
+
+/**
+ * 조건 칸 HTML: 연산자 고르기와 입력칸 셋(값 하나, 범위 시작·끝). 입력칸은 고른 연산자에 맞는 것만 보인다
+ * @param {"text"|"number"|"date"} type
+ * @param {import("../core/locales.js").Messages} m
+ * @returns {string}
+ */
+function conditionHtml(type, m) {
+  /** @type {Record<string, string>} */
+  const names = {
+    contains: m.condContains,
+    startsWith: m.condStartsWith,
+    equals: m.condEquals,
+    notEquals: m.condNotEquals,
+    eq: m.condEquals,
+    ne: m.condNotEquals,
+    gt: m.condGt,
+    ge: m.condGe,
+    lt: m.condLt,
+    le: m.condLe,
+    between: m.condBetween,
+  };
+  const ops = type === "text" ? TEXT_OPS : type === "number" ? NUMBER_OPS : ["between"];
+  const options = [
+    `<option value="">${escapeHtml(m.filterNoCondition)}</option>`,
+    ...ops.map((op) => `<option value="${op}">${escapeHtml(names[op])}</option>`),
+  ];
+  const mode = type === "number" ? ' inputmode="decimal"' : type === "date" ? ' inputmode="numeric" placeholder="yyyy-MM-dd"' : "";
+  const input = (/** @type {string} */ cls, /** @type {string} */ label) =>
+    `<input type="text" class="${cls}" aria-label="${escapeHtml(label)}"${mode} hidden>`;
+  return (
+    `<div class="pyo-f-cond" data-type="${type}">` +
+    `<select class="pyo-f-op" aria-label="${escapeHtml(m.filterCondition)}">${options.join("")}</select>` +
+    input("pyo-f-value", m.condValue) +
+    input("pyo-f-from", m.condFrom) +
+    input("pyo-f-to", m.condTo) +
+    `</div>`
+  );
 }

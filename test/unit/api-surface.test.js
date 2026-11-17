@@ -72,7 +72,7 @@ describe("공개 API 이름 고정", () => {
       // Cell range
       "setRange", "clearRange", "getRange", "getActiveCell", "getRangeCells", "getSelectionSummary", "getRangeText",
       // Sorting, filtering, tree
-      "setSort", "getSort", "toggleSort", "setFilter", "clearFilters", "getFilters", "openFilter", "isFilterActive",
+      "setSort", "getSort", "toggleSort", "setFilter", "clearFilters", "getFilters", "setFilterCondition", "getFilterConditions", "openFilter", "isFilterActive",
       "toggleNode", "expandAll", "collapseAll", "getTreeInfo",
       // Editing, clipboard, undo
       "startEdit", "commitEdit", "cancelEdit", "focus", "copy", "paste", "cut", "undo", "redo", "clearHistory",
@@ -100,7 +100,7 @@ describe("공개 API 이름 고정", () => {
           "columns", "frozenColumns", "rowHeight", "headerRowHeight", "lineNumber", "lineNumberWidth",
           "rowSelector", "rowSelectorWidth", "headerSelector", "multipleSelect", "selectedKey", "disableSelectionKey",
           "sortable", "multiSort", "sortCompare", "remoteSort", "cellSelect", "editable", "modifiedKey",
-          "undo", "undoLimit", "clipboard", "filter", "footSum", "grouping", "tree", "mergeCells",
+          "undo", "undoLimit", "clipboard", "filter", "filterConditions", "footSum", "grouping", "tree", "mergeCells",
           "deletedKey", "addedKey", "markAddedModified", "stateKey", "sheetName",
           "pageBar", "pageHeight", "statusDisplay", "pageNavigationCount", "pageIcons", "statusFormat",
           "selectionSummary", "defaultColumnWidth", "minColumnWidth", "resizable", "emptyText",

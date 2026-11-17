@@ -46,6 +46,13 @@ export function _afterColumnsChanged(grid, restore) {
       filterPruned = true;
     }
   }
+  for (const k of [...grid._filterConds.keys()]) {
+    const leaf = leafOf.get(k);
+    if (!leaf || !grid.isFilterable(leaf)) {
+      grid._filterConds.delete(k);
+      filterPruned = true;
+    }
+  }
   const sortBefore = JSON.stringify(grid.sort);
   grid.sort = grid.sort.filter((s) => {
     const leaf = leafOf.get(s.key);
@@ -59,7 +66,7 @@ export function _afterColumnsChanged(grid, restore) {
     grid.range = null;
   }
   layout(grid);
-  if (filterPruned) grid.emit("filterchange", { filters: grid.getFilters(), count: grid.dataRows.length });
+  if (filterPruned) grid.emit("filterchange", { filters: grid.getFilters(), conditions: grid.getFilterConditions(), count: grid.dataRows.length });
   if (sortPruned) grid.emit("sortchange", { sort: grid.getSort() });
 }
 

@@ -31,6 +31,7 @@ import * as gRender from "./grid/render.js";
  * @typedef {import("./core/sort.js").SortItem} SortItem
  * @typedef {import("./core/sort.js").SortCompare} SortCompare
  * @typedef {import("./features/pagebar.js").PageInfo} PageInfo
+ * @typedef {import("./features/conditions.js").FilterCondition} FilterCondition
  */
 
 /**
@@ -88,7 +89,7 @@ import * as gRender from "./grid/render.js";
  *   index·row: 누른 행 (selectAll이면 -1, null)
  * @property {{range: RangeInfo|null}} rangechange
  * @property {{sort: SortItem[]}} sortchange
- * @property {{filters: Record<string, string[]>, count: number}} filterchange  count: 필터를 거친 데이터 행 수
+ * @property {{filters: Record<string, string[]>, conditions: Record<string, FilterCondition>, count: number}} filterchange  count: 필터를 거친 데이터 행 수
  * @property {{page: number, current: number, info: PageInfo}} pagechange  page: 옮겨 갈 페이지 (0부터)
  * @property {{row: Row, item: Row, rowIndex: number, dindex: number, key: string, value: any, oldValue: any, source: string, batch: boolean}} change
  *   rowIndex: 화면에 없는 행이면 -1
@@ -153,6 +154,7 @@ import * as gRender from "./grid/render.js";
  * @property {number} [undoLimit=50]
  * @property {boolean} [clipboard=true]       Ctrl+C 복사, Ctrl+V 붙여넣기, Ctrl+X 잘라내기
  * @property {boolean} [filter=false]         헤더 값 필터 (컬럼 filter:false로 끄고, filter:true로 하나만 켤 수 있다)
+ * @property {boolean} [filterConditions=false]  필터 팝업에 조건 칸(포함·비교·범위)을 보인다. 꺼져 있어도 setFilterCondition은 동작한다
  * @property {import("./features/summary.js").SumCell[][]|null} [footSum]  아래 합계 행
  * @property {{by: string[], columns: import("./features/summary.js").SumCell[]}|null} [grouping]  그룹 합계 행
  * @property {{parentKey?: string, selfKey?: string, collapseKey?: string, indentWidth?: number, arrowWidth?: number, iconWidth?: number,
@@ -211,6 +213,7 @@ const DEFAULTS = {
   undoLimit: 50,
   clipboard: true,
   filter: false,
+  filterConditions: false,
   footSum: null,
   grouping: null,
   tree: null,
@@ -272,6 +275,8 @@ export class PyoGrid {
     this.dataRows = [];
     /** @type {Map<string, Set<string>>} 헤더 값 필터 조건 */
     this.filters = new Map();
+    /** @type {Map<string, FilterCondition>} 조건 필터 (setFilterCondition). 값 목록(filters)과 AND */
+    this._filterConds = new Map();
     /** @type {any[]} deleteRows로 지운 행 */
     this.deleted = [];
     /** @type {Map<any, {depth:number, children:any[], parent:any}>|null} */
@@ -537,6 +542,27 @@ export class PyoGrid {
   /** @returns {Record<string, string[]>} */
   getFilters() {
     return gData.getFilters(this);
+  }
+
+  /**
+   * 한 컬럼의 조건 필터를 정하거나(null이면) 지운다. 값 목록 필터(setFilter)와 AND로 함께 걸린다.
+   * filterConditions 옵션과 관계없이 동작한다 (옵션은 팝업의 조건 칸만 켜고 끈다).
+   * 글자 `{type:"text", op:"contains"|"startsWith"|"equals"|"notEquals", value}`는 필터 목록에 보이는 글자와 대소문자 없이 비교한다.
+   * 숫자 `{type:"number", op:"eq"|"ne"|"gt"|"ge"|"lt"|"le", value}` 또는 `{type:"number", op:"between", from?, to?}`,
+   * 날짜 `{type:"date", from?, to?}`(yyyy-MM-dd, 양 끝 포함). ne·notEquals는 같음의 반대라 빈 칸도 통과하고, 나머지는 빈 칸이 통과하지 못한다.
+   * 모양이 틀리면 TypeError를 던지고 지금 필터는 그대로 둔다.
+   * @param {string} key
+   * @param {FilterCondition|null} condition
+   * @returns {this}
+   */
+  setFilterCondition(key, condition) {
+    gData.setFilterCondition(this, key, condition);
+    return this;
+  }
+
+  /** @returns {Record<string, FilterCondition>} 컬럼 key → 조건 (복사본) */
+  getFilterConditions() {
+    return gData.getFilterConditions(this);
   }
 
   /** @param {LeafColumn} leaf */

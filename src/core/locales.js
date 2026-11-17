@@ -16,6 +16,20 @@
  * @property {string} clear                 필터 초기화 단추
  * @property {string} ok
  * @property {string} cancel
+ * @property {string} filterCondition       필터 팝업의 조건 고르기 이름
+ * @property {string} filterNoCondition     조건 없음 (고르기의 첫 항목)
+ * @property {string} condContains
+ * @property {string} condStartsWith
+ * @property {string} condEquals
+ * @property {string} condNotEquals
+ * @property {string} condGt
+ * @property {string} condGe
+ * @property {string} condLt
+ * @property {string} condLe
+ * @property {string} condBetween
+ * @property {string} condValue             값 하나를 받는 조건의 입력칸 이름
+ * @property {string} condFrom              범위 시작 입력칸 이름
+ * @property {string} condTo                범위 끝 입력칸 이름
  * @property {(shown: string, total: string) => string} filterTruncated  값이 많아 일부만 그릴 때
  * @property {string} noOptions             select 편집기 항목이 없을 때
  * @property {string} cellInput             셀 입력칸 이름 (스크린 리더)
@@ -50,6 +64,20 @@ const en = {
   selectAll: "(Select all)",
   blank: "(Blank)",
   clear: "Clear",
+  filterCondition: "Condition",
+  filterNoCondition: "(No condition)",
+  condContains: "Contains",
+  condStartsWith: "Starts with",
+  condEquals: "Equals",
+  condNotEquals: "Does not equal",
+  condGt: "Greater than",
+  condGe: "Greater than or equal to",
+  condLt: "Less than",
+  condLe: "Less than or equal to",
+  condBetween: "Between",
+  condValue: "Value",
+  condFrom: "From",
+  condTo: "To",
   ok: "OK",
   cancel: "Cancel",
   filterTruncated: (shown, total) => `Showing the first ${shown} of ${total}. Search to narrow the list.`,
@@ -85,6 +113,20 @@ const ko = {
   selectAll: "(전체 선택)",
   blank: "(빈 값)",
   clear: "초기화",
+  filterCondition: "조건",
+  filterNoCondition: "(조건 없음)",
+  condContains: "포함",
+  condStartsWith: "시작",
+  condEquals: "같음",
+  condNotEquals: "같지 않음",
+  condGt: "보다 큼",
+  condGe: "이상",
+  condLt: "보다 작음",
+  condLe: "이하",
+  condBetween: "범위",
+  condValue: "값",
+  condFrom: "부터",
+  condTo: "까지",
   ok: "확인",
   cancel: "취소",
   filterTruncated: (shown, total) => `${total}개 중 앞의 ${shown}개만 표시 (검색으로 좁히세요)`,

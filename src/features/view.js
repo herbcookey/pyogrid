@@ -18,13 +18,16 @@ export const filterKey = (v) => (v === null || v === undefined ? "" : String(v))
  * @param {Map<string, Set<string>>} conds  key → 허용 값 (filterKey 기준)
  * @param {string} [exceptKey] 이 키 조건은 빼고 (필터 목록 만들 때)
  * @param {(row: any) => boolean} [pass] true면 조건과 관계없이 통과 (저장 전에 addRow로 넣은 행)
+ * @param {Map<string, (row: any) => boolean>} [rowConds]  key → 조건 필터 판정 함수 (값 목록과 AND)
  */
-export function filterRows(list, conds, exceptKey, pass) {
+export function filterRows(list, conds, exceptKey, pass, rowConds) {
   const keys = [...conds.keys()].filter((k) => k !== exceptKey);
-  if (!keys.length) return list;
+  const preds = rowConds ? [...rowConds].filter(([k]) => k !== exceptKey).map(([, f]) => f) : [];
+  if (!keys.length && !preds.length) return list;
   return list.filter((row) => {
     if (pass && pass(row)) return true;
     for (const k of keys) if (!(/** @type {Set<string>} */ (conds.get(k)).has(filterKey(getValue(row, k))))) return false;
+    for (const f of preds) if (!f(row)) return false;
     return true;
   });
 }
@@ -225,6 +228,7 @@ function isUnderCollapsed(row, meta, cfg) {
  * @param {Object} o
  * @param {any[]} o.source
  * @param {Map<string, Set<string>>} o.filters
+ * @param {Map<string, (row: any) => boolean>} [o.conditions]  조건 필터 (key → 판정 함수)
  * @param {import("../core/sort.js").SortItem[]} o.sort
  * @param {import("../core/sort.js").SortCompare} o.compare
  * @param {string} [o.locale]  글자 정렬 언어
@@ -235,7 +239,7 @@ function isUnderCollapsed(row, meta, cfg) {
  * @returns {{rows: any[], dataRows: any[], treeMeta: Map<any, any>|null}}
  */
 export function buildView(o) {
-  const filtered = o.filters.size ? filterRows(o.source, o.filters, undefined, o.pass) : o.source.slice();
+  const filtered = o.filters.size || (o.conditions && o.conditions.size) ? filterRows(o.source, o.filters, undefined, o.pass, o.conditions) : o.source.slice();
   if (o.tree) {
     const sort = o.remoteSort ? [] : o.sort;
     const t = buildTree(filtered, o.tree, (sib) => (sort.length ? sortRows(sib, sort, o.compare, o.locale) : sib));

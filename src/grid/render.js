@@ -152,7 +152,7 @@ export function _headerCellHtml(grid, cell, from, to, rh) {
       sortMark = '<span class="pyo-sort-mark"></span>';
     }
     if (grid.isFilterable(grid.leaves[cell.leafIndex])) {
-      const on = grid.isFilterActive() && grid.filters.has(def.key);
+      const on = grid.isFilterActive() && (grid.filters.has(def.key) || grid._filterConds.has(def.key));
       cls += " pyo-filterable";
       const filterLabel = escapeHtml(grid.messages.filter);
       sortMark += `<span class="pyo-filter-btn${on ? " pyo-filter-on" : ""}" data-filter="${cell.leafIndex}" role="button" aria-label="${filterLabel}" title="${filterLabel}"></span>`;

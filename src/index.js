@@ -45,6 +45,7 @@
  * @typedef {import("./core/sort.js").SortItem} SortItem
  * @typedef {import("./core/sort.js").SortCompare} SortCompare
  * @typedef {import("./features/pagebar.js").PageInfo} PageInfo
+ * @typedef {import("./features/conditions.js").FilterCondition} FilterCondition
  */
 export { PyoGrid } from "./grid.js";
 export { formatters } from "./core/formatters.js";

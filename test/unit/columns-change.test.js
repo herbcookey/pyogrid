@@ -32,7 +32,7 @@ describe("컬럼을 바꾸면 없어진 컬럼의 필터·정렬을 지운다", 
     expect(grid.getSort()).toEqual([]);
     expect(grid.getRows()).toHaveLength(50);
     expect(grid.getRows()[0].n).toBe(0); // 원래 순서
-    expect(ev).toEqual([["filter", { filters: {}, count: 50 }], ["sort", { sort: [] }]]);
+    expect(ev).toEqual([["filter", { filters: {}, conditions: {}, count: 50 }], ["sort", { sort: [] }]]);
   });
 
   it("남아 있는 컬럼의 조건은 그대로 둔다", () => {

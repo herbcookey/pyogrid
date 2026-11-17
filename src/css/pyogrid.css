@@ -435,3 +435,10 @@
 .pyo-f-btns button:hover { background: #f4f6f9; }
 .pyo-f-btns .pyo-f-ok, .pyo-f-btns .pyo-f-ok:hover { background: #2f6fd6; border-color: #2f6fd6; color: #fff; }
 .pyo-f-btns .pyo-f-ok:disabled { opacity: 0.45; cursor: default; }
+
+/* 조건 필터 칸 (filterConditions) */
+.pyo-f-cond { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.pyo-f-cond select { flex: 1 1 100%; min-width: 0; font: inherit; }
+.pyo-f-cond input { flex: 1 1 0; min-width: 0; font: inherit; padding: 2px 4px; border: 1px solid var(--pyo-border); border-radius: 3px; }
+.pyo-f-cond input[hidden] { display: none; }
+.pyo-f-cond input[aria-invalid="true"] { border-color: #d92d20; outline: 1px solid #d92d20; }

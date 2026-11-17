@@ -6,6 +6,7 @@ import { buildView, filterKey, filterRows } from "../features/view.js";
 import { FilterPopup } from "../features/filter.js";
 import { selectOptions } from "../editors/types.js";
 import { getValue, toNumber } from "../util.js";
+import { normalizeCondition, compileCondition, filterTypeOf } from "../features/conditions.js";
 
 /**
  * @template [Row=any]
@@ -18,6 +19,7 @@ import { getValue, toNumber } from "../util.js";
 /** @typedef {import("../grid.js").LeafColumn} LeafColumn */
 /** @typedef {import("../grid.js").SortItem} SortItem */
 /** @typedef {import("../grid.js").PageInfo} PageInfo */
+/** @typedef {import("../features/conditions.js").FilterCondition} FilterCondition */
 
 /**
  * @template [Row=any]
@@ -255,6 +257,7 @@ export function setFilter(grid, key, values) {
  */
 export function clearFilters(grid) {
   grid.filters.clear();
+  grid._filterConds.clear();
   _afterFilter(grid);
   return grid;
 }
@@ -285,7 +288,69 @@ export function _afterFilter(grid) {
   grid.refresh();
   grid._renderHeader();
   grid._scheduleSummary();
-  grid.emit("filterchange", { filters: getFilters(grid), count: grid.dataRows.length });
+  grid.emit("filterchange", { filters: getFilters(grid), conditions: getFilterConditions(grid), count: grid.dataRows.length });
+}
+
+/**
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
+ * @param {string} key
+ * @param {FilterCondition | null} condition
+ * @returns {Grid<Row>}
+ */
+export function setFilterCondition(grid, key, condition) {
+  if (condition === null || condition === undefined) grid._filterConds.delete(key);
+  else grid._filterConds.set(key, normalizeCondition(condition)); // 틀리면 여기서 예외 (지금 조건은 그대로)
+  _afterFilter(grid);
+  return grid;
+}
+
+/**
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
+ * @returns {Record<string, FilterCondition>}
+ */
+export function getFilterConditions(grid) {
+  /** @type {Record<string, FilterCondition>} */
+  const out = {};
+  for (const [k, c] of grid._filterConds) out[k] = { ...c };
+  return out;
+}
+
+/**
+ * 필터 목록에 보이는 글자 (select 편집기는 항목 이름, money 컬럼은 천 단위 쉼표). 글자 조건도 이 글자와 비교한다
+ * @param {Grid} grid
+ * @param {any} def
+ * @returns {(v: string) => string}
+ */
+function filterLabel(grid, def) {
+  const opts = def && def.editor && def.editor.type === "select" ? selectOptions(def.editor.config) : null;
+  return (v) => {
+    if (opts) {
+      const o = opts.find((x) => String(x.value) === v);
+      if (o) return o.text;
+    }
+    if (def && def.formatter === "money" && toNumber(v) !== null) return grid._fmt(/** @type {number} */ (toNumber(v)));
+    return v;
+  };
+}
+
+/**
+ * 조건 필터 → key마다 행 판정 함수
+ * @param {Grid} grid
+ * @returns {Map<string, (row: any) => boolean>}
+ */
+function conditionPredicates(grid) {
+  /** @type {Map<string, (row: any) => boolean>} */
+  const out = new Map();
+  for (const [key, c] of grid._filterConds) {
+    const leaf = grid.leaves.find((l) => l.def.key === key);
+    const def = leaf ? leaf.def : null;
+    const cfg = def && def.editor && def.editor.type === "date" ? def.editor.config || {} : {};
+    const test = compileCondition(c, { label: filterLabel(grid, def), valueFormat: cfg.valueFormat });
+    out.set(key, (row) => test(getValue(row, key)));
+  }
+  return out;
 }
 
 /**
@@ -315,18 +380,14 @@ export function openFilter(grid, leafIndex, _anchor) {
   const def = leaf.def;
   const key = def.key;
   const seen = new Set();
-  for (const r of filterRows(grid.source, grid.filters, key)) seen.add(filterKey(getValue(r, key)));
+  // 목록은 다른 컬럼의 값 목록·조건을 거친 행의 값 (이 컬럼 자신의 조건으로는 줄이지 않는다, Excel과 같음)
+  for (const r of filterRows(grid.source, grid.filters, key, undefined, conditionPredicates(grid))) seen.add(filterKey(getValue(r, key)));
   const cur = grid.filters.get(key) || null;
   if (cur) for (const v of cur) seen.add(v);
-  const opts = def.editor && def.editor.type === "select" ? selectOptions(def.editor.config) : null;
-  const label = (v) => {
-    if (opts) {
-      const o = opts.find((x) => String(x.value) === v);
-      if (o) return o.text;
-    }
-    if (def.formatter === "money" && toNumber(v) !== null) return grid._fmt(toNumber(v));
-    return v;
-  };
+  const label = filterLabel(grid, def);
+  // 조건 칸은 그리드 filterConditions가 켜져 있고 컬럼이 끄지 않았을 때만 보인다 (메서드는 옵션과 관계없이 동작)
+  const condition =
+    grid.options.filterConditions && def.filterConditions !== false ? { type: filterTypeOf(def), current: grid._filterConds.get(key) || null } : null;
   const title = def.label === undefined || def.label === null ? String(key) : def.html ? String(def.label).replace(/<[^>]*>/g, "") : String(def.label);
   grid._filterPopup = new FilterPopup({
     title,
@@ -335,7 +396,21 @@ export function openFilter(grid, leafIndex, _anchor) {
     current: cur,
     messages: grid.messages,
     locale: grid._intl,
-    onApply: (allowed) => setFilter(grid, key, allowed ? [...allowed] : null),
+    condition,
+    // 값 목록과 조건을 함께 바꾸고 filterchange는 한 번만 알린다. 조건 칸이 없으면(condition undefined) 조건은 그대로 둔다
+    onApply: (allowed, cond) => {
+      if (allowed) grid.filters.set(key, new Set([...allowed].map(filterKey)));
+      else grid.filters.delete(key);
+      if (cond === null) grid._filterConds.delete(key);
+      else if (cond !== undefined) grid._filterConds.set(key, normalizeCondition(cond));
+      _afterFilter(grid);
+    },
+    // 초기화: 그 컬럼의 값 목록과 조건을 모두 지운다 (조건 칸이 숨어 있어도)
+    onClear: () => {
+      grid.filters.delete(key);
+      grid._filterConds.delete(key);
+      _afterFilter(grid);
+    },
     onClose: () => {
       grid._filterPopup = null;
       grid._filterLeaf = -1;
@@ -517,6 +592,7 @@ export function _applyView(grid) {
   const v = buildView({
     source: grid.source,
     filters: isFilterActive(grid) ? grid.filters : new Map(),
+    conditions: isFilterActive(grid) ? conditionPredicates(grid) : new Map(),
     sort: grid.sort,
     compare: o.sortCompare,
     locale: grid._intl,
@@ -541,5 +617,5 @@ export function _applyView(grid) {
  * @returns {boolean}
  */
 export function isFilterActive(grid) {
-  return grid.filters.size > 0 && !grid.options.tree && !grid.page;
+  return (grid.filters.size > 0 || grid._filterConds.size > 0) && !grid.options.tree && !grid.page;
 }

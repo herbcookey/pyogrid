@@ -42,7 +42,7 @@ describe("헤더 값 필터", () => {
     pop.querySelectorAll(".pyo-f-list input")[1].click(); // B 해제
     pop.querySelector(".pyo-f-ok").click();
     expect(grid.getRows().map((r) => r.name)).toEqual(["가", "다", "라"]);
-    expect(events[0]).toEqual({ filters: { team: ["A", "C"] }, count: 3 });
+    expect(events[0]).toEqual({ filters: { team: ["A", "C"] }, conditions: {}, count: 3 });
     expect(grid.el.headSc.querySelector('[data-filter="0"]').classList.contains("pyo-filter-on")).toBe(true);
     expect(document.querySelector(".pyo-filter")).toBeNull();
   });

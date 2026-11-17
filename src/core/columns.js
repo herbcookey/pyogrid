@@ -44,6 +44,8 @@
  * @property {"left"|"center"|"right"} [align]
  * @property {"left"|"center"|"right"} [headerAlign]
  * @property {boolean} [filter]  false면 헤더 값 필터 안 함, true면 그리드 filter 옵션과 관계없이 필터
+ * @property {"text"|"number"|"date"} [filterType]  조건 필터의 종류. 없으면 date 편집기는 date, 숫자 컬럼은 number, 나머지는 text
+ * @property {boolean} [filterConditions]  false면 이 컬럼의 필터 팝업에 조건 칸을 보이지 않는다 (그리드 filterConditions가 켜져 있어도)
  * @property {boolean} [treeControl]  트리 펼침 단추를 그릴 컬럼
  * @property {boolean} [numeric]  선택 합계에서 숫자 컬럼으로 볼지 (없으면 money formatter·number/money 편집기면 숫자)
  * @property {ColumnDef<Row>[]} [columns]  묶음 헤더의 하위 컬럼

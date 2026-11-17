@@ -2,7 +2,7 @@
 // "pyogrid"는 package.json exports의 types(dist/types/index.d.ts)로 풀린다. 사용자가 받는 선언 파일 그대로다.
 // 잘못된 사용은 // @ts-expect-error로 적는다. 오류가 나지 않으면 그 줄이 오히려 오류가 된다.
 import { PyoGrid } from "pyogrid";
-import type { AppliedChange, ColumnDef, GridEvents, GridOptions, ViewRow } from "pyogrid";
+import type { AppliedChange, ColumnDef, FilterCondition, GridEvents, GridOptions, ViewRow } from "pyogrid";
 
 /** A와 B가 정확히 같은 타입이면 true */
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -225,4 +225,28 @@ namespace readmeExample {
   grid.on("beforeedit", (e) => e.row.LOCKED !== "Y");
   const changed: Order[] = grid.getModifiedRows();
   void changed;
+}
+
+/* ------------------------------------------------------------------
+ * 조건 필터
+ * ---------------------------------------------------------------- */
+{
+  const g = new PyoGrid<Order>(el, { filter: true, filterConditions: true, columns: [{ key: "QTY", filterType: "number", filterConditions: false }] });
+  g.setFilterCondition("SKU", { type: "text", op: "contains", value: "a" });
+  g.setFilterCondition("QTY", { type: "number", op: "between", from: 1 });
+  g.setFilterCondition("QTY", { type: "number", op: "ge", value: 1 });
+  g.setFilterCondition("D", { type: "date", from: "2026-03-01", to: "2026-03-31" });
+  g.setFilterCondition("QTY", null);
+  // @ts-expect-error 숫자 비교는 value가 숫자다
+  g.setFilterCondition("QTY", { type: "number", op: "ge", value: "1" });
+  // @ts-expect-error 없는 연산자
+  g.setFilterCondition("SKU", { type: "text", op: "like", value: "a" });
+  const conds: Record<string, FilterCondition> = g.getFilterConditions();
+  void conds;
+  g.on("filterchange", (e) => {
+    const c: Record<string, FilterCondition> = e.conditions;
+    const f: Record<string, any[]> = e.filters;
+    const n: number = e.count;
+    void c, f, n;
+  });
 }
