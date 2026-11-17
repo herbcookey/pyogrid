@@ -33,6 +33,14 @@
  * @typedef {import("./grid.js").AppliedChange<Row>} AppliedChange
  */
 /**
+ * @template [Row=any]
+ * @typedef {import("./grid.js").GridEvents<Row>} GridEvents
+ */
+/**
+ * @template [Row=any]
+ * @typedef {import("./grid.js").GridClickEvent<Row>} GridClickEvent
+ */
+/**
  * @typedef {import("./grid.js").RangeInfo} RangeInfo
  * @typedef {import("./core/sort.js").SortItem} SortItem
  * @typedef {import("./core/sort.js").SortCompare} SortCompare

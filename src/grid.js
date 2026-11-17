@@ -77,6 +77,57 @@ import { escapeHtml, getValue, setValue as setPathValue, h, isFn, clamp, deepMer
  */
 
 /**
+ * 이벤트 이름 → 핸들러 인자. 소스의 emit·emitCancelable 호출에서 뽑았다.
+ * source 값은 그리드가 쓰는 글자(change: edit, clear, paste, cut, undo, redo, api / selectionchange: click, range, all, api) 외에
+ * setValues·selectRow의 opts.source로 받은 글자가 그대로 들어올 수 있어 string이다.
+ * @template [Row=any]
+ * @typedef {Object} GridEvents
+ * @property {GridClickEvent<Row>} click
+ * @property {GridClickEvent<Row>} dblclick
+ * @property {{index: number, row: ViewRow<Row>|null, selected: boolean, source: string, changed: Row[], indexes: number[]}} selectionchange
+ *   index·row: 누른 행 (selectAll이면 -1, null)
+ * @property {{range: RangeInfo|null}} rangechange
+ * @property {{sort: SortItem[]}} sortchange
+ * @property {{filters: Record<string, string[]>, count: number}} filterchange  count: 필터를 거친 데이터 행 수
+ * @property {{page: number, current: number, info: PageInfo}} pagechange  page: 옮겨 갈 페이지 (0부터)
+ * @property {{row: Row, item: Row, rowIndex: number, dindex: number, key: string, value: any, oldValue: any, source: string, batch: boolean}} change
+ *   rowIndex: 화면에 없는 행이면 -1
+ * @property {{source: string, changes: AppliedChange<Row>[]}} batchchange
+ * @property {GridCellInfo<Row> & {mode: "edit"|"type"}} beforeedit  핸들러가 false를 돌려주면 편집하지 않는다
+ * @property {GridCellInfo<Row> & {mode: "edit"|"type"}} editstart
+ * @property {GridCellInfo<Row> & {committed: boolean}} editend
+ * @property {{event: KeyboardEvent, editing: boolean}} keydown  핸들러가 false를 돌려주면 그리드가 키를 처리하지 않는다
+ * @property {{range: RangeInfo|null, text: string}} copy
+ * @property {{applied: number, skipped: number, rows: number}} paste  rows: 붙여넣은 글자의 줄 수
+ * @property {{source: string, count: number}} undo
+ * @property {{source: string, count: number}} redo
+ * @property {{rows: Row[]}} rowsadd
+ * @property {{rows: Row[]}} rowsremove
+ * @property {{rows: Row[]}} rowsdelete
+ * @property {{row: Row, collapsed: boolean}} treetoggle
+ * @property {{index: number, column: ColumnDef<Row>, width: number}} columnresize  index: 잎 컬럼 순번
+ * @property {{top: number, left: number}} scroll
+ * @property {{rows: ViewRow<Row>[]}} datachange  rows: setData 뒤의 화면 행 (필터·정렬 적용, 그룹 합계 행 포함)
+ */
+
+/**
+ * click·dblclick의 인자. 줄 번호·행 선택 칸을 누르면 special이 있고 colIndex·column·key·value가 없다.
+ * @template [Row=any]
+ * @typedef {Object} GridClickEvent
+ * @property {ViewRow<Row>} row
+ * @property {ViewRow<Row>} item  row와 같다
+ * @property {number} rowIndex
+ * @property {number} dindex  rowIndex와 같다
+ * @property {number} [colIndex]
+ * @property {ColumnDef<Row>} [column]
+ * @property {string} [key]
+ * @property {any} [value]
+ * @property {string} [special]  "lineNumber" 또는 "rowSelector"
+ * @property {MouseEvent} event
+ * @property {PyoGrid<Row>} grid
+ */
+
+/**
  * @template [Row=any]
  * @typedef {Object} GridOptions
  * @property {ColumnDef<Row>[]} [columns]
@@ -1675,8 +1726,24 @@ export class PyoGrid {
   }
 
   /**
+   * 이벤트 핸들러를 단다. 이름이 GridEvents에 있으면 핸들러 인자의 타입이 정해진다.
+   * @template {keyof GridEvents<Row>} K
+   * @overload
+   * @param {K} name
+   * @param {(this: PyoGrid<Row>, e: GridEvents<Row>[K]) => any} fn
+   * @returns {this}
+   */
+  /**
+   * GridEvents에 없는 이름도 받는다 (0.x 호환). 1.0에서 뺄지 docs/roadmap-1.0.md에서 정한다.
+   * @overload
+   * @param {string} name
+   * @param {Function | ((this: PyoGrid<Row>, e: any) => any)} fn
+   * @returns {this}
+   */
+  /**
    * @param {string} name
    * @param {Function} fn
+   * @returns {this}
    */
   on(name, fn) {
     (this._handlers[name] = this._handlers[name] || []).push(fn);
@@ -1684,8 +1751,24 @@ export class PyoGrid {
   }
 
   /**
+   * 핸들러를 뗀다. fn이 없으면 그 이름의 핸들러를 모두 뗀다.
+   * @template {keyof GridEvents<Row>} K
+   * @overload
+   * @param {K} name
+   * @param {(this: PyoGrid<Row>, e: GridEvents<Row>[K]) => any} [fn]
+   * @returns {this}
+   */
+  /**
+   * GridEvents에 없는 이름도 받는다 (0.x 호환).
+   * @overload
+   * @param {string} name
+   * @param {Function | ((this: PyoGrid<Row>, e: any) => any)} [fn]
+   * @returns {this}
+   */
+  /**
    * @param {string} name
    * @param {Function} [fn]
+   * @returns {this}
    */
   off(name, fn) {
     if (!fn) delete this._handlers[name];

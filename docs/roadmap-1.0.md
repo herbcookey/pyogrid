@@ -17,6 +17,10 @@
 - [ ] `dist/types`의 선언 파일이 정리한 공개 API와 맞는지 본다 (빠진 이름이 선언에도 없고, 남긴 이름에 설명이 있는지).
 - [ ] [test/unit/api-surface.test.js](../test/unit/api-surface.test.js)의 목록과 README가 같다.
 
+### 타입
+
+- [ ] `on`·`off`에서 GridEvents에 없는 이름을 받는 오버로드(`on(name: string, fn: Function | ((e: any) => any))`)를 1.0에서 뺄지 정한다. 빼면 오타 난 이벤트 이름(`"chnage"`)이 컴파일 오류로 잡히지만, 지금 모르는 이름을 넘기는 TypeScript 코드는 컴파일이 깨진다. 런타임은 그대로 아무 이름이나 받는다.
+
 ### 폐기 절차
 
 - [ ] 약속한 것을 빼거나 바꿀 때는 적어도 한 번의 0.x.0 릴리스에서 먼저 예고한다. CHANGELOG에 적고, 할 수 있으면 `deprecate(id, message)`(src/util.js)로 한 번 경고한다.
