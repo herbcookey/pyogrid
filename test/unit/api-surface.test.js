@@ -65,7 +65,7 @@ describe("공개 API 이름 고정", () => {
       // Data
       "setData", "getRows", "getViewRows", "getAllRows", "getRow", "addRow", "removeRows", "deleteRows",
       "getDeletedRows", "getAddedRows", "getModifiedRows", "clearModified", "clearDeleted", "acceptChanges",
-      "replaceRow", "setValue", "setValues",
+      "replaceRow", "setValue", "setValues", "getChanges", "cleanRow",
       // Row selection
       "selectRow", "selectRowRange", "selectAll", "clearSelection", "getSelectedRows", "getSelectedIndexes",
       "isRowSelected", "isRowSelectable",

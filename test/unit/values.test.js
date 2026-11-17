@@ -271,3 +271,119 @@ describe("8. 값을 바꾸는 API가 행 객체도 받는다", () => {
     expect(grid.el.foot.textContent).toContain("1");
   });
 });
+
+describe("getChanges·cleanRow: 저장할 때 내부 표시 키를 뺀 복사본", () => {
+  let host;
+  beforeEach(() => {
+    mockLayout();
+    host = document.createElement("div");
+    document.body.append(host);
+  });
+  afterEach(() => {
+    host.remove();
+    unmockLayout();
+  });
+  const cols = [{ key: "id" }, { key: "name", editor: { type: "text" } }];
+
+  it("added·modified·deleted를 나누고, 각 행은 표시 키를 뺀 얕은 복사본이다", () => {
+    const grid = new PyoGrid(host, { columns: cols, rowSelector: true });
+    const rows = [
+      { id: 1, name: "가", __selected__: true },
+      { id: 2, name: "나" },
+      { id: 3, name: "다" },
+    ];
+    grid.setData(rows);
+    grid.setValue(rows[0], "name", "가2");
+    grid.deleteRows(rows[2]);
+    const added = { id: 4, name: "라" };
+    grid.addRow(added);
+    grid.selectRow(grid.getRows().indexOf(added), true);
+
+    const ch = grid.getChanges();
+    expect(ch).toEqual({
+      added: [{ id: 4, name: "라" }],
+      modified: [{ id: 1, name: "가2" }], // 추가한 행은 modified에 넣지 않는다
+      deleted: [{ id: 3, name: "다" }],
+    });
+    expect(ch.added[0]).not.toBe(added);
+    expect(ch.modified[0]).not.toBe(rows[0]);
+    // 원본 행은 그대로
+    expect(rows[0]).toEqual({ id: 1, name: "가2", __selected__: true, __modified__: true });
+    expect(rows[2]).toEqual({ id: 3, name: "다", __deleted__: true });
+    expect(added).toEqual({ id: 4, name: "라", __added__: true, __modified__: true, __selected__: true });
+  });
+
+  it("빼는 키 이름은 selectedKey·modifiedKey·addedKey·deletedKey 옵션을 따른다", () => {
+    const grid = new PyoGrid(host, { columns: cols, selectedKey: "sel", modifiedKey: "mod", addedKey: "add", deletedKey: "del" });
+    // 옵션으로 이름을 바꾸면 기본 이름(__selected__ 등)은 그냥 데이터다
+    const rows = [
+      { id: 1, name: "가", sel: true, __selected__: "data" },
+      { id: 2, name: "나", __modified__: "data" },
+    ];
+    grid.setData(rows);
+    grid.setValue(rows[0], "name", "가2");
+    grid.deleteRows(rows[1]);
+    grid.addRow({ id: 3, name: "다" });
+    expect(grid.getChanges()).toEqual({
+      added: [{ id: 3, name: "다" }],
+      modified: [{ id: 1, name: "가2", __selected__: "data" }],
+      deleted: [{ id: 2, name: "나", __modified__: "data" }],
+    });
+  });
+
+  it("markAddedModified:false여도 추가한 행은 added에만 있다", () => {
+    const grid = new PyoGrid(host, { columns: cols, markAddedModified: false });
+    grid.setData([{ id: 1, name: "가" }]);
+    grid.addRow({ id: 2, name: "나" });
+    expect(grid.getChanges()).toEqual({ added: [{ id: 2, name: "나" }], modified: [], deleted: [] });
+  });
+
+  it("그 밖의 키(선택 막기 표시, 트리 접힘 상태, 다른 __ 속성)는 그대로 둔다", () => {
+    const grid = new PyoGrid(host, { columns: cols });
+    const row = { id: 1, name: "가", __disable_selection__: true, collapse: true, __note: "x" };
+    grid.setData([row]);
+    grid.setValue(row, "name", "가2");
+    expect(grid.getChanges().modified).toEqual([{ id: 1, name: "가2", __disable_selection__: true, collapse: true, __note: "x" }]);
+  });
+
+  it("얕은 복사라 중첩 객체는 원본과 같은 객체다", () => {
+    const grid = new PyoGrid(host, { columns: cols });
+    const row = { id: 1, name: "가", meta: { tags: ["a"] } };
+    grid.setData([row]);
+    grid.setValue(row, "name", "가2");
+    const [copy] = grid.getChanges().modified;
+    expect(copy.meta).toBe(row.meta);
+  });
+
+  it("바뀐 것이 없으면 빈 배열 셋, 저장(acceptChanges) 뒤에도 비고, 부를 때마다 새 배열이다", () => {
+    const grid = new PyoGrid(host, { columns: cols });
+    const rows = [{ id: 1, name: "가" }];
+    grid.setData(rows);
+    expect(grid.getChanges()).toEqual({ added: [], modified: [], deleted: [] });
+    grid.setValue(rows[0], "name", "가2");
+    grid.addRow({ id: 2 });
+    grid.acceptChanges();
+    expect(grid.getChanges()).toEqual({ added: [], modified: [], deleted: [] });
+    expect(grid.getChanges().added).not.toBe(grid.getChanges().added);
+  });
+
+  it("저장 전에 넣었다가 지운 행은 어디에도 없다", () => {
+    const grid = new PyoGrid(host, { columns: cols });
+    grid.setData([{ id: 1 }]);
+    const r = { id: 2 };
+    grid.addRow(r);
+    grid.deleteRows(r);
+    expect(grid.getChanges()).toEqual({ added: [], modified: [], deleted: [] });
+  });
+
+  it("cleanRow는 행 하나를 같은 방식으로 복사한다 (그리드에 없는 행도, 원본은 그대로)", () => {
+    const grid = new PyoGrid(host, { columns: cols, selectedKey: "sel" });
+    const row = { id: 1, name: "가", sel: true, __modified__: true, __added__: true, __deleted__: true, meta: {} };
+    const copy = grid.cleanRow(row);
+    expect(copy).toEqual({ id: 1, name: "가", meta: {} });
+    expect(copy).not.toBe(row);
+    expect(copy.meta).toBe(row.meta);
+    expect(row.sel).toBe(true);
+    expect(row.__modified__).toBe(true);
+  });
+});

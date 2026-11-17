@@ -437,6 +437,39 @@ export function getModifiedRows(grid) {
 /**
  * @template [Row=any]
  * @param {Grid<Row>} grid
+ * @param {Row} row
+ * @returns {Row}
+ */
+export function cleanRow(grid, row) {
+  const o = grid.options;
+  const copy = /** @type {any} */ ({ ...row });
+  delete copy[o.selectedKey];
+  delete copy[o.modifiedKey];
+  delete copy[o.addedKey];
+  delete copy[o.deletedKey];
+  return copy;
+}
+
+/**
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
+ * @returns {{added: Row[], modified: Row[], deleted: Row[]}}
+ */
+export function getChanges(grid) {
+  const ak = grid.options.addedKey;
+  const clean = (/** @type {Row} */ r) => cleanRow(grid, r);
+  return {
+    added: grid.getAddedRows().map(clean),
+    modified: getModifiedRows(grid)
+      .filter((r) => !(/** @type {any} */ (r)[ak]))
+      .map(clean),
+    deleted: grid.getDeletedRows().map(clean),
+  };
+}
+
+/**
+ * @template [Row=any]
+ * @param {Grid<Row>} grid
  * @param {string} key
  * @returns {boolean}
  */

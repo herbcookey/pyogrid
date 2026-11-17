@@ -851,6 +851,26 @@ export class PyoGrid {
   }
 
   /**
+   * 서버에 보낼 변경. 각 배열은 행의 얕은 복사본이고, 그리드가 붙인 표시 키
+   * (selectedKey·modifiedKey·addedKey·deletedKey 옵션의 이름)가 빠져 있다. 원본 행은 건드리지 않는다.
+   * added: addRow로 넣고 저장하지 않은 행, modified: 값이 바뀐 행 (added에 있는 행은 빼고), deleted: 지운 행.
+   * 순서는 getAddedRows·getModifiedRows·getDeletedRows와 같다.
+   * @returns {{added: Row[], modified: Row[], deleted: Row[]}}
+   */
+  getChanges() {
+    return gValues.getChanges(this);
+  }
+
+  /**
+   * 행 하나를 getChanges와 같은 방식으로 복사한다 (얕은 복사, 표시 키 4개를 뺀다). 그리드에 없는 행도 된다.
+   * @param {Row} row
+   * @returns {Row}
+   */
+  cleanRow(row) {
+    return gValues.cleanRow(this, row);
+  }
+
+  /**
    * 셀 편집을 시작한다.
    * @param {number} rowIndex
    * @param {number} colIndex 잎 컬럼 순번

@@ -87,6 +87,8 @@ assertType<Equal<ReturnType<typeof grid.getAddedRows>, Order[]>>();
 assertType<Equal<ReturnType<typeof grid.getDeletedRows>, Order[]>>();
 assertType<Equal<ReturnType<typeof grid.getRow>, ViewRow<Order> | undefined>>();
 assertType<Equal<ReturnType<typeof grid.setValues>, AppliedChange<Order>[]>>();
+assertType<Equal<ReturnType<typeof grid.getChanges>, { added: Order[]; modified: Order[]; deleted: Order[] }>>();
+assertType<Equal<ReturnType<typeof grid.cleanRow>, Order>>();
 
 const first = grid.getRows()[0];
 grid.setData([{ SKU: "A", QTY: 1 }]).addRow({ SKU: "B", QTY: 2 }, "first", { focus: true });
@@ -116,6 +118,8 @@ grid.on("change", 123);
 grid.setData([{ SKU: 1, QTY: 1 }]);
 // @ts-expect-error QTY가 없다
 grid.addRow({ SKU: "A" });
+// @ts-expect-error cleanRow는 Order를 받는다
+grid.cleanRow({ SKU: 1, QTY: 1 });
 
 const badColumns: ColumnDef<Order>[] = [
   // @ts-expect-error formatter의 row는 Order
