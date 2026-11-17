@@ -1117,7 +1117,7 @@ docs/                       design notes (Korean)
 tools/                      build, test runner, version sync, demo server, performance probes, screenshots
 ```
 
-Design decisions are written up in [docs/design.md](docs/design.md) (in Korean).
+Design decisions are written up in [docs/design.md](docs/design.md) (in Korean). How to send changes is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

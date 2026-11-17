@@ -1,0 +1,72 @@
+name: Bug report
+description: Something in the grid doesn't work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. A small example that shows the problem is the fastest way to a fix.
+        For security problems, use "Report a vulnerability" on the Security tab instead of a public issue.
+  - type: input
+    id: version
+    attributes:
+      label: pyogrid version
+      description: "`PyoGrid.version`, or the version in package.json or the CDN URL"
+      placeholder: "0.9.0"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: "Chrome 142 on Windows 11"
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How you load the grid
+      options:
+        - "<script> tag (global PyoGrid)"
+        - ES module with a bundler
+        - React
+        - Vue
+        - Angular
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, and any error in the console.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Code to reproduce
+      description: The grid options, a few rows of data, and the steps. A link to a CodePen or a repository also works.
+      render: js
+    validations:
+      required: true
+  - type: dropdown
+    id: ime
+    attributes:
+      label: Does it involve IME input (Korean, Japanese, Chinese)?
+      options:
+        - "No"
+        - "Yes"
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I tried the latest version.
+        - label: I searched the existing issues.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/herbcookey/pyogrid#readme
+    about: Options, methods, events, and examples.
+  - name: Live demos
+    url: https://herbcookey.github.io/pyogrid/demo/
+    about: Try the grid in your browser.

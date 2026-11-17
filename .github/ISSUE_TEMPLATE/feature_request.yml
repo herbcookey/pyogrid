@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a new option, method, event, or behavior.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the problem first, then the change you have in mind. pyogrid has no runtime dependencies and keeps a small API, so the use case matters more than the exact design.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and why the current options, methods, or events don't cover it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+      description: For example, the option or method and how it would be used.
+      render: js
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: How you handle it today, if at all.
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to send a pull request?
+      options:
+        - "No"
+        - "Yes, after we agree on the approach"
