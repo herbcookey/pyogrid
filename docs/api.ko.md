@@ -207,7 +207,7 @@
 | `getSort()` | |
 | `toggleSort(colIndex)` | 헤더를 누른 것과 같습니다: 없음 → desc → asc → 없음 |
 | `setFilter(key, values \| null)` | 그 컬럼에서 보여 줄 값. `null`이면 값 목록을 지웁니다 (같은 컬럼의 조건은 남음) |
-| `setFilterCondition(key, condition \| null)` | 그 컬럼에 조건을 겁니다 ([Conditions](../README.md#conditions) 참고). `null`이면 지웁니다. 모양이 틀린 조건이면 `TypeError`를 던지고 필터는 그대로 둡니다 |
+| `setFilterCondition(key, condition \| null)` | 그 컬럼에 조건을 겁니다 ([Conditions](../README.md#conditions) 참고). 글자 조건은 대소문자를 가리지 않고, 필터 팝업의 검색칸과 같이 `toLowerCase()`로 맞춥니다 (그리드의 `locale`은 쓰지 않음). `null`이면 지웁니다. 모양이 틀린 조건이면 `TypeError`를 던지고 필터는 그대로 둡니다 |
 | `getFilterConditions()` | `{key: 조건}` (복사본) |
 | `clearFilters()` | 값 목록과 조건을 모두 지웁니다 |
 | `getFilters()` | `{key: [값...]}` (값 목록만) |

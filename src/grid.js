@@ -547,7 +547,7 @@ export class PyoGrid {
   /**
    * 한 컬럼의 조건 필터를 정하거나(null이면) 지운다. 값 목록 필터(setFilter)와 AND로 함께 걸린다.
    * filterConditions 옵션과 관계없이 동작한다 (옵션은 팝업의 조건 칸만 켜고 끈다).
-   * 글자 `{type:"text", op:"contains"|"startsWith"|"equals"|"notEquals", value}`는 필터 목록에 보이는 글자와 대소문자 없이 비교한다.
+   * 글자 `{type:"text", op:"contains"|"startsWith"|"equals"|"notEquals", value}`는 필터 목록에 보이는 글자와 대소문자 없이 비교한다 (`toLowerCase`, 그리드의 locale은 쓰지 않는다).
    * 숫자 `{type:"number", op:"eq"|"ne"|"gt"|"ge"|"lt"|"le", value}` 또는 `{type:"number", op:"between", from?, to?}`,
    * 날짜 `{type:"date", from?, to?}`(yyyy-MM-dd, 양 끝 포함). ne·notEquals는 같음의 반대라 빈 칸도 통과하고, 나머지는 빈 칸이 통과하지 못한다.
    * 모양이 틀리면 TypeError를 던지고 지금 필터는 그대로 둔다.

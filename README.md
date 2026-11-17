@@ -817,7 +817,7 @@ grid.setFilterCondition("QTY", null); // remove
 
 | `type` | `op` | Value fields | Compares |
 |---|---|---|---|
-| `"text"` | `contains`, `startsWith`, `equals`, `notEquals` | `value` (string) | The text shown in the filter list (option names for select editors, formatted numbers for money columns), ignoring case |
+| `"text"` | `contains`, `startsWith`, `equals`, `notEquals` | `value` (string) | The text shown in the filter list (option names for select editors, formatted numbers for money columns), ignoring case. Case is folded with JavaScript's `toLowerCase()`, the same as the popup's search box, not by the grid's `locale`; in Turkish, for example, `"I"` doesn't match `"ı"` |
 | `"number"` | `eq`, `ne`, `gt`, `ge`, `lt`, `le` | `value` (number) | Numbers and number text such as `"1,200"` |
 | `"number"` | `between` | `from`, `to` (numbers, ends included) | Same |
 | `"date"` | `between` (may be omitted) | `from`, `to` (`"yyyy-MM-dd"`, ends included) | The date part as text, see below |
@@ -1071,7 +1071,7 @@ Numbers passed to message functions are already formatted with thousands separat
 | `status(from, to, count)` | `"1 - 15 of 300"` | Status text on the right |
 | `statusTotal(total)` | `"Total 1,234"` | Added to the status text with server paging |
 
-Numbers in all of these, and in the status text, use the locale's separators (`1,234.5` in English, `1.234,5` in German). Text sorting (`sortCompare: "smart"`) uses the locale too. To build the whole status HTML yourself, use the `statusFormat` option.
+Numbers in all of these, and in the status text, use the locale's separators (`1,234.5` in English, `1.234,5` in German). Text sorting (`sortCompare: "smart"`) uses the locale too. Text filter conditions and the filter search box don't: they ignore case with `toLowerCase()`. To build the whole status HTML yourself, use the `statusFormat` option.
 
 ## Demos
 

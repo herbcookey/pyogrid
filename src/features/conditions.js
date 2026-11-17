@@ -166,7 +166,7 @@ export function normalizeCondition(c) {
 export function compileCondition(c, opts = {}) {
   if (c.type === "text") {
     const label = opts.label || ((/** @type {string} */ k) => k);
-    // 필터 팝업의 검색칸과 같은 toLowerCase (toLocaleLowerCase(locale)는 Chrome에서 20만 행에 300ms 넘게 걸린다)
+    // 필터 팝업의 검색칸과 같은 toLowerCase (toLocaleLowerCase(locale)는 Chrome에서 20만 행에 330ms 걸린다, toLowerCase는 9ms)
     const lower = (/** @type {string} */ s) => s.toLowerCase();
     const needle = lower(c.value);
     const text = (/** @type {any} */ v) => lower(String(label(v === null || v === undefined ? "" : String(v))));
