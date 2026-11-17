@@ -4,6 +4,9 @@ import { Dropdown, Calendar } from "../editors/popups.js";
 import { getValue, isFn, clamp } from "../util.js";
 import { headerHeight, viewportHeight } from "../grid/layout.js";
 
+/** 조합을 끝낸 뒤 같은 키가 다시 오면 무시하는 시간 (ms, 이벤트 timeStamp 기준) */
+const SUPPRESS_MS = 80;
+
 /**
  * 셀 편집과 키보드.
  *
@@ -43,7 +46,7 @@ export class Editing {
     input.addEventListener("keydown", (e) => this.onKeyDown(e));
     input.addEventListener("input", (e) => this.onInput(/** @type {InputEvent} */ (e)));
     input.addEventListener("compositionstart", () => this.onCompositionStart());
-    input.addEventListener("compositionend", () => this.onCompositionEnd());
+    input.addEventListener("compositionend", (e) => this.onCompositionEnd(e));
     input.addEventListener("blur", () => this.onBlur());
     input.addEventListener("focus", () => grid.el.root.classList.add("pyo-focused"));
     // 복사·잘라내기·붙여넣기: 편집 중이면 입력칸 기본 동작, 아니면 선택 범위
@@ -390,7 +393,8 @@ export class Editing {
     else this._discardComposition = true;
   }
 
-  onCompositionEnd() {
+  /** @param {CompositionEvent} ev */
+  onCompositionEnd(ev) {
     if (this._discardComposition || !this.edit) {
       this._discardComposition = false;
       if (!this.edit) this.input.value = "";
@@ -403,11 +407,12 @@ export class Editing {
     const p = this._pending;
     this._pending = null;
     if (p) {
+      // macOS처럼 조합을 끝내며 같은 키를 한 번 더 보내는 입력기가 있다. 그 키는 compositionend와 거의 같은 시각에
+      // 만들어지므로, 처리 시각이 아니라 이벤트가 만들어진 시각(timeStamp)으로 80ms 안인지 본다.
+      // 처리 시각으로 재면 저장·change 핸들러·다시 그리기에 걸린 시간이 창을 깎아, 느린 화면에서 Enter가 두 번 처리됐다.
+      this._suppress = { code: p.code, at: ev.timeStamp };
       // 조합을 확정한 키(Enter 등)를 이어서 처리한다
-      setTimeout(() => {
-        this._suppress = { code: p.code, until: Date.now() + 80 };
-        this._editKey(p.code, p.shift);
-      }, 0);
+      setTimeout(() => this._editKey(p.code, p.shift), 0);
     }
   }
 
@@ -508,7 +513,8 @@ export class Editing {
       else this._discardComposition = true;
       return;
     }
-    if (this._suppress && this._suppress.code === e.code && Date.now() < this._suppress.until) {
+    // Safari는 확정 키의 keydown이 compositionend보다 조금 이른 시각으로 올 수 있어 차이의 절댓값으로 본다
+    if (this._suppress && this._suppress.code === e.code && Math.abs(e.timeStamp - this._suppress.at) < SUPPRESS_MS) {
       this._suppress = null;
       e.preventDefault();
       return;
