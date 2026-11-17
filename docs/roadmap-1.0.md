@@ -22,6 +22,15 @@
 - [ ] strictNullChecks를 모든 파일에 켠다. 아래 "strictNullChecks 남은 순서"를 따라 `tsconfig.strict.json`의 include를 늘리고, 다 끝나면 `tsconfig.json`에 켜고 `tsconfig.strict.json`을 지운다.
 - [ ] `on`·`off`에서 GridEvents에 없는 이름을 받는 오버로드(`on(name: string, fn: Function | ((e: any) => any))`)를 1.0에서 뺄지 정한다. 빼면 오타 난 이벤트 이름(`"chnage"`)이 컴파일 오류로 잡히지만, 지금 모르는 이름을 넘기는 TypeScript 코드는 컴파일이 깨진다. 런타임은 그대로 아무 이름이나 받는다.
 
+### 내부 구조
+
+- [ ] `_` 위임 없애기: grid.js 클래스에 남은 `_` 위임 23개를 없애고, 부르는 곳이 `src/grid/` 모듈 함수를 직접 부르게 한다. 남은 것과 부르는 곳:
+  - 모듈끼리 부르는 것: `_afterRowsChanged`, `_applyView`, `_flash`, `_measure`, `_renderFoot`, `_renderHeader`, `_renderPageNav`, `_rowClassName`, `_scheduleSummary`, `_updateBodySize`, `_updateHeaderSelector`
+  - grid.js 클래스 안(이벤트 연결, 생성자)에서 부르는 것: `_checkSize`, `_endResize`, `_onBodyClick`, `_onBodyPointerDown`, `_onHeaderClick`, `_onHeaderPointerDown`, `_placeFilterPopup`, `_setColumnsInternal`
+  - features/editing.js가 부르는 것: `_afterCopy`
+  - 테스트·도구가 직접 부르는 것: `_render`·`_renderStatus`(tools/probe-big.mjs, test/unit/stage2.test.js), `_scrollbarWidth`(test/unit/review-fixes5.test.js). 이것을 없애려면 그 테스트와 도구도 바꿔야 한다
+  - 위임을 없애면 .d.ts에서 그 멤버가 빠진다 (`_` 멤버라 Stability 약속 밖)
+
 ### 폐기 절차
 
 - [ ] 약속한 것을 빼거나 바꿀 때는 적어도 한 번의 0.x.0 릴리스에서 먼저 예고한다. CHANGELOG에 적고, 할 수 있으면 `deprecate(id, message)`(src/util.js)로 한 번 경고한다.
