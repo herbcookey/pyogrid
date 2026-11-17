@@ -39,8 +39,8 @@
 <main class="d-main">
   <div class="d-head">
     <h1><span class="en">Weekly orders and shipments</span><span class="ko">주간 주문·출고 현황</span></h1>
-    <p class="en">Made-up data. Filter with the ▾ in each header, by values or by a condition such as "greater than". The carry-over column can be edited, pasted into from Excel, and undone with Ctrl+Z. Column widths and sort are remembered across reloads.</p>
-    <p class="ko">가상 데이터입니다. 헤더 ▾로 값 또는 조건(예: 보다 큼)으로 필터, 이월 수량 칸은 편집·Excel 붙여넣기·Ctrl+Z, 컬럼 너비와 정렬은 새로 고쳐도 기억합니다.</p>
+    <p class="en">Made-up data. Filter with the ▾ in each header, by values or by a condition such as "greater than". Drag a header to reorder columns. The carry-over column can be edited, pasted into from Excel, and undone with Ctrl+Z. Column widths, order, and sort are remembered across reloads.</p>
+    <p class="ko">가상 데이터입니다. 헤더 ▾로 값 또는 조건(예: 보다 큼)으로 필터, 헤더를 끌어 컬럼 순서 바꾸기, 이월 수량 칸은 편집·Excel 붙여넣기·Ctrl+Z, 컬럼 너비·순서와 정렬은 새로 고쳐도 기억합니다.</p>
   </div>
 
   <div class="d-toolbar">
@@ -109,7 +109,7 @@
     $(b[0]).title = T(b[1], b[2]);
     $(b[0]).setAttribute("aria-label", T(b[1], b[2]));
   });
-  $("btnResetState").title = T("Forget saved column widths and sort", "기억한 컬럼 너비·정렬 지우기");
+  $("btnResetState").title = T("Forget saved column widths, order, and sort", "기억한 컬럼 너비·순서·정렬 지우기");
 
   function buildColumns(info) {
     var num = { align: "right", formatter: "money", width: 80 };
@@ -147,6 +147,7 @@
     sortable: true,
     filter: true,
     filterConditions: true, // 필터 팝업에 조건(포함, 보다 큼, 범위) 칸을 보인다
+    columnReorder: true, // 헤더를 끌거나 Alt+Shift+←/→로 컬럼 순서를 바꾼다 (stateKey로 기억)
     stateKey: "weekly-grid",
     sheetName: T("Weekly shipments", "주간 출고"),
     headerAlign: "center",
