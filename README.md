@@ -8,7 +8,7 @@ A fast, dependency-free data grid in plain JavaScript. It renders tens of thousa
 - Use it from a single `<script>` tag (global `PyoGrid`) or as an ES module.
 - Works with any framework, or none.
 
-> Version 0.9.0 · Chrome, Edge, Firefox, and Safari. See [Browser support](#browser-support).
+> Version 0.10.0 · Chrome, Edge, Firefox, and Safari. See [Browser support](#browser-support).
 
 ![Weekly orders demo: multi-level headers, frozen columns, row selection, footer totals](https://raw.githubusercontent.com/herbcookey/pyogrid/main/docs/images/weekly.png)
 

@@ -1,6 +1,6 @@
 {
   "name": "pyogrid",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Fast, dependency-free JavaScript data grid with virtual scrolling, Excel-style editing and paste, IME-friendly input, filters, totals, tree grid, and xlsx export.",
   "keywords": [
     "grid",
