@@ -87,11 +87,11 @@ import "pyogrid/css"; // with a bundler such as Vite or webpack
 Or load it from a CDN without a build step:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.9/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.9/dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.10/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.10/dist/pyogrid.min.js"></script>
 ```
 
-The same files are on unpkg (`https://unpkg.com/pyogrid@0.9/dist/...`). Keep the version in the URL (`@0.9`, or an exact one like `@0.9.0`) on production pages: without it you get whatever the latest release is, including breaking changes.
+The same files are on unpkg (`https://unpkg.com/pyogrid@0.10/dist/...`). Keep the version in the URL (`@0.10`, or an exact one like `@0.10.0`) on production pages: without it you get whatever the latest release is, including breaking changes.
 
 | File | Use |
 |---|---|
@@ -111,8 +111,8 @@ To build from source, see [Development](#development).
 ## Quick start
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.9/dist/pyogrid.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.9/dist/pyogrid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pyogrid@0.10/dist/pyogrid.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pyogrid@0.10/dist/pyogrid.min.js"></script>
 
 <div id="grid" style="height: 400px"></div>
 
@@ -1215,7 +1215,7 @@ After changing the demos, refresh the README screenshots with `npm run build` an
 
 To release, bump the version with `npm version patch` (or `minor`, `major`). It also updates the version in `src/index.js` and this README, then commits and tags. Pushing a `v*` tag (`git push origin main --follow-tags`) runs `.github/workflows/release.yml`: it checks that the tag, `package.json`, and the CHANGELOG agree, runs the full test workflow, stages the package on npm with trusted publishing (approve it on npmjs.com to make it public), and creates a GitHub Release from the CHANGELOG section. Setup and details are in [docs/releasing.md](docs/releasing.md) (in Korean). A local `npm publish` still works: it refuses to run if the versions don't match `package.json`, and runs the typecheck, unit tests, and the Chrome e2e tests first.
 
-GitHub Actions runs the lint, typecheck, unit tests, type tests, and e2e tests in Chrome, Firefox, and WebKit on every push and pull request (`.github/workflows/test.yml`). The CDN URLs above (`@0.9`) are changed by hand, only for releases that change the API.
+GitHub Actions runs the lint, typecheck, unit tests, type tests, and e2e tests in Chrome, Firefox, and WebKit on every push and pull request (`.github/workflows/test.yml`). The CDN URLs above (`@0.10`) are changed by hand, only for releases that change the API.
 
 The e2e tests use your installed Chrome. Download Firefox and WebKit for Playwright once with `npx playwright install firefox webkit`. To run one browser: `npx playwright test --project=firefox` (`chrome`, `firefox`, or `webkit`).
 

@@ -2,7 +2,7 @@
 
 All notable changes to pyogrid. Versions follow [semver](https://semver.org/); before 1.0, a minor release (0.x.0) may include breaking changes, which are listed first.
 
-## Unreleased
+## 0.10.0
 
 The JavaScript API only gains new options, methods, and fields (see Added and Changed); the TypeScript declarations are more precise. One input bug is fixed (see Fixed).
 
