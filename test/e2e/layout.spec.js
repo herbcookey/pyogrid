@@ -60,7 +60,8 @@ test.describe("weekly 데모", () => {
     const before = { fh: await box(frozenHead), fc: await box(frozenCell), mh: await box(movingHead), mc: await box(movingCell) };
     expect(before.mh.x).toBe(before.mc.x);
     await scroll.evaluate((el) => (el.scrollLeft = 150));
-    await page.waitForTimeout(100);
+    // 스크롤 뒤 다시 그리기는 다음 프레임이다. 고정 시간 대신 움직이는 헤더가 옮겨 갈 때까지 본다
+    await expect.poll(async () => (await box(movingHead)).x).toBe(before.mh.x - 150);
     const after = { fh: await box(frozenHead), fc: await box(frozenCell), mh: await box(movingHead), mc: await box(movingCell) };
     expect(after.fh.x).toBe(before.fh.x);
     expect(after.fc.x).toBe(before.fc.x);

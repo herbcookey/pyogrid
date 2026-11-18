@@ -29,9 +29,9 @@ test.describe("weekly 데모", () => {
     expect(num(await cell.textContent())).toBe(sum);
     // 같은 컬럼 헤더와 x가 같다 (가로로 스크롤한 뒤에도)
     await page.locator("#gridWrap .pyo-scroll").evaluate((el) => (el.scrollLeft = 120));
-    await page.waitForTimeout(80);
-    const head = await box(page.locator('#gridWrap .pyo-hcell[data-key="ORDER_QTY"]'));
-    expect((await box(cell)).x).toBe(head.x);
+    // 스크롤 뒤 다시 그리기는 다음 프레임이다. 고정 시간 대신 합계 칸과 헤더의 x가 맞을 때까지 본다
+    const headLoc = page.locator('#gridWrap .pyo-hcell[data-key="ORDER_QTY"]');
+    await expect.poll(async () => (await box(cell)).x - (await box(headLoc)).x).toBe(0);
     // 고정 영역의 "합계"는 제자리
     await expect(foot.locator(".pyo-fz .pyo-sum-cell", { hasText: "합계" })).toBeVisible();
   });
@@ -234,12 +234,11 @@ test("달력·필터 팝업은 바깥 페이지·모달 스크롤을 따라가�
   await page.keyboard.press("F2");
   await expect(page.locator(".pyo-calendar")).toBeVisible();
   const g0 = await gap(".pyo-calendar");
+  // scroll 이벤트는 다음 프레임에 온다. 느린 CI에서도 기다리도록 고정 시간 대신 될 때까지 본다
   await page.locator("#modal").evaluate((el) => (el.scrollTop = 60));
-  await page.waitForTimeout(50);
-  expect(await gap(".pyo-calendar")).toBe(g0);
+  await expect.poll(() => gap(".pyo-calendar")).toBe(g0);
   await page.evaluate(() => window.scrollTo(0, 40));
-  await page.waitForTimeout(50);
-  expect(await gap(".pyo-calendar")).toBe(g0);
+  await expect.poll(() => gap(".pyo-calendar")).toBe(g0);
   await page.keyboard.press("Escape");
 
   // 필터 팝업: 단추 아래에 붙어 따라오고, 화면 아래쪽이면 위로 열린다
@@ -248,21 +247,25 @@ test("달력·필터 팝업은 바깥 페이지·모달 스크롤을 따라가�
   const pop = page.locator(".pyo-filter");
   await expect(pop).toBeVisible();
   const below = async () => {
-      const p = await rectOf(pop);
-      const b = await rectOf(btn);
-      return Math.round(p.y - (b.y + b.height));
-    };
+    const p = await rectOf(pop);
+    const b = await rectOf(btn);
+    return Math.round(p.y - (b.y + b.height));
+  };
   const b0 = await below();
   await page.locator("#modal").evaluate((el) => (el.scrollTop = 0));
-  await page.waitForTimeout(50);
-  expect(await below()).toBe(b0);
+  await expect.poll(below).toBe(b0);
   await page.keyboard.press("Escape");
   // 헤더가 창 아래쪽에 오게 줄이고 다시 연다
   await page.setViewportSize({ width: 1000, height: 330 });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.locator("#modal").evaluate((el) => (el.scrollTop = 0));
   await btn.click();
-  const pb = await rectOf(pop);
-  const bb = await rectOf(btn);
-  expect(pb.y + pb.height).toBeLessThanOrEqual(bb.y);
+  await expect(pop).toBeVisible();
+  await expect
+    .poll(async () => {
+      const pb = await rectOf(pop);
+      const bb = await rectOf(btn);
+      return pb.y + pb.height - bb.y;
+    })
+    .toBeLessThanOrEqual(0);
 });
